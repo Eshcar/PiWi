@@ -22,7 +22,7 @@
 \newcommand{\remove}[1]{}
 \newcommand{\Idit}[1]{\inred{[Idit: #1]}}
 
-\newcommand{\sys}{PiWi}
+\newcommand{\sys}{Pi\~na}
 
 \newcommand{\tuple}[1]{\ensuremath{\langle \mbox{#1} \rangle}}
 
@@ -56,56 +56,14 @@ TBD
 \end{abstract}
 
 \section{Introduction}
-
-% Motivating examples
-Real-time analytics is super important. KV-stores are essential building blocks for this.
-\Idit{The paragraph below is copy-paste from KiWi, need to reword.}
-KV-stores underlie web-scale data processing systems such as
-Google's F1~\cite{Shute2013}, which powers its AdWords
-%\footnote{\url{https://www.google.com/adwords/}}
-business, and Yahoo's Flurry~\cite{flurry} --
-%\footnote{\url{https://developer.yahoo.com/flurry/docs/analytics/}},
-the technology behind Mobile Developer Analytics.
-For example,
-as of early 2016,  Flurry  reported systematically collecting data of $830\!,000$ mobile
-apps~\cite{appmatrix}
-%\footnote{\url{http://flurrymobile.tumblr.com/post/144245637325/}}  % appmatrix
-running on 1.6 billion
-user devices~\cite{phablet}.
-%\footnote{\url{http://flurrymobile.tumblr.com/post/117769261810/}}. % the-phablet-revolution
-Flurry streams  this data into a massive index, and provides
-%application developers with tools that produce
-a wealth of reports over the collected data.
-Such
-\emph{real-time analytics}  applications push KV-store scalability requirements to new levels and raise novel use cases.
-Namely, they require
-%  real-time performance for 
-both
-(1) low latency persistent ingestion of incoming data, and (2) high performance analytics of the resulting dataset.
-
-% Goals
-We emphasize three key goals for the service: First, for analytics, \emph{consistency} is important, namely, atomic scans. 
-Second, \emph{persistence} is essential, namely, no updates should be lost due to crash, which inevitably do happen from time to time\cite{?}.
-Finally, for real time ingestion, \emph{update performance} is a key consideration. 
-
-% Why not LSM
-LSM trees are really popular, but they induce high write amplification because they rewrite all data multiple times. In particular,
-all files in a given layer undergo compaction, even `cold' ones that have not changes since the most recent update.
-For persistence updates are additionally performed to a separte disk holding a \emph{write-ahead-log (WAL)}, which increases
-the number of disk writes even further. LSM includes a memory component and a disk component, and all scans are served
-by the disk component, assisted by a disk cache. 
-We forgo the  LSM approach, and instead use a common data sturcture for the memory and disk components, 
-encompassing both the WAL and the disk cache. 
-Our approach reduces compaction by selectively compacting only
-updated parts of the data structure, and not `cold' parts.
-It further reduces write amplification and I/O bottlenecks by eliminating the need for a WAL.
-Moreover, scans of `hot' key ranges may be served from the in-memory data structure without accessing disk.
-
-% Results
-We compare \sys\ to state-of-the-art key-value stores with awesome results. 
+\input{intro}
 
 \section{Related Work}
 \label{sec:related}
+
+LSM stores -- RocksDB, HyperLevelDB, LevelDB, cLSM, BLSM.
+
+$\epsilon^+$-trees and implelentations like Tucana~\cite{tucana} and Btrfs~\cite{Btrfs}.
 
 \section{\sys\ Design}
 \label{sec:design}
@@ -130,9 +88,7 @@ All three systems are configured to provided persistence, namely, no data loss, 
 In addition, we deploy a single partition in each of the systems in order to provide consistent scans across the entire data store.
 
 We do not compare with Tucana~\cite{tucana} as its code has not been available; moreover, it does not support the persistency and consistency guarantees that \sys\ provides. 
-%https://www.usenix.org/conference/atc16/technical-sessions/presentation/papagiannis 
-%cLSM https://subversion.assembla.com/svn/yahoo-lsm-ssds/
-%http://dl.acm.org/citation.cfm?id=2741973 
+
 
 \section{Conclusions}
 \label{sec:conclusions}
