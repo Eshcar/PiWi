@@ -1,0 +1,46 @@
+
+
+\subsection{API and guarantees}
+
+\sys\ is a persistent key-value store supporting \emph{put, get}, and atomic \emph{range scan} (or scan) operations. 
+Scans are atomic in the sense that all values returned by a single scan belong to a consistent snapshot reflecting
+the state of the data store at a unique point in time.
+
+\Idit{More on API?}
+
+\sys\ ensures \emph{durability} of all updates by writing updates to disk synchronously as part of the \emph{put} operation.
+
+\subsection{Organization and layout}
+
+Similarly to BTrees \Idit{and other disk-friendly data structures?}, 
+\sys\ organizes data in fixed-size \emph{chunks}, each holding a contiguous key range.
+
+For persistence, all chunks are stored on-disk. Each chunk is associated with a \emph{file chunk}, or \emph{funk},
+which is a persistent data structure consisting of three files holding the chunk's data -- a value store \emph{vstore}, 
+a sorted key store \emph{kstore}, and a write buffer \emph{wbuf}. The vstore holds all the values associated with keys
+in the chunk. When a funk is created, the kstore holds all the chunk's keys with pointers to corresponding values.
+New keys are subsequently added to the unsorted wbuf.
+The data store can be consistently recovered from the on-disk funks at any time. \Idit{Need to discuss recovery somewhere.}
+
+A subset of the chunks is also cached in memory to allow fast access, each in a data structure called \emph{memory chunk (munk)}. 
+\Idit{Explain munk structure.}
+
+At run-time, \sys\ holds in memory chunk objects representing all funks in the data store. Each chunk holds 
+a pointer to the appropriate funk, and, if applicable, also munk. In addition, the chunk holds a  synchronization data
+structure called PPA, whose function will be explained below. 
+Chunks are organized in a linked list, and are also indexed in-memory for fast access by key.
+
+\Idit{Typical sizes: in-memory chunk object up to 1KB, chunk holding 10K to 100K keys, munk/funk size 1M to 100M depending 
+on data size and number of keys, 1000s of chunks per map.}
+
+\Idit{Discuss global version, PSA.}
+
+\Idit{Add picture.}
+
+
+  
+
+
+
+%Since \sys\ is geared towards analytics workloads, which emphasize long range scans, we organize it as a sorted data structure.
+
