@@ -1,0 +1,46 @@
+
+Our goal in this work is to design key-value storage for real-time analytics. 
+Such a key-value map is constantly updated by real-time flows of information, for example, 
+logging of user activity, stock updates, incoming emails, tweets, and news.
+At the same time, the data store is queried for analytics purposes, by queries that 
+perform long range scans, for example, analyzing all the user activity pertaining to a given app
+or all the trading activity for a given stock. 
+
+A typical deployment of such a system uses compound keys, where the key 
+is the concatenation of a number of fields. For example,  \inred{Flurry} tracks user activity, and stores information
+in a key-value map using keys consisting of \inred{an application id, the user's gender, the date and time, and the user id.
+A typical analytics query scans the entire key range pertaining to a given application.}
+
+\Idit{It would be good to have a stock or other example with some reference.}
+
+From these use cases, we derive the following requirements:
+\begin{description}
+\item[Real-time updates] -- the system should allow updates to be processed at \inred{wire speed} with \inred{sub-millisecond} latency.  
+\item[Persistence] -- all updates must be persisted  to non-volatile storage.
+\item[Atomic scans] -- analytics queries ought to be able to obtain a consistent snapshot of the data store.
+\item[Fast massive scans] -- to favor analytics queries, it is important to optimize long range scans 
+\inred{consisting of tens of thousands of keys}.  In other words, we assume that the workload exhibits 
+\emph{spatial locality in large key ranges}.
+\end{description} 
+
+Given these requirements, we make the following design choices in \sys:
+\begin{description}
+\item[Chunk-based organization] -- we employ a memory organization and caching policy based on large \emph{chunks} of data
+pertaining to key ranges. Thus, we optimize \sys\ for workloads with high spatial locality of keys. This also allows us to support 
+long range scans efficiently, with minimal indirection and loading of new memory pages. 
+\item[Fast in-memory search and traversal] -- given that most of the keys accessed by get and scan operations are cached in memory, 
+we next optimize in-memory key access. We use a number of techniques for this purpose, including partially sorting keys in each chunk and 
+indexing the chunks.
+\item[Multi-versioning and CoW for atomic scans] -- \sys\ employs a copy-on-write policy to keep data versions required by atomic scans.
+Thus, version management incurs a low overhead (as it occurs only on scans). It also defines a simple rule for garbage collecting old versions.
+\item[Lightweight puts] -- \sys\ allows put operations to proceeds quickly by `dumping' their data to the appropriate file (and possibly) memory chunk; 
+it amortizes the cost of optimizing the chunk's organization (by sorting and compaction) across many puts.  
+\item[Infrequent disk compactions] -- as long as a chunk is cached in RAM, its organization does not have to be optimized since 
+queries do not access it. Therefore, \sys\ does not perform reorganization (compaction) on such chunks, minimizing I/O. 
+Conversely, when a chunk holds cold data, its organization hardly deteriorates, and therefore compaction is not necessary.
+Thus, \inred{disk compactions are rare in \sys.} 
+Note that this is unlike LSM-trees, where all disk components are compacted, regardless of which keys reside in memory and whether 
+keys are hot or cold. 
+\item[Parallel I/O] -- to allow updates to proceed at a high throughput, we allow different threads to perform I/O to different files simultaneously.
+We thus avoid I/O bottlenecks as in systems that employ a single write-ahead-log.
+\end{description} 

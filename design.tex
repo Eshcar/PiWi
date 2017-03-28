@@ -181,56 +181,87 @@ For symmetry, get operations synchronize with puts the same way that scans do.
 \subsection{Reorganization}
 \label{ssec:rebalance}
 
+\paragraph{Synchronizing puts and rebalances.}
 
-\paragraph{Chunk life cycle.}
+Rebalance is used to improve data organization in a chunk's funk or munk by removing old versions that are no longer needed for scans, 
+removing deleted items, and sorting all the keys in the chunk. 
+It can be invoked by any thread, either one attempting to access the chunk (typically for put) or a dedicated background thread.
 
-As a result of a rebalance operation, a chunk can undergo three types of changes: munk rebalance, funk rebalance,
-(when a munk does not exist), and split. The latter affects the chunk object, the munk (if exists), and the funk.
+In case a chunk has a munk, rebalance reorganizes only  the munk, since all searches are served by it. In case the chunk has no munk, the funk is reorganized. Reorganization involves creating a new funk or munk 
+to replace the  current one.  In some cases, the chunk itself is split, creating new funks (and munks if applicable). We first discuss 
+rebalances that do not involve splits; we revisit splits below.
 
-In case of a munk rebalance, the chunk is immutable throughout the rebalance operation, and put operations targeting that chunk must
-wait or help rebalance to complete. In this simple case, the chunk's status changes to \emph{asleep} -- indicating that it is immutable -- 
+A munk rebalance begins by obtaining the rebalanceLock in exclusive mode. Since puts acquire the lock in shared mode,
+the lock is acquired when there are no active puts in the chunk, and blocks new puts that attempt to write to the same chunk. 
+\remove{
+%It also changes the chunk status to asleep, indicating that it is now immutable.
+Since there might be active put threads at the time the chunk becomes immutable, the rebalance operation
+needs to either take them into account or prevent them from proceeding. To this end, it uses the PPA. 
+For each active put thread in the chunk, if the thread's PPA entry includes a value and a version, they
+are copied into the new funk or munk. Otherwise, scan uses CAS to set the PPA version to ``asleep'', 
+preventing the put from setting a version. 
+}
+When the new munk is ready, the rebalance process replaces the munk pointer in the chunk, releases rebalanceLock, and re-activates the chunk.
+%A put operation that finds the target chunk immutable or its PPA version asleep waits on  rebalanceLock
+%for rebalance to complete and then re-attempts the put. 
+
+Since funk reorganization may take a long time, we allow the chunk to be active while the new funk is created,
+and then make it immutable (as during munk rebalances) for a short time. In order to avoid redundant I/O, 
+we use the funkChangeLock to ensure that only one thread is working to create a new funk.  Once that thread
+completes, it acquires the rebalanceLock in exclusive mode.
+It then copies to the new chunk any new items added to wbuf in the old chunk before it became immutable. 
+When this is done, it replaces the funk pointer in the chunk, releases the lock, and re-activates the chunk.
+
+\paragraph{Splits and chunk life cycle.}
+
+As noted above, as a result of a rebalance operation, a chunk can undergo three types of changes: munk rebalance, funk rebalance
+(when a munk does not exist), and split. The latter affects the chunk object as well as the munk (if exists) and the funk.
+
+In case of a munk rebalance, the chunk is immutable throughout the rebalance operation.
+%, and put operations targeting that chunk must wait or help rebalance to complete. 
+In this simple case, the chunk's status changes to \emph{asleep} (indicating that it is immutable)
 when rebalance begins, and changes back to \emph{active} when rebalance ends. 
-\inred{Note that the asleep status is tantamount to the rebalanceLock being held in exclusive mode.}
+Note that the asleep status is tantamount to the rebalanceLock being held in exclusive mode.
 
 Since funk rebalance involves I/O, it may take a long time, and so we  refrain from sleeping for its entire 
-duration. Instead, we begin the funk creation in the background, when the chunk is still active, 
-allowing new puts to proceed in wbuf. Once the new funk contains all the keys that were in the old one when 
-rebalance started, we put the chunk to sleep,  
-migrate the wbuf's new tail to the new chunk, swing the funk pointer in the chunk, and then make the chunk active again.
+duration. In this case, the chunk becomes asleep after most of the funk is populated, and 
+changes back to active after we 
+migrate the wbuf's new tail to the new chunk and swing the funk pointer in the chunk.
 
 
 \begin{figure}[htb]
 \centerline{
 \includegraphics[width=\columnwidth]{state-diagram.png}
 }
-\caption{Chunk lifecycle; immutable states are grey and mutable ones are white.}
+\caption{Chunk lifecycle; immutable states are grey and mutable ones are white.
+Chunk splits  create new chunks in immutable \emph{baby} status, which changes to the mutable \emph{child} state once they 
+are indexed. When the appropriate funks are created, the chunks become \emph{active}. All rebalance operations go through an 
+\emph{asleep} state when the chunk is immutable.}
 \label{fig:status}
 \end{figure}
 
 In the third case, the chunk is asleep when we create two new chunks to replace it. 
 If the chunk has a munk, we split the munk (by creating two new munks) and update the appropriate pointers in the new chunks.  
-Since creating new funks again involves I/O, we do not wish to keep the chunk immutable for the duration of this process,
-and allow this process to proceed in the background while the two new chunks still point to the same old funk. 
+Since creating new funks again involves I/O, we do not wish to keep the new chunks immutable for the duration of this process,
+and allow funk creation to proceed in the background while the two new chunks still point to the same old funk. 
 
 After we replace the old chunk in the list with the two new ones, 
 the old chunk is still accessible via the chunk index (even though it is no longer in the list). 
 The new chunks are therefore created in \emph{baby} status, indicating that they are still immutable. 
 Once the new chunks are indexed, the old chunk is \emph{aged}, and the new chunks can become mutable.
 At this point, we change their status to \emph{child}, indicating that they are no longer immutable, but share a funk with another chunk,
-which should be taken into account in future rebalances. Once the funk split completes, we put the chunk to sleep in order
-to complete the funk switch and then change the chunk status  back to active. 
+and so should not be rebalanced. Once the funk split completes, we put the chunks to sleep in order
+to complete the funk switch and then change their  status  to active. 
 The chunk's life-cycle is depicted in Figure~\ref{fig:status}.
 
 
 
-\paragraph{Synchronizing puts and rebalances.}
-
-
+\remove{
 \subsection{\sys\ operations}
 \label{ssec:ops}
 
 \inred{Consider if we want full pseudocode}
-
+}
 
 
 
