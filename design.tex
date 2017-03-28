@@ -128,7 +128,7 @@ To minimize I/O, we allow at most one thread to rebalance a funk at a given time
 the  funkChangeLock. This lock is used at a coarse granularity -- it is held throughout the creation of the new funk. 
 It is acquired using a try\_lock call, and threads that fail to acquire it do not retry, but instead wait for the winning thread 
 to complete the funk's creation.
-Finally, the chunk holds a data structure called PPA for synchronizing  puts with concurrent scans, as will be explained below. 
+Finally, the chunk holds a data structure called PPA for synchronizing  puts with concurrent scans, as explained in the next section. 
 
 
 \subsection{Supporting atomic scans}
@@ -159,8 +159,24 @@ and seq is the running sequence number of values inserted to the chunk in the cu
 
 \paragraph{Concurrent puts and scans.}
 
-\inred{Explain PPA synchronization.}
+A put operation obtains a version number from GV, and a scan begins by fetching and incrementing GV.
+If a put obtains its version before a scan, then the new value must be included in the scan's snapshot. 
+However, because the put's access to the GV and the insertion of the new value to the chunk do not occur atomically,
+a subtle race may arise. Consider a put operation that obtains version $7$ from GV and then stalls before
+inserting the value to the chunk, while a scan obtains version $7$ and increments GV to $8$. The scan then proceeds 
+to read the appropriate chunk and does not find the new value although it should be included in its snapshot.
 
+To remedy this, we rely on a mechanism previously proposed in~\cite{kiwi} for synchronizing puts and scans in an in-memory map.  
+The idea is to have scans ``help'' puts obtain a version, and to make the inserted key-value pair visible the moment it has a version.
+The per-chunk PPA is used to synchronize pending puts  with ongoing scans. 
+The PPA holds an entry for every active inserting thread.
+A put operation first registers itself in the appropriate chunk's PPA entry with the key and value it intends to add.
+It thens reads GV, and attempts to set the version field in its PPA entry to the read version using an atomic 
+compare-and-swap (CAS) instruction. A scan, in turn, scans the PPA in addition to the chunk's data (karray 
+or kstore). If it finds a value associated with a version, it considers it to have been inserted (and returns it if the version is
+the highest version for this key that does not exceed its scan time). If it encounters a value without a version, the scan helps the put
+assign a version, also by attempting to CAS the PPA's version field to the current value of GV.
+For symmetry, get operations synchronize with puts the same way that scans do. 
 
 \subsection{Reorganization}
 \label{ssec:rebalance}
