@@ -5,6 +5,8 @@ Section~\ref{ssec:layout} then discusses \sys's data organization.
 %Detailed description of \sys's operations is given in Section~\ref{ssec:ops}.  
 Atomic scans are discussed in Section~\ref{ssec:scans}, and 
 the data structure's maintenance is discussed in Section~\ref{ssec:rebalance}.
+Finally, Section~\ref{ssec:flush-recovery} discusses flushing data to disk and failure recovery.
+
 
 \subsection{API and guarantees}
 \label{ssec:api}
@@ -256,7 +258,29 @@ and so should not be rebalanced. Once the funk split completes, we put the chunk
 to complete the funk switch and then change their  status  to active. 
 The chunk's life-cycle is depicted in Figure~\ref{fig:status}.
 
+\subsection{Disk flushes and recovery}
+\label{ssec:flush-recovery}
 
+Like most popular KV-stores, \sys\ supports two modes of operation -- \emph{synchronous} and \emph{asynchronous}. 
+With the former,  updates are persisted to disk before returning to the user, and so a user is ensured when its operation
+completes that the written data will survive failures. The drawback of this approach is that it is slow -- \inred{10x slower 
+than the asynchronous mode in  existing KV-stores like RocksDB}. 
+The asynchronous mode expedites updates by optimistically performing them in
+RAM only and periodically \emph{flushing} them to disk. This reduces write latency and increases throughput, but 
+may lead to loss of data that was written shortly before the crash. Since the tradeoffs between the two approaches are 
+well known and the choice is typically left to the user, we support both modes in \sys.
+
+In the synchronous mode, every put operation performs a flush after writing the data in the appropriate funk's wbuf, and then returns. 
+This ensures that the funks always reflect all completed updates. In this case, recovery is straightforward: we simply construct
+the chunks linked list from the funks on disk, and then the database can serve new requests, populating munks on-demand.  
+
+In the asynchronous mode, we allow some suffix of the  data written before a crash to be lost, but always 
+ensure that the data store \emph{consistently} reflects a \emph{prefix} of the  values written.
+For example, if put(k1, v1) completes before put(k2, v2) and then the system crashes, then following the recovery, 
+if k2 appears in the data store, then k1 must appear as well; conversely, if the update of k1 is lost, k2 must be also excluded.
+Such recovery to a \emph{consistent snapshot} of the data store is important for applications where later updates may depend on earlier ones. 
+
+\Idit{Add description of the background thread that takes a consistent snapshot, the incarnation numbers table, and the validation in gets} 
 
 \remove{
 \subsection{\sys\ operations}
