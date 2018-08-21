@@ -120,7 +120,7 @@ The chunk additionally includes locks and data structures to synchronize concurr
 The replacement of a chunk (due to a split) or of a funk or munk associated with a given chunk 
 must be executed atomically, and moreover, must be synchronized with concurrent puts. 
 This is controlled by the chunk's rebalanceLock, which is held for short time periods
-during chunk/funk/munk replacements.  It is a shared/exclusive lock (r/w lock), acquired in shared mode 
+during chunk, funk, and munk replacements.  It is a shared/exclusive lock (r/w lock), acquired in shared mode 
 by put operations and in exclusive mode by rebalance. Gets and scans do not need to acquire the lock at all,
 and are completely wait-free.
 
@@ -151,8 +151,8 @@ scan in the PSA. Specifically, for each key, it removes all but the last version
 PSA entry. 
 
 For linearizing (i.e., determining an order on) updates, we associate each key-value pair written to the data store 
-with a unique-per-key identifier.
-This identifier is a tuple $\langle$ver, gen, seq$\rangle$, where \emph{ver} is  the version read from GV 
+with a unique-per-key timestamp.
+This timestamp is composed as a tuple $\langle$ver, gen, seq$\rangle$, where \emph{ver} is  the version read from GV 
 (recall that GV is only incremented upon scans and hence might remain unchanged across multiple puts),
 \emph{gen} is the generation of the target chunk's last created munk  (which may or may not still exist), 
 and seq is the running sequence number of values inserted to the chunk in the current generation.
@@ -191,8 +191,9 @@ In case a chunk has a munk, rebalance reorganizes only  the munk, since all sear
 to replace the  current one.  In some cases, the chunk itself is split, creating new funks (and munks if applicable). We first discuss 
 rebalances that do not involve splits; we revisit splits below.
 
-A munk rebalance begins by obtaining the rebalanceLock in exclusive mode. Since puts acquire the lock in shared mode,
+A munk rebalance begins by obtaining the chunk's rebalanceLock in exclusive mode. Since puts acquire the lock in shared mode,
 the lock is acquired when there are no active puts in the chunk, and blocks new puts that attempt to write to the same chunk. 
+When the lock is held, the chunk is \emph{immutable}, and otherwise it is \emph{active}. 
 \remove{
 %It also changes the chunk status to asleep, indicating that it is now immutable.
 Since there might be active put threads at the time the chunk becomes immutable, the rebalance operation
@@ -201,16 +202,17 @@ For each active put thread in the chunk, if the thread's PPA entry includes a va
 are copied into the new funk or munk. Otherwise, scan uses CAS to set the PPA version to ``asleep'', 
 preventing the put from setting a version. 
 }
-When the new munk is ready, the rebalance process replaces the munk pointer in the chunk, releases rebalanceLock, and re-activates the chunk.
+When the new munk is ready, the rebalance process replaces the munk pointer in the chunk and releases rebalanceLock, thus 
+re-activating the chunk.
 %A put operation that finds the target chunk immutable or its PPA version asleep waits on  rebalanceLock
 %for rebalance to complete and then re-attempts the put. 
 
 Since funk reorganization may take a long time, we allow the chunk to be active while the new funk is created,
 and then make it immutable (as during munk rebalances) for a short time. In order to avoid redundant I/O, 
-we use the funkChangeLock to ensure that only one thread is working to create a new funk.  Once that thread
+we use the funkChangeLock to ensure that only one thread works to create a new funk.  Once that thread
 completes, it acquires the rebalanceLock in exclusive mode.
 It then copies to the new chunk any new items added to wbuf in the old chunk before it became immutable. 
-When this is done, it replaces the funk pointer in the chunk, releases the lock, and re-activates the chunk.
+When this is done, it replaces the funk pointer in the chunk and releases the lock, re-activating the chunk.
 
 \paragraph{Splits and chunk life cycle.}
 

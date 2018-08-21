@@ -1,48 +1,59 @@
 
 
-% Motivating examples
-Real-time analytics is super important. KV-stores are essential building blocks for this.
-\Idit{The paragraph below is copy-paste from KiWi, need to reword.}
-KV-stores underlie web-scale data processing systems such as
-Google's F1~\cite{Shute2013}, which powers its AdWords
-%\footnote{\url{https://www.google.com/adwords/}}
-business, and Yahoo's Flurry~\cite{flurry} --
-%\footnote{\url{https://developer.yahoo.com/flurry/docs/analytics/}},
-the technology behind Mobile Developer Analytics.
-For example,
-as of early 2016,  Flurry  reported systematically collecting data of $830\!,000$ mobile
-apps~\cite{appmatrix}
-%\footnote{\url{http://flurrymobile.tumblr.com/post/144245637325/}}  % appmatrix
-running on 1.6 billion
-user devices~\cite{phablet}.
-%\footnote{\url{http://flurrymobile.tumblr.com/post/117769261810/}}. % the-phablet-revolution
-Flurry streams  this data into a massive index, and provides
-%application developers with tools that produce
-a wealth of reports over the collected data.
-Such
-\emph{real-time analytics}  applications push KV-store scalability requirements to new levels and raise novel use cases.
-Namely, they require
-%  real-time performance for 
-both
-(1) low latency persistent ingestion of incoming data, and (2) high performance analytics of the resulting dataset.
+% RT analytics
+Real-time analytics applications are on the rise in the big data world. 
+Modern decision support and machine intelligence engines strive to continuously ingest large volumes of data, while providing up-to-date insights with minimum delay. 
+Examples of such systems include Google's F1~\cite{Shute2013}, which powers its AdWords, and 
+Oath's Flurry Analytics\footnote{\url{https://developer.yahoo.com/analytics/}}, which 
+provides mobile developers with analysis tools to explore user characteristics (age, gender, location, app context, etc.) and behavior, e.g., which code paths they follow and how they churn.
+As of late 2017, the Flurry SDK is installed on 2.6B devices, and monitors 1M+ mobile apps\footnote{\url{http://flurrymobile.tumblr.com/post/169545749110/state-of-mobile-2017-mobile-stagnates}}. 
+Analytics workloads feature a combination of high ingestion rates and (concurrently executed) large range scans; their  
+data -- both ingested and queried -- is highly skewed towards popular applications, locations, users, etc. 
+Moreover, since applications like Flurry often aggregate statistics for multi-dimension composite keys (e.g., application-user-date)  
+and scan them in ranges, the skewness is reflected for key ranges rather than individual keys. 
 
-% Goals
-We emphasize three key goals for the service: First, for analytics, \emph{consistency} is important, namely, atomic scans. 
-Second, \emph{persistence} is essential, namely, no updates should be lost due to crash, which inevitably do happen from time to time\cite{?}.
-Finally, for real time ingestion, \emph{update performance} is a key consideration. 
+% KV stores 
+Underlying today's real-time analytics systems are large \emph{key-value (KV)-stores}, such as RocksDB~\cite{rocks},  
+to which data is ingested at a high rate, and which simultaneously serve 
+\emph{range scans} for analytics queries. Such data stores need to be \emph{persistent} following crashes.   
+Today's KV-stores are, by and large, based on the \emph{Log-Structured Merge (LSM)} paradigm, which 
+optimizes write performance by replacing random writes with sequential ones. LSMs suffer from two main drawbacks.
+First, it is subject to \emph{write amplification} -- namely, each key-value pair is written multiple times. 
+This occurs  due to on-disk \emph{compaction} of previously written data, 
+and also because for persistence, updates are additionally logged to a separate disk holding a \emph{write-ahead-log (WAL)}, which increases
+the number of disk writes even further.
+Second, it incurs \emph{read amplification} -- namely, reads (and scans) need to search a key in multiple files residing on disk. 
+Various works focus on mitigating the former \Idit{add citations}, and the latter is mitigated by caching, which is effective
+when access is skewed towards popular keys, but less effective for range scans.  
+Though their impact can be reduced, both kinds of amplification are inherent to the LSM design, and cannot be avoided altogether. 
 
+% PiWi
+In this work we specifically target analytics workloads, with high ingestion rates and range scans of popular key ranges. 
+We present \sys,  a \emph{persistent key-value store} supporting fast data ingestion concurrently with 
+\emph{atomic range scans}. 
 % Why not LSM
-LSM trees are really popular, but they induce high write amplification because they rewrite all data multiple times. In particular,
-all files in a given layer undergo compaction, even `cold' ones that have not changes since the most recent update.
-For persistence updates are additionally performed to a separte disk holding a \emph{write-ahead-log (WAL)}, which increases
-the number of disk writes even further. LSM includes a memory component and a disk component, and all scans are served
-by the disk component, assisted by a disk cache. 
-We forgo the  LSM approach, and instead use a common data sturcture for the memory and disk components, 
-encompassing both the WAL and the disk cache. 
-Our approach reduces compaction by selectively compacting only
-updated parts of the data structure, and not `cold' parts.
+We forgo the  LSM approach, introducing  a new paradigm for KV-storage.
+The data store leverages  a common data structure for the memory and disk components, 
+encompassing the data store as well as the WAL and the disk cache, thus unifying the read and write paths. 
+Our approach reduces compaction by selectively compacting only frequently-updated parts of the data structure, and not ``cold'' parts.
 It further reduces write amplification and I/O bottlenecks by eliminating the need for a WAL.
-Moreover, scans of `hot' key ranges may be served from the in-memory data structure without accessing disk.
+Moreover, scans of ``hot'' key ranges are served from the in-memory data structure without accessing disk.
+
+% Design principles
+In particular, \sys\ has the following key properties: 
+\begin{enumerate}
+\item Data is organized in contiguous \emph{chunks} holding key ranges, which makes scans highly efficient, both in-memory and on disk. 
+\item \sys\ unifies the read and write path, and uses a common cache of popular chunks (key ranges) for both. Thus, reads need to access disk only in case the appropriate key 
+range is not cached, and need to check at most one disk location. 
+\item A put operation writes the key-value pair exactly once on disk and at most once in memory.
+This is achieved by (i) \sys's single on-disk representation, which does not require a WAL separately from the actual data store; and 
+(ii) \sys's use of a single cache for both reads and writes. 
+\item Most compactions occur in memory only, significantly reducing write amplification. This again leverages the fact that 
+popular key ranges are cached, in which case only their in-memory organization needs to be compacted, and on-disk cold data
+can be compacted less frequently. 
+  \end{enumerate}
+
 
 % Results
-We compare \sys\ to state-of-the-art key-value stores with awesome results. 
+\Idit{Todo: 
+We compare \sys\ to state-of-the-art key-value stores with awesome results.} 
