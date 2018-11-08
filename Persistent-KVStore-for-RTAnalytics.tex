@@ -2,16 +2,16 @@
 %% Replace 'XX' with your paper number (assigned when you register abstract)
 %% Replace 'NN' with actual number of pages. 
 
-\documentclass[10pt,preprint,numbers]{sigplanconf}
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage{usenix2019,epsfig}
 %========================
 %  Packages
 %========================
-\usepackage{times}
-\usepackage{datetime}
+%\usepackage{datetime}
 \usepackage{url}
-\usepackage{hyperref}
+%\usepackage{hyperref}
 \usepackage{color}
-\usepackage{graphicx}
+%\usepackage{graphicx}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 
@@ -34,30 +34,21 @@
 
 
 
-% These only appear when the 'preprint' option is specified.
-% Enabling these will cause the first page of the document to fail the 
-% format check on HotCRP :-(
-
-\preprintfooter{Draft of {\currenttime}, \today{}}
-
 % No date in title area.
 \date{}
 
-% Paper number and no. of pages as author
-\authorinfo{Anonymous}{For blind review}
-%\authorinfo{Paper \textbf{\#XX}}{NN pages}
 
 % Actual document begins below.
 \begin{document}
 
-\title{\sys: Persistent Key-Value Storage for Real-Time Analytics} 
+\title{\Large \bf \sys: Persistent Key-Value Storage for Real-Time Analytics} 
+\author{}
 \maketitle
 
-\begin{abstract}
+\subsection*{Abstract}
 
 TBD
 
-\end{abstract}
 
 \section{Introduction}
 \input{intro}
@@ -108,7 +99,13 @@ We do not compare with Tucana~\cite{tucana} as its code has not been available; 
 \label{sec:conclusions}
 \sys\ rocks.
 
-\bibliographystyle{acm}
- \bibliography{ref}
+%\bibliographystyle{acm}
+ %\bibliography{ref}
+
+{\normalsize \bibliographystyle{acm}
+\bibliography{ref}}
+
+
+%\theendnotes
 
 \end{document}
