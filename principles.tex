@@ -1,23 +1,29 @@
 
-
-
-The key requirements from \sys\ are as follows:
+\sys\ is geared for high-throughput analytics applications, which (1) perform many range scans; 
+(2) strive to accommodate the entire working set in RAM (for performance), and yet require  (3)
+persistence with fast recovery. 
+The key requirements from \sys\ are thus the following:
 \begin{description}
 %\item[Real-time updates] -- the system should allow updates to be processed at \inred{wire speed} with \inred{sub-millisecond} latency.  
-\item[High performance with memory-resident data sets] -- we target the common 
-use case where the memory size is sufficient to hold most of the active data, and strive for 
-maximum performance in this case.  
- \item[Fast atomic scans] -- analytics queries ought to be able to obtain a consistent snapshot of the data store. To favor analytics queries, it is important to optimize  such scans. 
-\Idit{Did we try particularly long ones or YCSB standard?}
- \item[Low write amplification] -- minimizing disk writes is important not only for performance, but also in order to reduce disk wear.
-\item[Fast recovery] --  the mean-time-to-recover from crashes should be short.
+\item[High performance with memory-resident data sets] -- 
+To sustain high throughput, key-value stores leverage increasing memory sizes where they can hold most of the active data set. 
+We strive for maximum performance in this ``high performance'' case.  
+\item[Fast recovery] --  Because crashes are inevitable, the mean-time-to-recover from crashes should be kept short.
+ \item[Fast atomic scans] -- 
+ Analytics engines typically support multi-dimensional exploration of event data, which they realize in a key-value store using composite keys.   For example, a typical  KV-map used by an application like Flurry Analytics~\cite{flurry} 
+  summarizes mobile traffic statistics grouped by a combination of dimensions like  date,  user-id, and application-id.
+A query that retrieves data pertaining to a particular user thus needs to atomically 
+retrieve the values pertaining to a range of keys. 
+ To favor analytics queries, it is important to optimize  such scans. 
+ \item[Low write amplification] -- Minimizing disk writes is important not only for performance, but also in order to reduce disk wear.
+
 \end{description} 
 
 
 
 Given these requirements, we make the following design choices in \sys:
 \paragraph{Chunk-based organization.} We employ a memory organization and caching policy based on large \emph{chunks} of data pertaining to key ranges.  This allows us to support 
-long range scans efficiently, with minimal indirection and loading of new memory pages. 
+ range scans efficiently, with minimal indirection and loading of new memory pages. 
 Both the read and the write path go through chunks. 
 Each chunk has a file representation called  \emph{funk}, and may be cached 
 in-memory in a  \emph{munk} data structure.

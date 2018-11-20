@@ -20,11 +20,16 @@ to which data is ingested at a high rate, and which simultaneously serve
 
 % Motivation
 \Idit{
-\emph{key-value (KV)-stores}, such as RocksDB~\cite{rocks},  are used all over the place for many applications (add citations). 
-One domain that is on the rise is analytics, and it uses big data and requires long scans (support  by examples/citations). 
-Memory is growing and becoming cheaper (cite something), and so in many cases the entire working set fits in memory. 
-However, persistence is required. Even when using a separate cold storage tier for persistent archiving, using a DRAM-only solution for real-time query processing is undesirable, as the 
-the penalty for crashes is extremely high (try to find a citation - maybe something Facebook wrote about this). 
+\emph{key-value (KV)-stores}, such as RocksDB~\cite{rocks},  are widely used for diverse applications [add citations]. 
+One domain that is on the rise is real-time analytics, and it uses big data and requires long scans [support  by examples/citations]. 
+High performance is achieved by striving to keep almost all of the working data set in-memory, which is becoming increasingly feasible 
+with the drop in DRAM prices [citations].  
+Nevertheless, disks are still required for data persistence. 
+Note that even in cache-only KV-stores that rely on a separate cold storage tier for persistent archiving, 
+using a RAM-only solution for real-time query processing is undesirable, as the the penalty for crashes is extremely high; for example,  
+Facebook reported that it would take days to recover a crashed cluster from the backend persistent store, and this is expedited to take hours  
+by recovering from so-called warm clusters that hold the data in memory~\cite{Scaling-Memcache}. 
+%(try to find a citation - maybe something Facebook wrote about this). 
 This motivates optimizing key-value stores for workloads where all or most data fits in memory, while supporting persistence with fast recovery. 
 } 
 
@@ -47,7 +52,10 @@ WAL logging implies that updates
  are written at least twice, and may be written additional times due to on-disk \emph{compaction}.
 Second, LSMs incur \emph{read amplification} -- 
 namely, reads (and scans) may need to search a key in multiple files residing on disk. 
-Various works focus on mitigating the former \Idit{add citations}, and the latter is mitigated by caching, which is  less effective for range scans.  
+% 
+This 
+%Various works focus on mitigating the former \Idit{add citations}, and the latter 
+is mitigated by caching, which is  less effective for range scans.  
 Though their impact can be reduced, both kinds of amplification are inherent to the LSM design, and cannot be avoided altogether. 
 Additionally, recovery from crashes is slow \Idit{How long does it take?} because the WAL needs to be replayed before the system proceeds to service new requests. 
 
@@ -55,7 +63,8 @@ Additionally, recovery from crashes is slow \Idit{How long does it take?} becaus
 %In this work we specifically target analytics workloads, with high ingestion rates and range scans of popular key ranges.
 In this work we propose a novel paradigm for KV-storage, diverging from the ubiquitous LSM approach.  
 We design and implement  \sys,  a \emph{persistent key-value store}, which minimizes read and write
-amplification and expedites atomic range scans. Whenever the data set entirely fits in memory, \sys\ writes data to a single memory location and a single disk location and reads data from a single memory location. 
+amplification and expedites atomic range scans. 
+%Whenever the data set entirely fits in memory, \sys\ writes data to a single memory location and a single disk location and reads data from a single memory location. 
  \sys\ further offers almost immediate recovery from  crashes. 
  
  \remove{
@@ -72,25 +81,27 @@ Moreover, scans of popular key ranges are served from the in-memory data structu
 \item Instead of temporally partitioning data into files according to update times as in LSM, 
 \sys\ organizes data as  \emph{chunks} holding contiguous key ranges, both in memory and on disk. 
 Thus, reads
-only need to look for a key in one memory location and at most one file, and  scans are highly efficient.
+only need to look for a key in one memory location and at most one file. Moreover, scans are highly efficient.
 %, both in-memory and on disk. 
 
+\remove{
 \item Whereas LSM buffers writes in a memory component and separately caches blocks of data for expediting reads,
 \sys\ unifies the read and write paths, using a common cache of popular chunks (key ranges) for both. 
 The cached in-memory chunks are called \emph{munks}. 
+}
 %Thus, reads need to access disk only in case the appropriate key 
 %range is not cached, and need to check at most one disk location. 
-\item \sys\ uses 
+
+\item \sys\ uses a single on-disk data representation, which replaces both the WAL and the data store.  
 %A put operation writes the key-value pair exactly once on disk and at most once in memory.
 %This is achieved by (i) 
-a single on-disk representation called \emph{funk} (file chunk), which replaces both the WAL
-and the data store.  
+%called \emph{funk} (file chunk)
  %and does not keep a WAL separately from the  data store.
 This reduces write amplification %as data needs to be written to disk exactly once, 
-and also 
-expedites recovery from crashes by eliminating the need to replay the WAL. 
+and also expedites recovery from crashes by eliminating the need to replay the WAL. 
 % ; and (ii) a common cache for reads and writes. 
-\item Most compactions occur in memory, further reducing write amplification. This again leverages the fact that popular key ranges are cached as munks, which can be compacted in-memory; funks holding cold data can be compacted infrequently. 
+\item Most compactions occur in memory, further reducing write amplification. This again leverages the fact that chunks holding
+popular key ranges are cached and can be compacted in-memory; files holding cold data can be compacted infrequently. 
  \end{enumerate}
 
 
