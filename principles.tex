@@ -1,4 +1,13 @@
 
+
+\sys\ is a persistent key-value store supporting atomic \emph{put, get}, and  \emph{range scan} (or scan) operations. 
+Scans are atomic in the sense that all values returned by a single scan belong to a consistent snapshot reflecting
+the state of the data store at a unique point in time.
+
+
+
+% \sys\ ensures \emph{durability} of all updates by writing updates to disk synchronously as part of the \emph{put} operation.
+
 \sys\ is geared for high-throughput analytics applications, which (1) perform many range scans; 
 (2) strive to accommodate the entire working set in RAM (for performance), and yet require  (3)
 persistence with fast recovery. 
@@ -8,7 +17,17 @@ The key requirements from \sys\ are thus the following:
 \item[High performance with memory-resident data sets] -- 
 To sustain high throughput, key-value stores leverage increasing memory sizes where they can hold most of the active data set. 
 We strive for maximum performance in this ``high performance'' case.  
-\item[Fast recovery] --  Because crashes are inevitable, the mean-time-to-recover from crashes should be kept short.
+\item[Fast recovery to consistent state] --  Because crashes are inevitable, the mean-time-to-recover from crashes should be kept short.
+Like other popular KV-stores~\cite{rocksdb,leveldb,hbase}, \sys\ supports \emph{asynchronous} persistence, 
+where put requests are buffered in memory and periodically persisted to disk in bulk. 
+This approach significantly reduces the latency of put operations, which do not wait for their data to be persisted.
+The downside of this approach, is potential loss of the most recently written data upon crash. For example, 
+if data is flushed to disk every $10$ seconds, then put operations executed in the last $10$ seconds before the crash 
+may be undone. 
+Nevertheless, \sys\ ensures that \emph{data consistency} is preserved following recovery, in the sense that 
+if some put is lost, all ensuing (and thus possibly dependent) puts are lost as well, and the recovery is to a well 
+defined execution point some time before the crash.
+ 
  \item[Fast atomic scans] -- 
  Analytics engines typically support multi-dimensional exploration of event data, which they realize in a key-value store using composite keys.   For example, a typical  KV-map used by an application like Flurry Analytics~\cite{flurry} 
   summarizes mobile traffic statistics grouped by a combination of dimensions like  date,  user-id, and application-id.
