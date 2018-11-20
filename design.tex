@@ -1,30 +1,18 @@
 
-
-The API of \sys\ is presented in Section~\ref{ssec:api}. 
-Section~\ref{ssec:layout} then discusses \sys's data organization. 
-%Detailed description of \sys's operations is given in Section~\ref{ssec:ops}.  
+% The API of \sys\ is presented in Section~\ref{ssec:api}. 
+Section~\ref{ssec:layout}  discusses \sys's data organization. 
+We describe  \sys's normal get/put flow in Section~\ref{ssec:ops}.  
 Atomic scans are discussed in Section~\ref{ssec:scans}, and 
 the data structure's maintenance is discussed in Section~\ref{ssec:rebalance}.
 Finally, Section~\ref{ssec:flush-recovery} discusses flushing data to disk and failure recovery.
 
-
-\subsection{API and guarantees}
-\label{ssec:api}
-
-\sys\ is a persistent key-value store supporting \emph{put, get}, and atomic \emph{range scan} (or scan) operations. 
-Scans are atomic in the sense that all values returned by a single scan belong to a consistent snapshot reflecting
-the state of the data store at a unique point in time.
-
-\Idit{More on API?}
-
-\sys\ ensures \emph{durability} of all updates by writing updates to disk synchronously as part of the \emph{put} operation.
 
 \subsection{Data organization}
 \label{ssec:layout}
 
 \begin{figure}[htb]
 \centerline{
-\includegraphics[width=0.9\columnwidth]{PiWi.png}
+\includegraphics[width=\columnwidth]{PiWi.pdf}
 }
 \caption{\sys\ data layout.}
 \label{fig:layout}
@@ -33,27 +21,27 @@ the state of the data store at a unique point in time.
 \paragraph{Chunk-based layout.}
 
 \sys's data layout is depicted in Figure~\ref{fig:layout}.
-Similarly to BTrees \Idit{and other disk-friendly data structures?}, 
+Similarly to BTrees {and other disk-friendly data structures}, 
 \sys\ organizes data in fixed-size \emph{chunks}, each holding a contiguous key range.
-This improves the efficiency of both disk access and memory access, in particular, for large range scans. 
+This improves the efficiency of both disk access and memory access, in particular, for  range scans. 
 At run-time, a list of all chunks is kept in RAM, where each chunk's data 
 (consisting of keys in the corresponding range and values associated with them) 
 is kept on disk (for persistence), and possibly in memory (for fast access). 
 
-On disk, each chunk is associated with a \emph{file chunk}, or \emph{funk} --
-a persistent data structure consisting of three files:  a value store \emph{vstore}, 
+On disk, each chunk is associated with a  \emph{funk (file chunk)} 
+consisting of three files:  a value store \emph{vstore}, 
 a compacted and sorted  key store \emph{kstore}, and a write buffer \emph{wbuf}. The vstore holds all the values associated with keys
-in the chunk. When a funk is created, the kstore holds all the chunk's keys with pointers to corresponding values and the wbuf is empty.
+in the chunk. When a funk is created, the kstore holds all the chunk's keys with pointers to corresponding values in the vstore, and the wbuf is empty.
 New keys are subsequently appended to the unsorted wbuf, while new values are appended to the chunk's vstore.
 
 This structure allows us to benefit from sorted searches on the kstore, and at the same time
 allows for updating chunks without re-writing existing data, thus minimizing write amplification.
 As a funk's wbuf grows, however, searching becomes inefficient   and  
-the funk is no longer compact, i.e., it may contain redundant (over-written keys).
-Therefore, once the wbuf exceeds a certain threshold, we reorganize the funk.
+the funk is no longer compact, i.e., it may contain redundant (over-written) values.
+Therefore, once the wbuf exceeds a certain threshold, we reorganize the funk
+via a process we call \emph{rebalance}, as explained below.
 
-Since updates to disk are executed synchronously,  the data store reflecting all completed put operations 
-can be consistently recovered from the on-disk funks at any time. \Idit{Need to discuss recovery somewhere.}
+
 
 A subset of the chunks is also cached in memory to allow fast access, where each cached chunk is associated with a
 \emph{memory chunk (munk)}  data structure. 
@@ -70,22 +58,48 @@ ranges between 1M to 100M depending on the data size. A typical \sys\ node holds
 all chunk objects in memory in addition to hundreds of munks.} 
 
 
-A munk consists of two arrays -- karray and varray -- where the karray implements a sorted linked list of the chunk's keys. 
+A munk consists of two arrays -- \emph{karray} for keys and \emph{varray} for values. The karray holds a sorted linked list of the chunk's keys
+with pointers to values in the varray. 
 When a munk is created, its karray is sorted by key, so each cell's successor in the linked list is the ensuing cell in the array.
 As new keys are added, they create bypasses in the linked list and karray is no longer sorted.
+But if a sizeable portion of the karray is sorted, bypasses are short in expectation.
 Key removals, in turn, leave obsolete values in the karrray, so it is no longer compacted.
 
-As key-value pairs are added, overwritten, and removed, munks and funks need to undergo reorganization. This includes  
-\emph{compaction} to deallocate removed and overwritten data, 
-\emph{sorting} keys to make searches more efficient,  and
-\emph{splitting} overflowing chunks.
-\remove{, and \emph{merging} under-utilized ones.}
+As key-value pairs are added, overwritten, and removed munks and funks need to undergo reorganization. This includes  
+(1) \emph{compaction} to deallocate removed and overwritten data, 
+(2) \emph{sorting} keys to make searches more efficient,  
+(3) \emph{splitting} overflowing chunks, and
+(4) \emph{merging} under-utilized ones.
 All reorganizations are performed by \sys's \emph{rebalance} operation.
 If the chunk has a munk, then rebalance compacts and sorts the munk in-memory by creating a new 
 (compacted and sorted) munk instead of the existing one. 
 Funks of uncached chunks are also compacted by replacing them with new funks, albeit less frequently.
 Splits  create new chunks as well as new  funks (and possibly munks) associated with them.
 
+\paragraph{Expediting reads.}
+As long as a chunk  is memory-resident, the munk data structure serves both the read-path and the write-path for keys in this chunk. 
+In this case, the munk is quickly located using the index, and the karray's sorted prefix allows for efficient binary search.
+Thus, \sys\ is particularly fast when almost the entire data set is memory resident. 
+We take two measures to mitigate the performance penalty of accessing keys in munk-less   chunks, namely 
+a row cache and Bloom filters, as we now explain.
+
+First, we keep a \emph{row cache} holding popular key-value pairs. Note that unlike munks, which cache key ranges, the row
+cache caches individual keys, and is thus more effective in dealing with point queries (gets as opposed to scans) with no
+spatial locality (i.e., popular keys are not adjacent in the key space). \sys\ uses both data structures, and so 
+popular key ranges are associated with munks (and can be scanned quickly), 
+and  ``isolated'' popular keys are included in the row cache for efficient gets.
+
+In data sets that are much larger than the available RAM size, these two caches might not suffice, and so a certain portion of 
+reads will need to be served from disk. Here, the slowest step is the sequential search of the wbuf. 
+If a key indeed resides in the wbuf (and is not cached in RAM), there is no way around that -- we need to locate it in the wbuf in order to find
+its associated value. However, we would like to reduce wbuf searches to a minimum. 
+To this end, each chunk holds a \emph{Bloom filter} for the corresponding funk's wbuf; 
+this is a statistical data structure that summarizes a set of keys so that 
+when queried for a key that is included in it always returns true (no false negatives), 
+and otherwise returns false with some high probability (low false positive probability). 
+Thanks to these Bloom filters, we eliminate most of the redundant wbuf searches.
+In most workloads, wbuf searches will be rare, as the wbuf only includes keys written to the chunk 
+since its last rebalance.
 
 \paragraph{Data structures.}
 
@@ -99,7 +113,7 @@ It next holds a pointer to the appropriate funk, and, if applicable, also munk, 
 chunk in the chunk linked list.
 It further keeps the generation number of its latest munk and a per-generation sequence number,
 which, in case there is an active munk, is the index of the next free cell in the munk's karray and varray.
-
+It further includes a Bloom filter as explained above.
 
 \begin{algorithm}[htb]
 \begin{algorithmic}
@@ -109,6 +123,7 @@ which, in case there is an active munk, is the index of the next free cell in th
 \State ptr next \Comment next chunk in linked list
 \State int gen \Comment munk generation
 \State int seq \Comment sequence number in current generation 
+\State bloomFilter \Comment summary of set of keys in the funk's wbuf
 \State asymmetric lock rebalanceLock \Comment r/w lock 
 \State lock funkChangeLock \Comment acquired with try\_lock 
 \State PPA[threads] \Comment pending put array
@@ -121,7 +136,7 @@ which, in case there is an active munk, is the index of the next free cell in th
 The chunk additionally includes locks and data structures to synchronize concurrent access by multiple threads.
 The replacement of a chunk (due to a split) or of a funk or munk associated with a given chunk 
 must be executed atomically, and moreover, must be synchronized with concurrent puts. 
-This is controlled by the chunk's rebalanceLock, which is held for short time periods
+This is controlled by the chunk's \emph{rebalanceLock}, which is held for short time periods
 during chunk, funk, and munk replacements.  It is a shared/exclusive lock (r/w lock), acquired in shared mode 
 by put operations and in exclusive mode by rebalance. Gets and scans do not need to acquire the lock at all,
 and are completely wait-free.
@@ -131,6 +146,12 @@ the  funkChangeLock. This lock is used at a coarse granularity -- it is held thr
 It is acquired using a try\_lock call, and threads that fail to acquire it do not retry, but instead wait for the winning thread 
 to complete the funk's creation.
 Finally, the chunk holds a data structure called PPA for synchronizing  puts with concurrent scans, as explained in the next section. 
+
+\subsection{Get and put operations}
+\label{ssec:ops}
+
+
+\Idit{Todo: add pseudo-code for normal read/write}
 
 
 \subsection{Supporting atomic scans}
