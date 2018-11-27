@@ -1,9 +1,10 @@
 
 % The API of \sys\ is presented in Section~\ref{ssec:api}. 
 Section~\ref{ssec:layout}  discusses \sys's data organization. 
-We describe  \sys's normal get/put flow in Section~\ref{ssec:ops}.  
-Atomic scans are discussed in Section~\ref{ssec:scans}, and 
-the data structure's maintenance is discussed in Section~\ref{ssec:rebalance}.
+We introduce mechanisms for supporting 
+atomic scans  in Section~\ref{ssec:scans}, and describe \sys's
+ normal (maintenance-free) operation flow  in Section~\ref{ssec:ops}.  
+The data structure's maintenance is discussed in Section~\ref{ssec:rebalance}.
 Finally, Section~\ref{ssec:flush-recovery} discusses flushing data to disk and failure recovery.
 
 
@@ -28,11 +29,20 @@ At run-time, a list of all chunks is kept in RAM, where each chunk's data
 (consisting of keys in the corresponding range and values associated with them) 
 is kept on disk (for persistence), and possibly in memory (for fast access). 
 
-On disk, each chunk is associated with a  \emph{funk (file chunk)} 
-consisting of three files:  a value store \emph{vstore}, 
+On disk, each chunk is associated with a  \emph{funk (file chunk)} as illustrated in 
+Figure~\ref{fig:funk}. A funk
+consists of three files:  a value store \emph{vstore}, 
 a compacted and sorted  key store \emph{kstore}, and a write buffer \emph{wbuf}. The vstore holds all the values associated with keys
 in the chunk. When a funk is created, the kstore holds all the chunk's keys with pointers to corresponding values in the vstore, and the wbuf is empty.
 New keys are subsequently appended to the unsorted wbuf, while new values are appended to the chunk's vstore.
+
+\begin{figure}[htb]
+\centerline{
+\includegraphics[width=0.7\columnwidth]{funk.png}
+}
+\caption{\sys\ funk.}
+\label{fig:funk}
+\end{figure}
 
 This structure allows us to benefit from sorted searches on the kstore, and at the same time
 allows for updating chunks without re-writing existing data, thus minimizing write amplification.
@@ -54,8 +64,7 @@ At run-time, \sys\ holds in memory a linked list of chunk objects as well as
 a \emph{chunk index}, which is a sorted map from keys to chunks (e.g., a sorted array, skip list, or search tree).
 Note that since chunk objects do not hold actual keys and values, they are significantly smaller than munks and funks. 
 \inred{A typical chunk object is smaller than 1KB, whereas the size of a funk or munk that holds 10K to 100K keys 
-ranges between 1M to 100M depending on the data size. A typical \sys\ node holds thousands of chunks, with 
-all chunk objects in memory in addition to hundreds of munks.} 
+ranges between 1M to 100M depending on the data size.} 
 
 
 A munk consists of two arrays -- \emph{karray} for keys and \emph{varray} for values. The karray holds a sorted linked list of the chunk's keys
@@ -79,7 +88,7 @@ Splits  create new chunks as well as new  funks (and possibly munks) associated 
 \paragraph{Expediting reads.}
 As long as a chunk  is memory-resident, the munk data structure serves both the read-path and the write-path for keys in this chunk. 
 In this case, the munk is quickly located using the index, and the karray's sorted prefix allows for efficient binary search.
-Thus, \sys\ is particularly fast when almost the entire data set is memory resident. 
+Thus, \sys\ is particularly fast when almost the entire working set is memory resident. 
 We take two measures to mitigate the performance penalty of accessing keys in munk-less   chunks, namely 
 a row cache and Bloom filters, as we now explain.
 
@@ -89,8 +98,7 @@ spatial locality (i.e., popular keys are not adjacent in the key space). \sys\ u
 popular key ranges are associated with munks (and can be scanned quickly), 
 and  ``isolated'' popular keys are included in the row cache for efficient gets.
 
-In data sets that are much larger than the available RAM size, these two caches might not suffice, and so a certain portion of 
-reads will need to be served from disk. Here, the slowest step is the sequential search of the wbuf. 
+For working sets that are  larger than the available RAM size, these two caches might not suffice, and so a certain portion of reads will need to be served from disk. Here, the slowest step is the sequential search of the wbuf. 
 If a key indeed resides in the wbuf (and is not cached in RAM), there is no way around that -- we need to locate it in the wbuf in order to find
 its associated value. However, we would like to reduce wbuf searches to a minimum. 
 To this end, each chunk holds a \emph{Bloom filter} for the corresponding funk's wbuf; 
@@ -101,7 +109,7 @@ Thanks to these Bloom filters, we eliminate most of the redundant wbuf searches.
 In most workloads, wbuf searches will be rare, as the wbuf only includes keys written to the chunk 
 since its last rebalance.
 
-\paragraph{Data structures.}
+\paragraph{Synchronization structures.}
 
 In addition to the chunk list and chunk index, \sys\ keeps a \emph{global version (GV)} for supporting atomic snapshot scans,
 as described below; it tracks active scans in a \emph{pending scan array (PSA)} for garbage collection purposes (old 
@@ -138,8 +146,7 @@ The replacement of a chunk (due to a split) or of a funk or munk associated with
 must be executed atomically, and moreover, must be synchronized with concurrent puts. 
 This is controlled by the chunk's \emph{rebalanceLock}, which is held for short time periods
 during chunk, funk, and munk replacements.  It is a shared/exclusive lock (r/w lock), acquired in shared mode 
-by put operations and in exclusive mode by rebalance. Gets and scans do not need to acquire the lock at all,
-and are completely wait-free.
+by put operations and in exclusive mode by rebalance. Gets and scans do not need to acquire the lock at all.
 
 To minimize I/O, we allow at most one thread to rebalance a funk at a given time; this is controlled by 
 the  funkChangeLock. This lock is used at a coarse granularity -- it is held throughout the creation of the new funk. 
@@ -147,11 +154,7 @@ It is acquired using a try\_lock call, and threads that fail to acquire it do no
 to complete the funk's creation.
 Finally, the chunk holds a data structure called PPA for synchronizing  puts with concurrent scans, as explained in the next section. 
 
-\subsection{Get and put operations}
-\label{ssec:ops}
 
-
-\Idit{Todo: add pseudo-code for normal read/write}
 
 
 \subsection{Supporting atomic scans}
@@ -189,7 +192,21 @@ a subtle race may arise. Consider a put operation that obtains version $7$ from 
 inserting the value to the chunk, while a scan obtains version $7$ and increments GV to $8$. The scan then proceeds 
 to read the appropriate chunk and does not find the new value although it should be included in its snapshot.
 
-To remedy this, we rely on a mechanism previously proposed in~\cite{kiwi} for synchronizing puts and scans in an in-memory map.  
+\inred{
+% SImplified PPA
+To remedy this, we have puts announce the key they intend to change when beginning their operations, and have scans wait for pending puts to complete.  The per-chunk PPA is used to synchronize pending puts  with ongoing scans. It holds an entry for every active inserting thread, consisting of a \code{key},  a \code{version}, 
+and a \code{done} bit indicating whether the update has been completed.
+A put operation first registers itself in the appropriate chunk's PPA entry with the key it intends to put.
+It thens reads GV and sets the version field in its PPA entry to the read version. 
+After completing the actual put (in the appropriate munk and/or funk), it sets the \code{done} bit.
+A scan, in turn, scans the PPA in addition to the chunk's data (karray or kstore). If it finds a pending put
+of a relevant key that is not yet associated with a version, it waits for the version to be assigned. 
+Once the version is assigned, it if it is the highest version for this key that does not exceed its scan time, 
+it waits for the \code{done} bit to be true or for the the \code{version} to change again, at  which point
+it reads the value from the appropriate munk or funk.
+}
+\remove{
+rely on a mechanism previously proposed in~\cite{kiwi} for synchronizing puts and scans in an in-memory map.  
 The idea is to have scans ``help'' puts obtain a version, and to make the inserted key-value pair visible the moment it has a version.
 The per-chunk PPA is used to synchronize pending puts  with ongoing scans. 
 The PPA holds an entry for every active inserting thread.
@@ -198,8 +215,28 @@ It thens reads GV, and attempts to set the version field in its PPA entry to the
 compare-and-swap (CAS) instruction. A scan, in turn, scans the PPA in addition to the chunk's data (karray 
 or kstore). If it finds a value associated with a version, it considers it to have been inserted (and returns it if the version is
 the highest version for this key that does not exceed its scan time). If it encounters a value without a version, the scan helps the put
-assign a version, also by attempting to CAS the PPA's version field to the current value of GV.
+}
 For symmetry, get operations synchronize with puts the same way that scans do. 
+
+\subsection{Normal operation flow}
+\label{ssec:ops}
+
+\sys\ \code{put} and \code{get} operations begin by locating the target chunk using the \code{lookup} function. In principle, this can be done by traversing the linked list, but that would result in a linear search time. To expedite the search,   \code{lookup} searches the index first, but since the index update is lazy, it may return a stale chunk that has already undergone rebalance or miss newly added chunks. To this end, the index search is repeated with a smaller key in case the index returns a stale chunk, and the index search is supplemented by a linked-list traversal. A similar approach was used in earlier works~\cite{kiwi,tdsl}. 
+
+After locating the appropriate chunk, the operations proceed to synchronize via the PPA as described in Section~\ref{ssec:scans} above. Namely, a \code{put} publishes itself in the PPA, whereas a \code{get} 
+checks the PPA for new puts and waits for them to complete. 
+
+Once all \code{put}s that were pending when a \code{get}  began complete, the 
+\code{get} proceeds without synchronization. If the chunk has a munk,  \code{get}   locates the key in the
+karray by first using binary search in its sorted prefix, and then traversing edges of the linked list. 
+Otherwise, the \code{get} searches the key in the \code{row cache}. If it is not found, it queries 
+the \code{Bloom filter} to learn whether the key might be present in the target chunk's  \code{kstore} or  \code{wbuf}, and if so, searches for it on disk.  
+
+After publishing itself in PPA, a \code{put} grabs the \code{rebalanceLock} in shared mode to ensure that the chunk is not being rebalanced during its operation. The \code{put} then allocates the next free entry in 
+the munk to its value by atomically fetching-and-incrementing the chunk's \code{seq}. 
+
+
+
 
 \subsection{Reorganization}
 \label{ssec:rebalance}

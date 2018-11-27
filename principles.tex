@@ -14,7 +14,7 @@ persistence with fast recovery.
 The key requirements from \sys\ are thus the following:
 \begin{description}
 %\item[Real-time updates] -- the system should allow updates to be processed at \inred{wire speed} with \inred{sub-millisecond} latency.  
-\item[High performance with memory-resident data sets] -- 
+\item[High performance with memory-resident working sets] -- 
 To sustain high throughput, key-value stores leverage increasing memory sizes where they can hold most of the active data set. 
 We strive for maximum performance in this ``high performance'' case.  
 \item[Fast recovery to consistent state] --  Because crashes are inevitable, the mean-time-to-recover from crashes should be kept short.
