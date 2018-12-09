@@ -73,54 +73,61 @@ reduces the flush rate, which slows down WAL recycling, and consequently prolong
 % PiWi
 %In this work we specifically target analytics workloads, with high ingestion rates and range scans of popular key ranges.
 In this work we propose a novel paradigm for KV-storage, diverging from the ubiquitous LSM approach.  
-We design and implement  \sys,  a \emph{persistent key-value store}, which minimizes read and write
-amplification and expedites atomic range scans. 
-%Whenever the data set entirely fits in memory, \sys\ writes data to a single memory location and a single disk location and reads data from a single memory location. 
- \sys\ further offers almost immediate recovery from  crashes. 
- 
- \remove{
-To minimize amplification, \sys\ leverages a common data structure for storing data in-memory and on-disk, 
-encompassing the data store as well as the WAL and the disk cache, thus unifying the read and write paths. 
-Our approach reduces compaction by selectively compacting only frequently-updated parts of the data structure, and not cold ones.
-It further reduces write amplification and I/O bottlenecks by eliminating the need for a WAL.
-Moreover, scans of popular key ranges are served from the in-memory data structure without accessing disk.
-} 
-
-% Data structure
-\sys's organization differs from that of LSM  in a number of significant ways: 
+We present \sys, an experimental {\em persistent key-value store}, which pursues the following goals: 
 \begin{enumerate}
-\item Instead of temporally partitioning data into files according to update times as in LSM, 
-\sys\ organizes data as  \emph{chunks} holding contiguous key ranges, both in memory and on disk. 
-Thus, reads
-only need to look for a key in one memory location and at most one file. Moreover, scans are highly efficient.
-%, both in-memory and on disk. 
 
-\remove{
-\item Whereas LSM buffers writes in a memory component and separately caches blocks of data for expediting reads,
-\sys\ unifies the read and write paths, using a common cache of popular chunks (key ranges) for both. 
-The cached in-memory chunks are called \emph{munks}. 
-}
-%Thus, reads need to access disk only in case the appropriate key 
-%range is not cached, and need to check at most one disk location. 
+\item{\bf Consistency} -- strict linearizability~\cite{Herlihy} of all operations, in particular range scans. 
 
-\item \sys\ uses a single on-disk data representation, which replaces both the WAL and the data store.  
-%A put operation writes the key-value pair exactly once on disk and at most once in memory.
-%This is achieved by (i) 
-%called \emph{funk} (file chunk)
- %and does not keep a WAL separately from the  data store.
-This reduces write amplification %as data needs to be written to disk exactly once, 
-and also expedites recovery from crashes by eliminating the need to replay the WAL. 
-% ; and (ii) a common cache for reads and writes. 
-\item Most compactions occur in memory, further reducing write amplification. This again leverages the fact that chunks holding
-popular key ranges are cached and can be compacted in-memory; files holding cold data can be compacted infrequently. 
+\item {\bf High performance}, in terms of throughput and latency, by exploiting the workload's  
+locality better than the LSM design. \sys's advantage is biggest when the working set fits in main memory. 
+
+\item {\bf Low write amplification}, by applying in-memory compaction whenever possible to avoid 
+on-disk compaction. 
+
+\item {\bf Near-instant recovery}, by avoiding the WAL replay process upon start-up. 
+\end{enumerate}
+
+\sys\/ introduces the following principles in order to achieve these goals: 
+\begin{enumerate}
+
+\item Instead of managing log-structured storage for the whole dataset, 
+\sys\/ organizes data as a collection of micro-partitions (chunks) holding contiguous key ranges, 
+both in memory and on disk. Whereas the LSM design keeps the write and read paths separate, 
+\sys\/ unifies them by maintaining a read-write cache of popular chunks in RAM. 
+
+\item In-memory chunks (named {\em munks}) accommodate both write and read operations. 
+They are maintained mostly ordered ordered through periodic background mink {\em rebalances}, 
+in the spirit of KiWi~\cite{KiWi}. Therefore, the gets and the scans that access these munks are 
+served very efficiently. The second-tier shared {\emph{row cache}} supports the efficiency of 
+gets that cannot be served from munks. 
+
+\item Every chunk is backed by a two private files: an ordered data store (named {\em funk}) 
+and a linear WAL. The latter logs the latest writes, to facilitate recovery. In contrast 
+with the LSM approach, {\em both\/} the funk and the WAL are searched by reads that cannot 
+be served from RAM. These reads access just these two locations -- in contrast with LSM reads  
+that has to search in multiple levels. \sys\/ strives to minimize the latency and volume of sequential 
+searches by keeping its WALs trimmed and maintaining Bloom filters for WAL data. 
+
+\item Since the WALs are inherently searchable, there is no need to replay them upon recovery. 
+Therefore, \sys\/ becomes instantly available to serve data. 
+
+\item There is no need to perform costly on-disk compaction for the funks that have in-memory 
+munks; they are just re-written when the munk snapshots are flushed back to disk. For unpopular chunks, 
+the background funk rebalance process infrequently merges the funk and the WAL in the background. 
+All in all, write amplification is reduced, especially for large datasets. 
  \end{enumerate}
 
-
-We have implemented \sys\ in C++. We compare it to version \Idit{what?} of RocksDB~\cite{rocks}, perhaps the most popular KV store implementation today.  
-% Results
-\Idit{Todo: Write something about results.
-Explain what we are better at and what we are worse at.} 
-
+We have implemented \sys\ in C++. We compare it to the recent release of RocksDB~\cite{rocks}, 
+an industry-leading KV-store technology based on LSM design. Our experiments, based on the popular 
+YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly surpasses RocksDB in terms of performance, 
+especially when the workload locality is high. For example, we observe up to 2.5x scan throughput, 2.2x
+get throughput, and 1.6 write throughput under high-locality workloads. We also demonstrate up to 2.5x 
+reduction in write amplification. We do not claim, however, that \sys\/ exceeds mature LSM-tree implementations 
+under all circumstances -- there are scenarios in which RocksDB perfoms better (e.g., low-locality highly dispersed 
+access patterns). The primary goal of our work is to draw attention to this new approach, leaving room for 
+future optimization. 
+ 
+The rest of this paper is organized as follows ... 
 
 
 
