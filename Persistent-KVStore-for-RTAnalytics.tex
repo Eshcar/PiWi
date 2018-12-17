@@ -25,7 +25,7 @@
 \newcommand{\remove}[1]{}
 \newcommand{\Idit}[1]{\inred{[Idit: #1]}}
 
-\newcommand{\sys}{FunkDB}
+\newcommand{\sys}{Pewee}
 
 \newcommand{\tuple}[1]{\ensuremath{\langle \mbox{#1} \rangle}}
 
@@ -73,27 +73,12 @@ $\epsilon^+$-trees and implelentations like Tucana~\cite{tucana}.
 \label{sec:design}
 \input{design}
 
+\section{Implementation}
+\label{sec:impl}
 
 \section{Evaulation}
 \label{sec:eval}
-
-To drive the benchmarks, we use the 
-YCSB framework in C++\footnote{\url{https://github.com/basicthinker/YCSB-C}}  
-
-We compare \sys\ to 
-\begin{enumerate}
-\item
-LevelDB\footnote{\url{http://leveldb.org/}}
-\item
-RocksDB\footnote{\url{http://rocksdb.org/}}
-\item
-RocksDB with cLSM extensions\footnote{\url{https://github.com/guyg8/rocksdb}}
-\end{enumerate}
-All three systems are configured to provided persistence, namely, no data loss, by using their synchronous logging mode.
-In addition, we deploy a single partition in each of the systems in order to provide consistent scans across the entire data store.
-
-We do not compare with Tucana~\cite{tucana} as its code has not been available; moreover, it does not support the persistency and consistency guarantees that \sys\ provides. 
-
+\input{eval}
 
 \section{Conclusions}
 \label{sec:conclusions}
