@@ -22,9 +22,14 @@ The dataset build stage sequentially fills an empty KV-store with the target num
 the evaluation stage performs 80 million data accesses, equally spread across the worker threads.   
 
 \paragraph{Workloads.} 
+
 We use the following key distributions. 
 
 \begin{enumerate}
+\item {\em Zipf}. 
+\item {\em Zipf-prefix}. 
+\item {\em Latest}. 
+\end{enumerate}
 
 \paragraph{\sys\/ configuration.} 
 
