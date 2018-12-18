@@ -1,0 +1,53 @@
+We extensively compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
+
+\subsection{Setup}
+We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular YCSB~\cite{YCSB} benchmarking platform. 
+YCSB provides a framework for KV-store comparisons, through a set of common data access API's and standard workloads. 
+Most modern KV-stores implement  YCSB adapter API's. The platform decouples data access from workload generation, 
+thereby providing common ground for backend comparison. A workload is characterized by a combination of get, put, 
+and scan accesses, as well as by a synthetic distribution of keys and values. YCSB provides a set of benchmark workloads
+inspired by real-life applications, and allows developing new ones through workload generation API's. 
+
+A typical YCSB instance stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
+workloads. It aggregates the key performance metrics for the scenario under test, e.g., total throughput and tail access latencies. 
+
+\paragraph{Environment.}
+Our experiment testbed is a 12-core Intel Xeon 5 machine with 4TB SSD disk. The driver application exercises 12 threads (maximum parallelism). In order to guarantee a fair memory allocation to all KV-stores, we run each experiment 
+within a Linux container with 16 GB RAM. 
+
+\paragraph{Data.} We use datasets of size 4 GB to 64 GB. Similarly to the published RocksDB benchmarks, we use 
+10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
+
+The dataset build stage sequentially fills an empty KV-store with the target number of KV-pairs. Following this, 
+the evaluation stage performs 80 million data accesses, equally spread across the worker threads.   
+
+\paragraph{Workloads.} 
+We use the following key distributions. 
+
+\begin{enumerate}
+
+\paragraph{\sys\/ configuration.} 
+
+\subsection{Results}
+
+\paragraph{YCSB-P (100\% put, Zipf and Zipf-prefix distributions).} 
+
+\paragraph{YCSB-A (50\% put, 50\% get, Zipf and Zipf-prefix distributions).} 
+
+\paragraph{YCSB-B (5\% put, 95\% get, Zipf and Zipf-prefix distributions).}
+
+\paragraph{YCSB-C (100\% get, Zipf and Zipf-prefix distributions).}  
+
+\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).}
+
+\paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-prefix distributions).}
+
+\remove{
+To drive the benchmarks, we use the 
+YCSB framework in C++\footnote{\url{https://github.com/basicthinker/YCSB-C}}  
+
+All three systems are configured to provided persistence, namely, no data loss, by using their synchronous logging mode.
+In addition, we deploy a single partition in each of the systems in order to provide consistent scans across the entire data store.
+
+We do not compare with Tucana~\cite{tucana} as its code has not been available; moreover, it does not support the persistency and consistency guarantees that \sys\ provides. 
+}
