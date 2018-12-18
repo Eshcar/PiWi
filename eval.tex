@@ -19,19 +19,29 @@ within a Linux container with 16 GB RAM.
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 
 The dataset build stage sequentially fills an empty KV-store with the target number of KV-pairs. Following this, 
-the evaluation stage performs 80 million data accesses, equally spread across the worker threads.   
+the evaluation stage performs 80 million data accesses, evenly spread across the worker threads.   
 
 \paragraph{Workloads.} 
 
-We use the following key distributions. 
+Our experiments leverage the following workloads.  
 
 \begin{enumerate}
 \item {\em Zipf}. 
-\item {\em Zipf-prefix}. 
+\item {\em Zipf-range}. 
 \item {\em Latest}. 
 \end{enumerate}
 
-\paragraph{\sys\/ configuration.} 
+\paragraph{Configuration.} 
+
+We set the \sys\/ hard chunk size limit to 10 MB, and the rebalance threshold to $0.7$ -- that is, 
+most chunks are bound by 7 MB. 
+
+We allocate a quota of 11 GB memory (out of the 16 GB container) to the munk cache and the row cache. 
+For the Zipf and Latest workloads, 7 GB are given to munks. For the Zipf-range workloads, 9 GB 
+are given to munks.  We limit the write buffer size to 2 MB for write-intensive workloads, and to $0.5$ MB 
+for read intensive-workloads. 
+  
+We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
 \subsection{Results}
 
