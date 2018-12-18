@@ -111,10 +111,14 @@ its associated value. However, we would like to reduce \code{wbuf} searches to a
 To this end, each munk-less chunk holds a \emph{Bloom filter} for the corresponding funk's \code{wbuf}; 
 this is a statistical data structure that summarizes a set of keys so that 
 when queried for a key that is included in it always returns true (no false negatives), 
-and otherwise returns false with some high probability (low false positive probability). 
+and otherwise returns false with some high probability (low false positive probability).
 Using Bloom filters, we eliminate most of the redundant \code{wbuf}  searches.
-In most workloads, actual \code{wbuf}  searches will be rare, as the \code{wbuf}  only includes keys written to the chunk 
-since its last rebalance.
+To reduce the \code{wbuf} search time in case it does happen, 
+we further  partition the Bloom filter into a  handful of filters, each summarizing the 
+content of part of the \code{wbuf}; this allows us to know not only whether or not to search the 
+\code{wbuf}, but also which part of it to search.  
+ 
+
 
 
 \paragraph{Chunk structure.}
@@ -142,7 +146,7 @@ It further includes a Bloom filter as explained above.
 \State ptr \code{bloomFilter} \Comment summary of set of keys in \code{wbuf}
 \State asymmetric lock \code{rebalanceLock} \Comment shared/exclusive lock 
 \State lock \code{funkChangeLock} \Comment acquired with try\_lock 
-\State \code{$\langle$key, version, done, counter$\rangle$  PPA[threads]} \Comment pending puts
+% \State \code{$\langle$key, version, done, counter$\rangle$  PPA[threads]} \Comment pending puts
 \end{algorithmic}
 
 \caption{Chunk data structure.}
@@ -170,8 +174,8 @@ In addition to the chunk list and chunk index, \sys\ keeps a \emph{global versio
 \emph{Pending Operations (PO)} array, which has one entry per active thread. 
 The PO is used to synchronize puts with scans, as well as for  garbage collection purposes (old 
 versions not needed by any active scan can be reclaimed).
-
-
+We note that using a single pending array to synchronize all operations can cause contention, which we
+mitigate in our implementation by tracking the pending puts in per-chunk arrays as described in~\cite{kiwi}. 
 
 \subsection{Multi-versioning for atomic scans}
 \label{ssec:scans}
@@ -425,7 +429,7 @@ migrate the \code{wbuf}'s new tail to the new chunk and swing the funk pointer i
 \centerline{
 \includegraphics[width=\columnwidth]{state-diagram.png}
 }
-\caption{Chunk lifecycle; immutable states are grey and mutable ones are white.
+\caption{Chunk life cycle; immutable states are grey and mutable ones are white.
 Chunk splits  create new chunks in immutable \emph{baby} status, which changes to the mutable \emph{child} state once they 
 are indexed. When the appropriate funks are created, the chunks become \emph{active}. All rebalance operations go through an 
 \emph{asleep} state when the chunk is immutable.}
@@ -460,6 +464,7 @@ RAM only and periodically \emph{flushing} them to disk. This reduces write laten
 may lead to loss of data that was written shortly before the crash. The tradeoffs between the two approaches are 
 well known and the choice is typically left to the user.
 
+\paragraph{Recovery semantics.}
 In the synchronous mode, every put operation performs a flush after writing the data in the appropriate funk's \code{wbuf}, and then returns. 
 This ensures that the funks always reflect all completed updates. In this case, recovery is straightforward: we simply construct
 the chunks linked list from the funks on disk, and then the database is immediately ready to serve new requests, populating munks on-demand.  
@@ -472,7 +477,49 @@ if \code{k2} appears in the data store, then \code{k1} must appear in it as well
 conversely, if the update of \code{k1}  is lost, \code{k2}  must be also excluded.
 Such recovery to a \emph{consistent snapshot} of the data store is important for applications where later updates may depend on earlier ones. 
 
-\Idit{Add description of the background thread that takes a consistent snapshot, the incarnation numbers table, and the validation in gets} 
+\paragraph{Checkpointing for consistent recovery.}
+
+To support recovery to a consistent snapshot, we use a background process to
+periodically create and persist \emph{checkpoints} of the data store.
+The checkpointing process creates a snapshot similarly to the atomic scan mechanism. That is, 
+it begins by fetching-and-incrementing GV to obtain a 
+ snapshot version \code{gv}.  Next, 
+it synchronizes with pending puts via PO to ensure that all puts with smaller versions are complete. 
+It then flushes all the pending writes to disk (using an \code{fsync} call). 
+Once the flush is complete, it writes \code{gv} to a dedicated \emph{checkpoint file} on disk,
+indicating that all updates pertaining to versions smaller than or equal to this version have been persisted.
+Note that some puts with higher versions than \code{gv} might be reflected on disk while others are not. 
+
+Recovery in \sys\ is lazy, keeping all data on disk, and 
+allowing it to be fetched from disk into munks  on demand in the course of the normal operation mode. 
+But to ensure consistency, following a recovery,  
+retrievals from funks should ignore newer versions that were not included in the latest completed checkpoint before the crash. This must be done by every operation that reads data from a funk -- \code{get} or \code{scan} from a munk-less chunk, funk rebalance,  or a munk load. 
+
+To facilitate this check, 
+we distinguish between pre-crash versions and new ones created after recovery, using \emph{incarnation numbers}. Specifically, a version is split into an incarnation number (in our implementation, the four most-significant bits of the version) and a per-incarnation version number. The normal mode operation incrementing the GV in effect increases the latter, and the former is incremented as part of the recovery procedure. 
+We maintain a \code{recoveryTable} mapping each recovered incarnation to its last checkpointed version number. 
+For example, Table~\ref{table:recovery} shows a possible state of the recovery table after two recoveries, i.e., during incarnation $2$. 
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{ll}
+incarnation & checkpoint number \\
+\hline
+0 & 1375\\
+1 &  956\\
+\end{tabular}
+\end{center}
+\caption{Example recovery table during incarnation $2$.}
+\label{table:recovery}
+\end{table} 
+ 
+Every read from a funk  (during \code{get},  \code{scan}, funk rebalance,  and munk load) then
+refers to the recovery table in order to identify versions that should be ignored -- these are versions from old incarnations that exceed the checkpoint number for their incarnation. 
+
+The recovery procedure is very simple: it reads the checkpoint time from disk, loads the \code{recoveryTable} into memory, adds a new row to it with the last incarnation and latest checkpoint time, and persists it again. It then increments the incarnation number, and resumes normal operation with version numnber $0$ in the new incarnation.
+
+
+
 
 \remove{
 \subsection{\sys\ operations}

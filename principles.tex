@@ -58,7 +58,8 @@ individual popular keys are cached in a \emph{row cache},
 and \emph{Bloom filters} are used to limit excessive access to disk. 
 
 
-\paragraph{Multi-versioning and CoW for atomic scans.} \sys\ employs copy-on-write to keep data versions required by atomic scans. 
+\paragraph{Multi-versioning for atomic scans.} \sys\ employs multi-versioning along with
+copy-on-write to keep data versions required by atomic scans. 
 In other words, if a put attempts to overwrite a key  required by an active scan, then a new version is created alongside the 
 existing one, whereas old versions that are not needed by any scan are not retained. 
 Thus, version management incurs a low overhead (as it occurs only on scans). It also defines a simple rule for garbage collecting old versions.
