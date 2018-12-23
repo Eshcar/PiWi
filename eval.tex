@@ -89,11 +89,11 @@ amplification under write-intensive workloads (YCSB-P and YCSB-A).
 
 \paragraph{YCSB-P (100\% put, Zipf and Zipf-range distributions).} 
 \sys's throughput is $30\%$ to $50\%$ above RocksDB, in most of the data points (Figure~\ref{fig:throughput:p}). 
-Its advantage is most pronounced when the dataset fully fits into RAM (4 GB and 8 GB). This is explained by 
-\sys's significant reduction in disk I/O versus the LSM design in write-intensive scenarios. \sys\/ maintains its
-internal data ordering mostly via in-memory munk rebalances, in contrast with RocksDB's on-disk compactions. 
+%Its advantage is most pronounced when the dataset fully fits into RAM (4 GB and 8 GB). 
+This is explained by \sys's significant reduction in disk I/O versus the LSM design in write-intensive scenarios. 
+\sys\/ maintains its internal data ordering mostly via in-memory munk rebalances, in contrast with RocksDB's 
+on-disk compactions. This manifests in reduced write amplification versus RocksDB (Figure~\ref{fig:writeamp:p}). 
 %When the dataset is small versus the available memory, it never resorts to funk rebalances (the equivalent of LSM compactions). 
-This manifests in reduced write amplification versus RocksDB (Figure~\ref{fig:writeamp:p}). 
 
 Interestingly, the write amplification ratio is smallest when the dataset is big. 
 e.g., only $1.15$ versus $3.03$ for the 32 GB dataset under the Zipf workload. 
