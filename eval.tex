@@ -23,12 +23,23 @@ the evaluation stage performs 80 million data accesses, evenly spread across the
 
 \paragraph{Workloads.} 
 
-Our experiments leverage the following workloads.  
+Our experiments leverage multiple workloads: 
 
 \begin{enumerate}
-\item {\em Zipf}. 
-\item {\em Zipf-range}. 
-\item {\em Latest}. 
+\item {\em Zipf}. . The key frequencies are sampled from the heavy-tailed Zipf distribution, 
+following the description in~\cite{?}, with $\theta = 0.8$. The keys themselves are sampled 
+uniformly at random from the whole data range. This is a standard YCSB workload that captures
+a multitude of use cases -- e.g., a web page cache distribution. 
+
+\item {\em Zipf-range}. Similar to Zipf ($\theta=0.8$), except that we sample the key's $14$ most significant bits
+(MSBs) rather than the complete key. The remainder of the key sampled uniformly at random. This workload
+captures a multitude of mini-clusters of varying popularity -- for example, user posts in a social 
+network~\cite{linkbench} or mobile app event logs~\cite{flurry}. In this setting, the key is structured
+as a combination of the user (resp., app) id and the post (resp., event) id.  
+
+\item {\em Latest}. New records are inserted, and the most recently inserted records are the 
+most popular (e.g., status updates and reads). Also, a standard YCSB workload.  
+
 \end{enumerate}
 
 \paragraph{Configuration.} 
