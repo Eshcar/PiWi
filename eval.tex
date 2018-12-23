@@ -1,4 +1,6 @@
 We extensively compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
+It is worth noting that RocksDB's performance improved extensively during the last two years, primarily through 
+optimized LSM compaction scheduling~\cite{RocksDBProgress}.   
 
 \subsection{Setup}
 We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular YCSB~\cite{YCSB} benchmarking platform. 
@@ -15,7 +17,8 @@ workloads. It aggregates the key performance metrics for the scenario under test
 Our experiment testbed is a 12-core Intel Xeon 5 machine with 4TB SSD disk. The driver application exercises 12 threads (maximum parallelism). In order to guarantee a fair memory allocation to all KV-stores, we run each experiment 
 within a Linux container with 16 GB RAM. 
 
-\paragraph{Data.} We use datasets of size 4 GB to 64 GB. Similarly to the published RocksDB benchmarks, we use 
+\paragraph{Data.} We scale the dataset size from 4 GB to 64 GB, in order to exercise multiple locality 
+scenarios with respect to the available RAM. Similarly to the published RocksDB benchmarks, we use 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 
 The dataset build stage sequentially fills an empty KV-store with the target number of KV-pairs. Following this, 
@@ -28,21 +31,34 @@ Our experiments leverage multiple workloads:
 \begin{enumerate}
 \item {\em Zipf}. . The key frequencies are sampled from the heavy-tailed Zipf distribution, 
 following the description in~\cite{?}, with $\theta = 0.8$. The keys themselves are sampled 
-uniformly at random from the whole data range. This is a standard YCSB workload that captures
+uniformly at random from the whole data range. Zipf exhibits medium locality -- e.g., the most 
+popular key's frequency is approximately $0.7\%$. This is a standard YCSB workload that captures
 a multitude of use cases -- e.g., a web page cache distribution. 
 
 \item {\em Zipf-range}. Similar to Zipf ($\theta=0.8$), except that we sample the key's $14$ most significant bits
-(MSBs) rather than the complete key. The remainder of the key sampled uniformly at random. This workload
-captures a multitude of mini-clusters of varying popularity -- for example, user posts in a social 
-network~\cite{linkbench} or mobile app event logs~\cite{flurry}. In this setting, the key is structured
-as a combination of the user (resp., app) id and the post (resp., event) id.  
+(MSBs) rather than the complete key. The remainder of the key sampled uniformly at random. Zipf-range exhibits
+higher locality than Zipf. This workload captures a multitude of mini-clusters of varying popularity -- 
+for example, user posts in a social network~\cite{linkbench} or mobile app event logs~\cite{flurry}. 
+In this setting, the key is structured as a combination of the user (resp., app) id and the post (resp., event) id. 
 
 \item {\em Latest}. New records are inserted, and the most recently inserted records are the 
-most popular (e.g., status updates and reads). Also, a standard YCSB workload.  
-
+most popular (e.g., status updates and reads). This is a standard YCSB workload with very high 
+locality. 
 \end{enumerate}
 
+The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
+(A to E) that capture write-savvy ($50\%$ puts) to read-savvy ($95\%-100\%$ gets or scans) settings. 
+We 
+
+In order to stress the system even more on the write side, we introduce a new workload, named 
+YCSB-P, comprised of $100\%$ puts. It captures a heavy-duty data load scenario (e.g., from an 
+external data pipeline). 
+
 \paragraph{Configuration.} 
+
+We only present the performance results that exercise asynchronous puts -- as synchronous puts 
+are approximately 10 times slower, thereby trivializing the performance results of every scenario 
+they are part of. 
 
 We set the \sys\/ hard chunk size limit to 10 MB, and the rebalance threshold to $0.7$ -- that is, 
 most chunks are bound by 7 MB. 
@@ -54,19 +70,51 @@ for read intensive-workloads.
   
 We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
-\subsection{Results}
+\subsection{Results -- Mainstream Scenarios}
 
-\paragraph{YCSB-P (100\% put, Zipf and Zipf-prefix distributions).} 
+\begin{figure*}
+\caption{\bf{\sys\/ versus RocksDB throughput, under multiple workloads and scaling dataset sizes.}}
+\label{fig:throughput}
+\end{figure*}
 
-\paragraph{YCSB-A (50\% put, 50\% get, Zipf and Zipf-prefix distributions).} 
+\begin{figure*}
+\caption{\bf{\sys\/ versus RocksDB write amplification, under write-intensive workloads and scaling dataset sizes.}}
+\label{fig:writeamp}
+\end{figure*}
+
+%\subsubsection{Throughput}
+Figure~\ref{fig:throughput} summarizes the overall system throughput (operations per second, or ops) 
+measured across all scenarios and dataset sizes under study. Figure~\ref{fig:writeamp} presents write 
+amplification under write-intensive workloads (YCSB-P and YCSB-A). 
+
+\paragraph{YCSB-P (100\% put, Zipf and Zipf-range distributions).} 
+\sys's throughput is $30\%$ to $50\%$ above RocksDB, in most of the data points (Figure~\ref{fig:throughput:p}). 
+Its advantage is most pronounced when the dataset fully fits into RAM (4 GB and 8 GB). This is explained by 
+\sys's significant reduction in disk I/O versus the LSM design in write-intensive scenarios. \sys\/ maintains its
+internal data ordering mostly via in-memory munk rebalances, in contrast with RocksDB's on-disk compactions. 
+%When the dataset is small versus the available memory, it never resorts to funk rebalances (the equivalent of LSM compactions). 
+This manifests in reduced write amplification versus RocksDB (Figure~\ref{fig:writeamp:p}). 
+
+Interestingly, the write amplification ratio is smallest when the dataset is big. 
+e.g., only $1.15$ versus $3.03$ for the 32 GB dataset under the Zipf workload. 
+This happens because in LSM  trees, big datasets spread into multiple levels. 
+This leads to more compactions, which in turn translate to rewriting big volumes of data, 
+regardless of whether this data is hot or cold. In contrast, \sys's funk rebalances 
+happen mostly to medium-popularity chunks (the highly popular ones have munks), 
+and therefore rewrite less bytes.  
+
+\paragraph{YCSB-A (50\% put, 50\% get, Zipf and Zipf-range distributions).}
 
 \paragraph{YCSB-B (5\% put, 95\% get, Zipf and Zipf-prefix distributions).}
 
-\paragraph{YCSB-C (100\% get, Zipf and Zipf-prefix distributions).}  
+\paragraph{YCSB-C (100\% get, Zipf and Zipf-range distributions).}  
 
 \paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).}
 
-\paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-prefix distributions).}
+\paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-range distributions).}
+We experiment with short-to-medium scans - 10, 100, and 1000 rows. 
+
+\subsection{Results -- Recovery Scenarios}
 
 \remove{
 To drive the benchmarks, we use the 
