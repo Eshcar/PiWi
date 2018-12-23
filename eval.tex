@@ -20,6 +20,7 @@ within a Linux container with 16 GB RAM.
 \paragraph{Data.} We scale the dataset size from 4 GB to 64 GB, in order to exercise multiple locality 
 scenarios with respect to the available RAM. Similarly to the published RocksDB benchmarks, we use 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
+The data is stored uncompressed. 
 
 The dataset build stage sequentially fills an empty KV-store with the target number of KV-pairs. Following this, 
 the evaluation stage performs 80 million data accesses, evenly spread across the worker threads.   
