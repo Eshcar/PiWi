@@ -49,7 +49,6 @@ locality.
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
 (A to E) that capture write-savvy ($50\%$ puts) to read-savvy ($95\%-100\%$ gets or scans) settings. 
-We 
 
 In order to stress the system even more on the write side, we introduce a new workload, named 
 YCSB-P, comprised of $100\%$ puts. It captures a heavy-duty data load scenario (e.g., from an 
@@ -73,38 +72,119 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 
 \subsection{Results -- Mainstream Scenarios}
 
-\begin{figure*}
+\begin{figure*}[tb]
+\centering
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-P}
+\label{fig:throughput:p}
+\end{subfigure}
+\hspace{0.2\linewidth}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-A}
+\label{fig:throughput:a}
+\end{subfigure}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-B}
+\label{fig:throughput:b}
+\end{subfigure}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-C}
+\label{fig:throughput:c}
+\end{subfigure}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-D}
+\label{fig:throughput:d}
+\end{subfigure}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-E10}
+\label{fig:throughput:e10}
+\end{subfigure}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-E100}
+\label{fig:throughput:e100}
+\end{subfigure}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-E1000}
+\label{fig:throughput:e1000}
+\end{subfigure}
 \caption{\bf{\sys\/ versus RocksDB throughput, under multiple workloads and scaling dataset sizes.}}
 \label{fig:throughput}
 \end{figure*}
 
 \begin{figure*}
+\centering
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.3\linewidth}
+\caption{YCSB-P}
+\label{fig:writeamp:p}
+\end{subfigure}
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.25\linewidth}
+\caption{YCSB-A}
+\label{fig:writeamp:a}
+\end{subfigure}
 \caption{\bf{\sys\/ versus RocksDB write amplification, under write-intensive workloads and scaling dataset sizes.}}
 \label{fig:writeamp}
 \end{figure*}
 
 %\subsubsection{Throughput}
-Figure~\ref{fig:throughput} summarizes the overall system throughput (operations per second, or ops) 
-measured across all scenarios and dataset sizes under study. Figure~\ref{fig:writeamp} presents write 
-amplification under write-intensive workloads (YCSB-P and YCSB-A). 
+Figure~\ref{fig:throughput} summarizes the overall system throughput (operations per second) 
+measured across all scenarios and dataset sizes. 
+%Figure~\ref{fig:writeamp} presents write amplification under write-intensive workloads 
+%(YCSB-P and YCSB-A). 
 
 \paragraph{YCSB-P (100\% put, Zipf and Zipf-range distributions).} 
-\sys's throughput is $30\%$ to $50\%$ above RocksDB, in most of the data points (Figure~\ref{fig:throughput:p}). 
-%Its advantage is most pronounced when the dataset fully fits into RAM (4 GB and 8 GB). 
-This is explained by \sys's significant reduction in disk I/O versus the LSM design in write-intensive scenarios. 
-\sys\/ maintains its internal data ordering mostly via in-memory munk rebalances, in contrast with RocksDB's 
-on-disk compactions. This manifests in reduced write amplification versus RocksDB (Figure~\ref{fig:writeamp:p}). 
-%When the dataset is small versus the available memory, it never resorts to funk rebalances (the equivalent of LSM compactions). 
+\sys's throughput is $30\%$ to $50\%$ above RocksDB's across the board 
+(Figure~\ref{fig:throughput:p}). This is explained by \sys's significant reduction 
+in disk I/O versus the LSM design in write-intensive scenarios, for all dataset sizes: 
 
-Interestingly, the write amplification ratio is smallest when the dataset is big. 
-e.g., only $1.15$ versus $3.03$ for the 32 GB dataset under the Zipf workload. 
-This happens because in LSM  trees, big datasets spread into multiple levels. 
-This leads to more compactions, which in turn translate to rewriting big volumes of data, 
-regardless of whether this data is hot or cold. In contrast, \sys's funk rebalances 
-happen mostly to medium-popularity chunks (the highly popular ones have munks), 
-and therefore rewrite less bytes.  
+\begin{enumerate}
+\item {\em Small dataset (8GB or less).} \sys\/ accommodates munks for all chunks,
+and manages all puts in memory. The munks are flushed to disk infrequently, in order 
+to roll the chunk WAL's. In contrast, RocksDB performs on-disk compactions from time 
+to time, due to its LSM-tree structure.   
+
+\item{\em Big dataset (16 GB or more).} \sys\/ manages the popular chunks in RAM, 
+and resorts to periodic on-disk funk rebalances for the less less popular chunks. The 
+funk rebalance frequency depends on the chunk's popularity. In contrast, RocksDB 
+compactions rewrite on-disk data regardless on whether it is hot or cold. As the dataset
+becomes bigger, RocksDB spreads into more levels, hence its compactions become 
+more frequent and involve more data.  
+\end{enumerate}
+
+Figure~\ref{fig:writeamp:p} corroborates the above observations, by comparing 
+\sys's write amplification to RocksDB's. \sys\/ reduces the disk write rate dramatically, 
+with the largest gain observed for big datasets (e.g., $1.15$ versus $3.03$ for the 32 GB 
+database). As a nice by-product, \sys\/ is also more efficient with respect to disk wear.  
+
+As expected, with small datasets \sys\/ performs better under the Zipf-range workload  
+in comparison with the Zipf workload, due to higher locality. 
 
 \paragraph{YCSB-A (50\% put, 50\% get, Zipf and Zipf-range distributions).}
+
+This scenario is particularly challenging because it stresses both the write and the read paths. 
+The latter exercises \sys's munk cache as well as its row cache (which was not used by the previous 
+scenario). Table~\ref{tab:hitrate} summarizes the hit rate by cache type, to explain the read performance. 
+
+Similarly to YCSB-P, we analyze two scenarios: 
+
+\begin{enumerate}
+\item {\em Small dataset.} Both \sys\/ and RocksDB exhibit near-perfect hit ratio. RocksDB needs to search 
+both its memtable and block cache, whereas \sys\/ serves all puts and gets directly from munks. Overall, it
+achieves $50\%$ to $100\%$ better throughput.
+
+\item {\em Big dataset.} \sys's read performance depends on the workload's locality. For example, 
+the Zipf-range workload is highly local, and is therefore served effectively by \sys's munk cache. 
+Its throughput is $30\%$ to $50\%$ higher than RocksDB's across the board. The Zipf workload
+is more dispersed, and therefore, \sys\/ resorts to the row cache and I/O optimizations to serve it.  
+Thanks to its fine granularity, the row cache serves a big fraction of gets that are not covered by the munks. 
+For example, for the 64 GB dataset it serves $74\%$ of the gets that miss the munk cache. The rest are served 
+from the disk data structures -- the key store and the WAL. TBD ... 
+
+\end{enumerate}
+
+The write-path behavior is similar to YCSB-P (e.g., see Figure~\ref{fig:writeamp:a} for the write
+amplification statistics). 
 
 \paragraph{YCSB-B (5\% put, 95\% get, Zipf and Zipf-prefix distributions).}
 
