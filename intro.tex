@@ -1,7 +1,26 @@
 
 
 
+% KV-stores are everywhere
+Key-value stores (KV-stores) are widely adopted by a broad range of applications, and are projected
+to continue to increase in popularity in years to come; market research  identifies them as the 
+``driving factors'' of the NoSQL market, which is expected to garner \$4.2B by 2020~\cite{alliedmarketresearch}.
 
+% In many applications, data locality is in ranges
+For performance reasons,  KV-stores  commonly employ a single primary key representing 
+an agglomerate of attributes. Range scans are then used to collect all the rows associated with
+a particular attribute. For instance,  in messaging and email applications such as  Facebook Messages,
+keys are typically a concatenation of user-id and post-id, and range scans are used 
+for efficient retrieval of multiple rows, e.g., the last 100
+messages of a given user, or the hourly impression counts over the last 24 hours for a given advertiser~\cite{Borthakur:2011:AHG:1989323.1989438}. 
+Similarly, social network applications \Idit{Check linkbench}
+and analytics (Flurry).
+
+
+\Idit{LSM is not ideal for this  because of (1) write path and (2) read path.
+
+We propose a better design for data with locality in ranges.
+}
 
 \remove{
 % Removed RT analytics - not sure this is our pitch
@@ -19,11 +38,12 @@ and scan them in ranges, the skewness is reflected for key ranges rather than in
 Underlying today's real-time analytics systems are large \emph{key-value (KV)-stores}, such as RocksDB~\cite{rocks},  
 to which data is ingested at a high rate, and which simultaneously serve 
 \emph{range scans} for analytics queries. Such data stores need to be \emph{persistent} following crashes.   
-}
+
 
 % Motivation
 The booming NoSQL market, which broadly aggregates the technologies for storage, serving and analysis of very large volumes of unstructured data, is expected to garner \$4.2B by 2020~\cite{alliedmarketresearch}. %\footnote{\url{https://www.alliedmarketresearch.com/press-release/NoSQL-market-is-expected-to-reach-4-2-billion-globally-by-2020-allied-market-research.html}}. 
 Key-value (KV)-stores~\cite{Aerospike, Bigtable, Cassandra, DynamoDB, HBase, Redis, RocksDB, Scylla} are the fastest-growing market segment among the NoSQL platforms. They offer a simple yet powerful data abstraction that is  attractive for a variety of applications, e.g., e-commerce~\cite{DynamoDB}, search indexing~\cite{Percolator}, product recommendation~\cite{NetflixCassandraSpark}, user modeling~\cite{AirbnbHBase}, etc. Modern KV-storage technologies provide scalability and speed far beyond the reach of traditional RDBMS technologies, at a fraction of cost. The new generation of relational databases~\cite{MyRocks, Phoenix} uses KV-store infrastructure as building block, in order to apply its multiple benefits to structured data management. 
+}
 
 % Analytics, DRAM, persistence
 The drop in DRAM prices (more than $6.6$x since 2010~\cite{StatistaReport}) stimulates proliferation of 
