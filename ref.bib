@@ -1,13 +1,73 @@
-%% This BibTeX bibliography file was created using BibDesk.
-%% http://bibdesk.sourceforge.net/
+@article{O'Neil1996,
+ author = {O'Neil, Patrick and Cheng, Edward and Gawlick, Dieter and O'Neil, Elizabeth},
+ title = {The Log-structured Merge-tree ({LSM}-tree)},
+ journal = {Acta Inf.},
+ issue_date = {1996},
+ volume = {33},
+ number = {4},
+ month = jun,
+ year = {1996},
+ pages = {351--385},
+ }
 
-%% Created for Idit Keidar at 2018-12-25 14:16:23 +0200 
+@inproceedings{Muth1998,
+ author = {Muth, Peter and O'Neil, Patrick E. and Pick, Achim and Weikum, Gerhard},
+ title = {Design, Implementation, and Performance of the LHAM Log-Structured History Data Access Method},
+ booktitle = {Proceedings of the 24rd International Conference on Very Large Data Bases},
+ series = {VLDB '98},
+ year = {1998},
+ pages = {452--463},
+ numpages = {12},
+ }
 
+@article{accordion,
+ author = {Bortnikov, Edward and Braginsky, Anastasia and Hillel, Eshcar and Keidar, Idit and Sheffi, Gali},
+ title = {Accordion: Better Memory Organization for LSM Key-value Stores},
+ journal = {Proc. VLDB Endow.},
+ issue_date = {August 2018},
+ volume = {11},
+ number = {12},
+ month = aug,
+ year = {2018},
+  pages = {1863--1875},
+ numpages = {13},
+} 
 
-%% Saved with string encoding Unicode (UTF-8) 
+@article{WiscKey,
+ author = {Lu, Lanyue and Pillai, Thanumalayan Sankaranarayana and Gopalakrishnan, Hariharan and Arpaci-Dusseau, Andrea C. and Arpaci-Dusseau, Remzi H.},
+ title = {WiscKey: Separating Keys from Values in SSD-Conscious Storage},
+ journal = {ACM Trans. Storage},
+ issue_date = {March 2017},
+ volume = {13},
+ number = {1},
+ month = mar,
+ year = {2017},
+ pages = {5:1--5:28},
+ articleno = {5},
+ numpages = {28},
+ keywords = {LevelDB, WiscKey, flash-based SSDs},
+}
 
+@inproceedings{PebblesDB,
+ author = {Raju, Pandian and Kadekodi, Rohan and Chidambaram, Vijay and Abraham, Ittai},
+ title = {PebblesDB: Building Key-Value Stores Using Fragmented Log-Structured Merge Trees},
+ booktitle = {Proceedings of the 26th Symposium on Operating Systems Principles},
+ series = {SOSP '17},
+ year = {2017},
+ pages = {497--514},
+ numpages = {18},
+ url = {http://doi.acm.org/10.1145/3132747.3132765},
+ keywords = {key-value stores, log-structured merge trees, write-optimized data structures},
+} 
 
-
+@inproceedings {triad,
+author = {Oana Balmau and Diego Didona and Rachid Guerraoui and Willy Zwaenepoel and Huapeng Yuan and Aashray Arora and Karan Gupta and Pavan Konka},
+title = {{TRIAD}: Creating Synergies Between Memory, Disk and Log in Log Structured Key-Value Stores},
+booktitle = {2017 {USENIX} Annual Technical Conference ({USENIX} {ATC} 17)},
+year = {2017},
+pages = {363--375},
+publisher = {{USENIX} Association},
+}
 
 @inproceedings{Borthakur:2011:AHG:1989323.1989438,
  author = {Borthakur, Dhruba and Gray, Jonathan and Sarma, Joydeep Sen and Muthukkaruppan, Kannan and Spiegelberg, Nicolas and Kuang, Hairong and Ranganathan, Karthik and Molkov, Dmytro and Menon, Aravind and Rash, Samuel and Schmidt, Rodrigo and Aiyer, Amitanand},
@@ -35,12 +95,8 @@
 	Title = {{NoSQL} Market is Expected to Reach \$4.2 Billion, Globally, by 2020 }}
 
 @inproceedings{kiwi,
-	Acmid = {3018761},
-	Address = {New York, NY, USA},
 	Author = {Basin, Dmitry and Bortnikov, Edward and Braginsky, Anastasia and Golan-Gueta, Guy and Hillel, Eshcar and Keidar, Idit and Sulamy, Moshe},
 	Booktitle = {Proceedings of the 22Nd ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
-	Doi = {10.1145/3018743.3018761},
-	Isbn = {978-1-4503-4493-7},
 	Keywords = {lock-free key-value map, wait-free atomic scans},
 	Location = {Austin, Texas, USA},
 	Numpages = {13},
@@ -48,10 +104,7 @@
 	Publisher = {ACM},
 	Series = {PPoPP '17},
 	Title = {KiWi: A Key-Value Map for Scalable Real-Time Analytics},
-	Url = {http://doi.acm.org/10.1145/3018743.3018761},
 	Year = {2017},
-	Bdsk-Url-1 = {http://doi.acm.org/10.1145/3018743.3018761},
-	Bdsk-Url-2 = {https://doi.org/10.1145/3018743.3018761}}
 
 @inproceedings{tucana,
 	Address = {Denver, CO},
@@ -64,14 +117,6 @@
 	Url = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/papagiannis},
 	Year = {2016},
 	Bdsk-Url-1 = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/papagiannis}}
-
-@inproceedings{wttm2016,
-	Author = {Bapi Chatterjee},
-	Booktitle = {WTTM},
-	Date-Added = {2016-08-01 08:56:02 +0000},
-	Date-Modified = {2016-08-01 08:57:37 +0000},
-	Title = {Lock-Free Linearizable 1-Dimensional Range Queries},
-	Year = {2016}}
 
 @misc{phablet,
 	Date-Added = {2016-07-12 11:10:45 +0000},
@@ -89,32 +134,84 @@
 	Howpublished = {\url{https://developer.yahoo.com/flurry/docs/analytics/}},
 	Title = {Flurry Analytics}}
 
-@inproceedings{bpc16,
-	Author = {Anastasia Braginsky and Erez Petrank and Nachshon Cohen},
-	Booktitle = {{Euro-Par}},
-	Date-Added = {2016-07-11 12:46:05 +0000},
-	Date-Modified = {2016-07-11 12:54:30 +0000},
-	Title = {{CBPQ}: High Performance Lock-Free Priority Queue},
-	Year = {2016}}
+@misc {leveldb,
+title = {A fast and lightweight key/value database library by Google},
+month = jan,
+year={2014},
+howpublished= "\url{http://code.google.com/p/leveldb}"
+}
 
-@misc{leveldb,
-	Howpublished = {\url{http://code.google.com/p/leveldb}},
-	Month = jan,
-	Title = {A fast and lightweight key/value database library by Google},
-	Year = {2014}}
+@misc {HyperLevelDB,
+title = {HyperLevelDB},
+month = apr,
+year={2014},
+howpublished= "\url{https://github.com/rescrv/HyperLevelDB}"
+}
+
+@misc {RocksDB,
+title = {A persistent key-value store for fast storage environments},
+month = jun,
+year={2014},
+howpublished= "\url{http://rocksdb.org/}"
+}
+
+@misc {hbase,
+title = {Apache HBase, a distributed, scalable, big data store},
+month = apr,
+year={2014},
+howpublished= "\url{http://hbase.apache.org/}"
+}
+
+@misc {scylladb,
+title = {Scylla The Real-Time Big Data Database},
+year={2018},
+howpublished= "\url{https://www.scylladb.com/}"
+}
+
+@misc{hyperdex,
+title = {HyperLevelDB Performance Benchmarks},
+month = apr,
+year={2014},
+howpublished = "\url{http://hyperdex.org/performance/leveldb}"
+}
+
+@article{FBMessaging2012,
+  author = {Aiyer, A. and
+	Bautin, M. and
+	Chen, G. and
+	Damania, P. and
+	Khemani, P. and
+	Muthukkaruppan, P. and
+	Ranganathan, K. and
+	Spiegelberg, N. and
+	Tang, L. and
+	Vaidya, M.},
+  title = {{Storage Infrastructure Behind Facebook Messages: Using HBase at Scale}},
+journal = {{IEEE Data Eng. Bull}},
+volume=35,
+issue=2,
+year=2012,
+pages={4--13}
+}
+
+
+@article{cassandra2010,
+ author = {Lakshman, Avinash and Malik, Prashant},
+ title = {Cassandra: A Decentralized Structured Storage System},
+ journal = {SIGOPS Oper. Syst. Rev.},
+ issue_date = {April 2010},
+ volume = {44},
+ number = {2},
+ month = apr,
+ year = {2010},
+ pages = {35--40},
+}
 
 @misc{RocksDB,
 	Howpublished = {\url{http://rocksdb.org/}},
 	Month = jun,
 	Title = {A persistent key-value store for fast storage environments},
 	Year = {2014}}
-
-@inproceedings{ArbelGHK15,
-	Author = {Maya Arbel and Guy Golan{-}Gueta and Eshcar Hillel and Idit Keidar},
-	Booktitle = {{DISC}},
-	Pages = {170--184},
-	Title = {Towards Automatic Lock Removal for Scalable Synchronization},
-	Year = {2015}}
 
 @inproceedings{Lomet13,
 	Author = {Lomet, David B. and Sengupta, Sudipta and Levandoski, Justin J.},
@@ -123,40 +220,6 @@
 	Title = {The Bw-Tree: A B-tree for New Hardware Platforms},
 	Year = {2013}}
 
-@incollection{mv-stm-chapter,
-	Author = {Idit Keidar and Dmitri Perelman},
-	Booktitle = {Transactional Memory; Foundations, Algorithms, Tools, and Applications},
-	Chapter = {7},
-	Pages = {150--165},
-	Title = {Multi-versioning in Transactional Memory},
-	Volume = {8913},
-	Year = {2015}}
-
-@inproceedings{Kogan12,
-	Author = {Kogan, Alex and Petrank, Erez},
-	Booktitle = {{PPoPP}},
-	Pages = {141--150},
-	Title = {A Methodology for Creating Fast Wait-free Data Structures},
-	Year = {2012}}
-
-@inproceedings{Hendler04,
-	Author = {Hendler, Danny and Shavit, Nir and Yerushalmi, Lena},
-	Booktitle = {{SPAA}},
-	Pages = {206--215},
-	Title = {A Scalable Lock-free Stack Algorithm},
-	Year = {2004}}
-
-@misc{JavaConcurrentSkipList,
-	Howpublished = {\url{https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentSkipListMap.html}},
-	Title = {{Java Concurrent Skip List}}}
-
-@misc{JavaArrayCopy,
-	Howpublished = {\url{https://docs.oracle.com/javase/7/docs/api/java/lang/System.html}},
-	Title = {{Java Array Copy}}}
-
-@misc{ApacheHBase,
-	Howpublished = {\url{https://hbase.apache.org/}},
-	Title = {{Apache HBase -- a Distributed Hadoop Database}}}
 
 @book{Knuth:1998:ACP:280635,
 	Address = {Redwood City, CA, USA},
@@ -174,7 +237,7 @@
 	Title = {The Art of Multiprocessor Programming},
 	Year = {2008}}
 
-@inproceedings{GolanGueta2015,
+@inproceedings{clsm2015,
 	Author = {Golan-Gueta, Guy and Bortnikov, Edward and Hillel, Eshcar and Keidar, Idit},
 	Booktitle = {{EuroSys}},
 	Pages = {32:1--32:14},
@@ -189,7 +252,7 @@
 	Title = {Concurrency Control and Recovery in Database Systems},
 	Year = {1987}}
 
-@article{Chang2008,
+@article{Bigtable2008,
 	Author = {Chang, Fay and Dean, Jeffrey and Ghemawat, Sanjay and Hsieh, Wilson C. and Wallach, Deborah A. and Burrows, Mike and Chandra, Tushar and Fikes, Andrew and Gruber, Robert E.},
 	Issn = {0734-2071},
 	Journal = {ACM Trans. Comput. Syst.},
@@ -206,47 +269,6 @@
 	Title = {F1: A Distributed SQL Database That Scales},
 	Year = 2013}
 
-@inproceedings{Fatourou07,
-	Acmid = {1281108},
-	Address = {New York, NY, USA},
-	Author = {Fatourou, Panagiota and Kallimanis, Nikolaos D.},
-	Booktitle = {Proceedings of the Twenty-sixth Annual ACM Symposium on Principles of Distributed Computing},
-	Date-Added = {2016-02-09 09:23:44 +0000},
-	Date-Modified = {2016-02-09 09:24:08 +0000},
-	Doi = {10.1145/1281100.1281108},
-	Isbn = {978-1-59593-616-5},
-	Keywords = {asynchronous, compare-and-swap (CAS), distributed algorithms, linearizable objects, single-scanner, snapshots, wait-free implementations},
-	Location = {Portland, Oregon, USA},
-	Numpages = {10},
-	Pages = {33--42},
-	Publisher = {ACM},
-	Series = {PODC '07},
-	Title = {Time-optimal, Space-efficient Single-scanner Snapshots \& Multi-scanner Snapshots Using CAS},
-	Url = {http://doi.acm.org/10.1145/1281100.1281108},
-	Year = {2007},
-	Bdsk-Url-1 = {http://doi.acm.org/10.1145/1281100.1281108},
-	Bdsk-Url-2 = {http://dx.doi.org/10.1145/1281100.1281108}}
-
-@inproceedings{Jayanti05,
-	Acmid = {1060697},
-	Address = {New York, NY, USA},
-	Author = {Jayanti, Prasad},
-	Booktitle = {Proceedings of the Thirty-seventh Annual ACM Symposium on Theory of Computing},
-	Date-Added = {2016-02-09 09:21:12 +0000},
-	Date-Modified = {2016-02-09 09:21:27 +0000},
-	Doi = {10.1145/1060590.1060697},
-	Isbn = {1-58113-960-8},
-	Keywords = {asynchronous, concurrent algorithm, fault-tolerant, lock-free, snapshot, wait-free},
-	Location = {Baltimore, MD, USA},
-	Numpages = {10},
-	Pages = {723--732},
-	Publisher = {ACM},
-	Series = {STOC '05},
-	Title = {An Optimal Multi-writer Snapshot Algorithm},
-	Url = {http://doi.acm.org/10.1145/1060590.1060697},
-	Year = {2005},
-	Bdsk-Url-1 = {http://doi.acm.org/10.1145/1060590.1060697},
-	Bdsk-Url-2 = {http://dx.doi.org/10.1145/1060590.1060697}}
 
 @inproceedings{Prokopec12,
 	Author = {Prokopec, Aleksandar and Bronson, Nathan Grasso and Bagwell, Phil and Odersky, Martin},
@@ -266,28 +288,6 @@
 	Title = {Database Management Systems},
 	Year = {2003}}
 
-@inproceedings{Petrank2013,
-	Author = {Petrank, Erez and Timnat, Shahar},
-	Booktitle = {{DISC}},
-	Pages = {224--238},
-	Title = {Lock-Free Data-Structure Iterators},
-	Year = {2013}}
-
-@inproceedings{Fraser04,
-	Author = {K. Fraser},
-	Booktitle = {PhD dissertation, University of Cambridge},
-	Date-Added = {2016-02-01 15:08:40 +0000},
-	Date-Modified = {2016-02-01 15:08:40 +0000},
-	Title = {Practical Lock-Freedom},
-	Year = {2004}}
-
-@inproceedings{kary,
-	Author = {Trevor Brown and Joanna Helga},
-	Booktitle = {{OPODIS}},
-	Pages = {207--221},
-	Title = {Non-blocking k-ary Search Trees},
-	Year = {2011}}
-
 @inproceedings{LogDRAM,
 	Author = {Stephen M. Rumble and Ankita Kejriwal and John K. Ousterhout},
 	Bibsource = {dblp computer science bibliography, http://dblp.org},
@@ -302,13 +302,6 @@
 	Url = {https://www.usenix.org/conference/fast14/technical-sessions/presentation/rumble},
 	Year = {2014},
 	Bdsk-Url-1 = {https://www.usenix.org/conference/fast14/technical-sessions/presentation/rumble}}
-
-@inproceedings{LinkedListBP,
-	Author = {Anastasia Braginsky and Erez Petrank},
-	Booktitle = {{ICDCN}},
-	Pages = {107--118},
-	Title = {Locality-Conscious Lock-Free Linked Lists},
-	Year = {2011}}
 
 @book{Welch2004,
 	Author = {Welch, Jennifer L. and Attiya, Hagit},
@@ -332,88 +325,6 @@
 	Bdsk-Url-1 = {http://doi.acm.org/10.1145/78969.78972},
 	Bdsk-Url-2 = {http://dx.doi.org/10.1145/78969.78972}}
 
-@inproceedings{HerlihyLLS2007,
-	Author = {Maurice Herlihy and Yossi Lev and Victor Luchangco and Nir Shavit},
-	Booktitle = {{SIROCCO}},
-	Numpages = {15},
-	Pages = {124--138},
-	Title = {A Simple Optimistic Skiplist Algorithm},
-	Year = {2007}}
-
-@inproceedings{BronsonCCO2010,
-	Author = {Nathan Grasso Bronson and Jared Casper and Hassan Chafi and Kunle Olukotun},
-	Booktitle = {PPOPP},
-	Pages = {257--268},
-	Title = {A practical concurrent binary search tree.},
-	Year = {2010}}
-
-@inproceedings{EllenFRB2010,
-	Author = {Faith Ellen and Panagiota Fatourou and Eric Ruppert and Franck van Breugel},
-	Booktitle = {PODC},
-	Keywords = {binary search tree, cas, non-blocking, shared memory},
-	Pages = {131--140},
-	Title = {Non-blocking Binary Search Trees},
-	Year = {2010}}
-
-@inproceedings{AfekKKMT2012,
-	Author = {Yehuda Afek and Haim Kaplan and Boris Korenfeld and Adam Morrison and Robert E. Tarjan},
-	Booktitle = {DISC},
-	Pages = {1--15},
-	Title = {{CBTree}: A Practical Concurrent Self-adjusting Search Tree},
-	Year = {2012}}
-
-@inproceedings{BraginskyP2012,
-	Author = {Anastasia Braginsky and Erez Petrank},
-	Booktitle = {SPAA},
-	Pages = {58--67},
-	Title = {A Lock-free {B}+Tree},
-	Year = {2012}}
-
-@inproceedings{CrainGR2013,
-	Acmid = {2529849},
-	Author = {Tyler Crain and Vincent Gramoli and Michel Raynal},
-	Booktitle = {19th International Conference on Parallel Processing (Euro-Par)},
-	Isbn = {978-3-642-40046-9},
-	Keywords = {binary tree, concurrent data structures, efficient implementation},
-	Location = {Aachen, Germany},
-	Numpages = {12},
-	Pages = {229--240},
-	Title = {A Contention-friendly Binary Search Tree},
-	Year = {2013}}
-
-@inproceedings{BrownER2014,
-	Author = {Trevor Brown and Faith Ellen and Eric Ruppert},
-	Booktitle = {PPoPP},
-	Pages = {329--342},
-	Title = {A General Technique for Non-blocking Trees},
-	Year = {2014}}
-
-@inproceedings{NatarajanM2014,
-	Author = {Aravind Natarajan and Neeraj Mittal},
-	Booktitle = {PPoPP},
-	Pages = {317--328},
-	Title = {Fast Concurrent Lock-free Binary Search Trees},
-	Year = {2014}}
-
-@inproceedings{DrachslerVY2014,
-	Author = {Dana Drachsler and Martin T. Vechev and Eran Yahav},
-	Booktitle = {PPoPP},
-	Pages = {343--356},
-	Title = {Practical concurrent binary search trees via logical ordering.},
-	Year = {2014}}
-
-@inproceedings{ArbelA2014,
-	Author = {Maya Arbel and Hagit Attiya},
-	Booktitle = {PODC},
-	Pages = {196--205},
-	Title = {Concurrent updates with {RCU:} search tree as an example},
-	Year = {2014}}
-
-@inproceedings{Gramoli2015,
-	Author = {Vincent Gramoli},
-	Booktitle = {PPoPP},
-	Title = {More Than You Ever Wanted to Know about Synchronization: Synchrobench, Measuring the Impact of the Synchronization on Concurrent Algorithms},
-	Year = {2015}}
 
 @book{Weikum:2001,
 	Address = {San Francisco, CA, USA},
@@ -444,41 +355,6 @@
 	Volume = {5},
 	Year = {2010}}
 
-@article{Afek93,
-	Acmid = {153741},
-	Address = {New York, NY, USA},
-	Author = {Afek, Yehuda and Attiya, Hagit and Dolev, Danny and Gafni, Eli and Merritt, Michael and Shavit, Nir},
-	Date-Modified = {2016-02-10 19:27:55 +0000},
-	Doi = {10.1145/153724.153741},
-	Issn = {0004-5411},
-	Issue_Date = {Sept. 1993},
-	Journal = {J. ACM},
-	Keywords = {atomic, consistent state, fault-tolerance, snapshot},
-	Month = sep,
-	Number = {4},
-	Numpages = {18},
-	Pages = {873--890},
-	Publisher = {ACM},
-	Title = {Atomic Snapshots of Shared Memory},
-	Url = {http://doi.acm.org/10.1145/153724.153741},
-	Volume = {40},
-	Year = {1993},
-	Bdsk-Url-1 = {http://doi.acm.org/10.1145/153724.153741},
-	Bdsk-Url-2 = {http://dx.doi.org/10.1145/153724.153741}}
-
-@inproceedings{BrownA12,
-	Author = {Brown, Trevor and Avni, Hillel},
-	Booktitle = {OPODIS},
-	Pages = {31--45},
-	Title = {Range Queries in Non-blocking k-ary Search Trees},
-	Year = {2012}}
-
-@inproceedings{Spiegelman:2016,
-	Author = {Spiegelman, Alexander and Golan-Gueta, Guy and Keidar, Idit},
-	Booktitle = {PLDI},
-	Pages = {682--696},
-	Title = {Transactional Data Structure Libraries},
-	Year = {2016}}
 
 @article{Sowell:2012,
 	Acmid = {2311915},
