@@ -1,6 +1,19 @@
-PO array is split into PSA and per-chunk PPAs, employs 
-helping as in KiWi. 
+We implement \sys\ in C++. It is partially based on RocksDB open source library~\cite{RocksDB}.
+Specifically, the implementation of \sys\ STables is based on the SSTable code in RocksDB since it supports similar functionality of append writes and efficient searches. 
 
-Generations.  
+%PO array is split into PSA and per-chunk PPAs, as kiwi; DO NOT MENTION employs  helping as in KiWi. 
+We note that using a single pending array to synchronize all
+operations can cause unnecessary contention.
+We mitigate this problem in our implementation by maintaining two data structures for coordinating different operations similar to the solution used in~\cite{kiwi}. The first is a per-chunk pending put array (PPA) maps each thread either to a cell in the chunk that the thread is currently attempting to put into and a corresponding version, or an indication that the thread is currently not performing a put. The second is a global pending scan array (PSA) tracks versions used by pending scans for compaction purposes; each entry consists of a version ver and a sequence number seq, as well as the scan’s key range. Each entry in the PPAs and PSA includes, in addition to the operation metadata, an aba~\footnote{ABA phenomena- ...} sequence number. 
 
-Our current implementation does not support chunk merges. 
+A put operation consists of 5 phases: (1) \emph{pre-processing} - locate the target chunk and if a munk exists prepare a cell to insert with the written value; (2) \emph{publishing} - obtain a version while synchronizing with concurrent scans and rebalances via the chunk's lock and publish its existence in the chunk's PPA; (3) \emph{persisting} - write the data into the log, indicate it is persisted in the PPA; (4) \emph{linking} - if a munk exists, connect the new cell to the linked list, so it can be found through the list traversal, otherwise, update cache to latest version if key is present in the cache; and finally (5) \emph{cleaning} - clear the entry in the chunk's PPA, and increase the entry's aba number.
+If the put operation is unable to acquire the chunk's lock (since it is being rebalanced) the operation restarts, hoping it will find an active chunk this time.
+
+The version number is composed of the GV and a per-chunk linearization number that is used to determine the order of put operations to the same key with the same GV value.  The sequence number is composed of two parts: (a) \emph{a generation number} - incremented whenever a munk is cached into memory and when the munk is rebalanced; and (b) \emph{a sequential number} - incremented upon each put operation and is set to the number of cells in a munk upon a new generation number. When a new chunk is created as a result of a split, the child chunks inherit their generation number from their parent. The version number is written both to the PPA upon publishing the put operation, and to the log when persisting the data. This ensures all operations see the same order of writes per key.
+
+The scan operation first publishes its intent to obtain a version in the PSA. It determines its scan time $t$ by increasing GV and writing it to its entry in the PSA. The scan operation then starts traversing the chunks in its range. For each chunck, first wait for all put operations that are either with smaller version than $t$ or still have not acquired a version to clear their entry in the PPA or acquire a larger version. After waiting for all concurrent puts to complete, the scan operation can read the range from the chunck. If a munk exists simply read the range from the linked list, skipping versions of keys that are not last before $t$. Otherwise, the scan merge-sort the content of the STable and the log and read the range from the result, again skipping versions of keys that are not last before $t$. When the scan completes it clears the entry in the PSA, and increase the entry's aba number. Get operations do not access neither the PSA nor the PPA data structures.
+
+Finally, rebalance operations go through the PSA to collect the maximum version number of active scans that can not be reclaimed yet. If a scan publishes an intent in the PSA but not yet a version number the rebalance operation waits until a version is published or the aba number in the entry is increased. It then acquires the chunk's lock to block additional put operation. If executing a funk rebalance it also acquires the funk rebalance lock for the chunk. After completeing the rebalance operation and placing the new content of the chunk in place including the updated metadata, all locks are released.
+
+
+\inred{TBD. Our current implementation does not support chunk merges. }
