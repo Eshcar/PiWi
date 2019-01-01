@@ -25,7 +25,7 @@
 \newcommand{\remove}[1]{}
 \newcommand{\Idit}[1]{\inred{[Idit: #1]}}
 
-\newcommand{\sys}{Pewee}
+\newcommand{\sys}{YoDB}
 
 \newcommand{\tuple}[1]{\ensuremath{\langle \mbox{#1} \rangle}}
 
@@ -43,7 +43,7 @@
 % Actual document begins below.
 \begin{document}
 
-\title{\Large \bf \sys: Re-thinking Design Principles for Key-Value Storage} 
+\title{\Large \bf \sys: Rethinking Design Principles for Key-Value Storage} 
 \author{}
 \maketitle
 
@@ -51,23 +51,10 @@
 
 TBD
 
-
 \section{Introduction}
 \input{intro}
 
-\section{Related Work}
-\label{sec:related}
-
-LSM stores -- RocksDB, HyperLevelDB, LevelDB, cLSM, BLSM, PebbleDB.
-TRIAD-atc17.pdf, 
-Accordion, 
-Wiskey.
-
-$\epsilon^+$-trees and implelentations like Tucana~\cite{tucana}.
-% Btrfs does not seem relevant, the empahsis there is CoW instead of MVCC
-
-
-\section{Design Princples}
+\section{Design Principles}
 \label{sec:principles}
 \input{principles}
 
@@ -77,10 +64,15 @@ $\epsilon^+$-trees and implelentations like Tucana~\cite{tucana}.
 
 \section{Implementation}
 \label{sec:impl}
+\input{impl}
 
-\section{Evaulation}
+\section{Evaluation}
 \label{sec:eval}
 \input{eval}
+
+\section{Related Work}
+\label{sec:related}
+\input{related}
 
 \section{Conclusions}
 \label{sec:conclusions}
