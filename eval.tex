@@ -14,37 +14,34 @@ A typical YCSB instance stress-tests the backend KV-store through a pool of conc
 workloads. It aggregates the key performance metrics for the scenario under test, e.g., total throughput and tail access latencies. 
 
 \paragraph{Environment.}
-Our experiment testbed is a 12-core Intel Xeon 5 machine with 4TB SSD disk. The driver application exercises 12 threads (maximum parallelism). In order to guarantee a fair memory allocation to all KV-stores, we run each experiment 
-within a Linux container with 16 GB RAM. 
+Our experiment testbed is a 12-core Intel Xeon 5 machine with 4TB SSD disk. The driver application exercises 12 workers 
+(maximum parallelism). In order to guarantee a fair memory allocation to all KV-stores, we run each experiment within 
+a Linux container with 16 GB RAM. 
 
 \paragraph{Data.} We scale the dataset size from 4 GB to 64 GB, in order to exercise multiple locality 
 scenarios with respect to the available RAM. Similarly to the published RocksDB benchmarks, we use 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 The data is stored uncompressed. 
 
-The dataset build stage sequentially fills an empty KV-store with the target number of KV-pairs. Following this, 
-the evaluation stage performs 80 million data accesses, evenly spread across the worker threads.   
-
 \paragraph{Workloads.} 
-
 Our experiments leverage multiple workloads: 
 
 \begin{enumerate}
-\item {\em Zipf}. . The key frequencies are sampled from the heavy-tailed Zipf distribution, 
-following the description in~\cite{?}, with $\theta = 0.8$. The keys themselves are sampled 
-uniformly at random from the whole data range. Zipf exhibits medium locality -- e.g., the most 
-popular key's frequency is approximately $0.7\%$. This is a standard YCSB workload that captures
-a multitude of use cases -- e.g., a web page cache distribution. 
+\item {\em Zipf}. The key frequencies are sampled from the heavy-tailed Zipf distribution, 
+following the description in~\cite{Gray:1994:QGB:191839.191886}, with $\theta = 0.8$. 
+The keys themselves are sampled uniformly at random from the whole data range. Zipf exhibits 
+medium temporal locality (e.g., the most popular key's frequency is approximately $0.7\%$), 
+and no spatial locality. This is a standard YCSB workload that captures a multitude of use cases 
+-- e.g., a web page cache distribution by URL. 
 
 \item {\em Zipf-range}. Similar to Zipf ($\theta=0.8$), except that we sample the key's $14$ most significant bits
 (MSBs) rather than the complete key. The remainder of the key sampled uniformly at random. Zipf-range exhibits
-higher locality than Zipf. This workload captures a multitude of mini-clusters of varying popularity -- 
-for example, user posts in a social network~\cite{linkbench} or mobile app event logs~\cite{flurry}. 
-In this setting, the key is structured as a combination of the user (resp., app) id and the post (resp., event) id. 
+a workload of high spatial locality, e.g., message threads~\cite{Borthakur:2011:AHG:1989323.1989438}. 
 
-\item {\em Latest}. New records are inserted, and the most recently inserted records are the 
-most popular (e.g., status updates and reads). This is a standard YCSB workload with very high 
-locality. 
+\item {\em Latest}. New KV-pairs are inserted in sequential key order; the most recently inserted ones are 
+the  most popular (the sampled key's position wrt from the most recent key is distributed Zipf). This is a 
+standard YCSB workload of medium spatial and temporal locality that exhibits, e.g., status updates and reads. 
+
 \end{enumerate}
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
@@ -54,20 +51,23 @@ In order to stress the system even more on the write side, we introduce a new wo
 YCSB-P, comprised of $100\%$ puts. It captures a heavy-duty data load scenario (e.g., from an 
 external data pipeline). 
 
+\paragraph{Evaluation methodology.} Each experiment consists of two stages. The first stage builds 
+the dataset, by filling an initially empty store with an sequence of KV-pairs, ordered by key. The second 
+phase exercises the specific scenario; all worker threads follow the same access pattern. Most experiments 
+perform 80 M data accesses. The experiments that run scans perform 4 M to 16 M accesses, depending on 
+the scan size. We run 5 experiments for each data point, and present the median metric measurement. 
+
 \paragraph{Configuration.} 
+We only present the performance metrics in asynchronous logging mode -- as synchronous logging 
+is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-We only present the performance results that exercise asynchronous puts -- as synchronous puts 
-are approximately 10 times slower, thereby trivializing the performance results of every scenario 
-they are part of. 
-
-We set the \sys\/ hard chunk size limit to 10 MB, and the rebalance threshold to $0.7$ -- that is, 
+We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
 most chunks are bound by 7 MB. 
 
-We allocate a quota of 11 GB memory (out of the 16 GB container) to the munk cache and the row cache. 
-For the Zipf and Latest workloads, 7 GB are given to munks. For the Zipf-range workloads, 9 GB 
-are given to munks.  We limit the write buffer size to 2 MB for write-intensive workloads, and to $0.5$ MB 
-for read intensive-workloads. 
-  
+We allocate a quota of 13.5 GB RAM (out of the 16 GB container) to the munk cache and the row cache, 
+and split it between the two at a $2:1$ ratio. The log size threshold auto-tuned by \sys\/ varies from    
+$0.5$ MB to 2 MB. 
+
 We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
 \subsection{Results -- Mainstream Scenarios}
