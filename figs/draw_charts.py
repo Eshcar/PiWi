@@ -6,19 +6,27 @@ from matplotlib.ticker import FuncFormatter
 
 x_axis = ["4GB", "8GB", "16GB", "32GB", "64GB"]
 workloads = ['S', 'P', 'A', 'B', 'C', 'E-', 'E', 'E+', 'D']
+line_color = {'Rocks Flurry': {'color': 'b', 'linestyle': '--'},
+              'Rocks Zipf': {'color': 'r', 'linestyle': '--'},
+              'Rocks Latest': {'color': 'b', 'linestyle': '--'},
+              'Piwi Flurry': {'color': 'b', 'linestyle': '-'},
+              'Piwi Zipf': {'color': 'r', 'linestyle': '-'},
+              'Piwi Latest': {'color': 'b', 'linestyle': '-'}}
 
 
 def draw_line_chart(chart_name, lines):
 
     fig, ax = plt.subplots()
     for line in lines:
-        ax.plot(x_axis, line['data'], label=line['label'])
+        ax.plot(x_axis, line['data'], label=line['label'],
+                color=line_color[line['label']]['color'],
+                linestyle=line_color[line['label']]['linestyle'])
 
     ax.set(xlabel='', ylabel='Throughput',
            title=chart_name)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
-
+    plt.ylim(0)
     plt.legend(loc=1)
     plt.savefig(chart_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -76,7 +84,6 @@ def calculate_speedups(workload, distributions):
 
 def main():
     experiments = read_csv()
-
     # draw line charts:
     for workload in workloads:
         draw_line_chart('Workload ' + workload,
