@@ -1,77 +1,3 @@
-@inproceedings{YCSB,
-  author    = {Brian F. Cooper and
-               Adam Silberstein and
-               Erwin Tam and
-               Raghu Ramakrishnan and
-               Russell Sears},
-  title     = {Benchmarking cloud serving systems with {YCSB}},
-  booktitle = {Proceedings of the 1st {ACM} Symposium on Cloud Computing, SoCC 2010,
-               Indianapolis, Indiana, USA, June 10-11, 2010},
-  pages     = {143--154},
-  year      = {2010},
-  crossref  = {DBLP:conf/cloud/2010},
-  url       = {https://doi.org/10.1145/1807128.1807152},
-  doi       = {10.1145/1807128.1807152},
-  timestamp = {Tue, 06 Nov 2018 11:07:34 +0100},
-  biburl    = {https://dblp.org/rec/bib/conf/cloud/CooperSTRS10},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-@proceedings{DBLP:conf/cloud/2010,
-  editor    = {Joseph M. Hellerstein and
-               Surajit Chaudhuri and
-               Mendel Rosenblum},
-  title     = {Proceedings of the 1st {ACM} Symposium on Cloud Computing, SoCC 2010,
-               Indianapolis, Indiana, USA, June 10-11, 2010},
-  publisher = {{ACM}},
-  year      = {2010},
-  isbn      = {978-1-4503-0036-0},
-  timestamp = {Wed, 07 Jul 2010 08:39:58 +0200},
-  biburl    = {https://dblp.org/rec/bib/conf/cloud/2010},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-
-@misc{StatistaReport,
- Howpublished = {\url{https://www.statista.com/statistics/298821/dram-average-unit-price/}},
- title = {Average selling price of DRAM  1Gb equivalent units from 2009 to 2017 (in U.S. dollars)}
- }
-
-@misc{flurry-data-model,
- Howpublished = {\url{https://developer.yahoo.com/flurry/docs/api/code/analyticsapi/appevent/?guccounter=1}},
- title = {App Events Data} 
-}
-
-@inproceedings{linkbench,
-  author    = {Timothy G. Armstrong and
-               Vamsi Ponnekanti and
-               Dhruba Borthakur and
-               Mark Callaghan},
-  title     = {LinkBench: a database benchmark based on the Facebook social graph},
-  booktitle = {Proceedings of the {ACM} {SIGMOD} International Conference on Management
-               of Data, {SIGMOD} 2013, New York, NY, USA, June 22-27, 2013},
-  pages     = {1185--1196},
-  year      = {2013},
-  crossref  = {DBLP:conf/sigmod/2013},
-  url       = {https://doi.org/10.1145/2463676.2465296},
-  doi       = {10.1145/2463676.2465296},
-  timestamp = {Tue, 06 Nov 2018 11:07:38 +0100},
-  biburl    = {https://dblp.org/rec/bib/conf/sigmod/ArmstrongPBC13},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-@proceedings{DBLP:conf/sigmod/2013,
-  editor    = {Kenneth A. Ross and
-               Divesh Srivastava and
-               Dimitris Papadias},
-  title     = {Proceedings of the {ACM} {SIGMOD} International Conference on Management
-               of Data, {SIGMOD} 2013, New York, NY, USA, June 22-27, 2013},
-  publisher = {{ACM}},
-  year      = {2013},
-  url       = {http://dl.acm.org/citation.cfm?id=2463676},
-  isbn      = {978-1-4503-2037-5},
-  timestamp = {Wed, 26 Jun 2013 08:41:29 +0200},
-  biburl    = {https://dblp.org/rec/bib/conf/sigmod/2013},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-
 @article{O'Neil1996,
  author = {O'Neil, Patrick and Cheng, Edward and Gawlick, Dieter and O'Neil, Elizabeth},
  title = {The Log-structured Merge-tree ({LSM}-tree)},
@@ -201,8 +127,7 @@ publisher = {{USENIX} Association},
 	Publisher = {ACM},
 	Series = {PPoPP '17},
 	Title = {KiWi: A Key-Value Map for Scalable Real-Time Analytics},
-	Year = {2017}
-}
+	Year = {2017},
 
 @inproceedings{tucana,
 	Address = {Denver, CO},
@@ -250,7 +175,7 @@ howpublished= "\url{https://github.com/rescrv/HyperLevelDB}"
 title = {A persistent key-value store for fast storage environments},
 month = jun,
 year={2014},
-howpublished= {\url{http://rocksdb.org/}}
+howpublished= "\url{http://rocksdb.org/}"
 }
 
 @misc {hbase,
@@ -305,7 +230,11 @@ pages={4--13}
  pages = {35--40},
 }
 
-
+@misc{RocksDB,
+	Howpublished = {\url{http://rocksdb.org/}},
+	Month = jun,
+	Title = {A persistent key-value store for fast storage environments},
+	Year = {2014}}
 
 @inproceedings{Lomet13,
 	Author = {Lomet, David B. and Sengupta, Sudipta and Levandoski, Justin J.},
@@ -486,3 +415,27 @@ pages={4--13}
 	Year = {2012},
 	Bdsk-Url-1 = {http://doi.acm.org/10.1145/2168836.2168855},
 	Bdsk-Url-2 = {https://doi.org/10.1145/2168836.2168855}}
+
+
+@misc{Cpp-YCSB,
+	Howpublished = {\url{https://github.com/basicthinker/YCSB-C}},
+	Title = {Yahoo! Cloud Serving Benchmark in C++, a C++ version of YCSB},
+	Year = {2014}}
+
+@inproceedings{Cooper:2010:BCS:1807128.1807152,
+ author = {Cooper, Brian F. and Silberstein, Adam and Tam, Erwin and Ramakrishnan, Raghu and Sears, Russell},
+ title = {Benchmarking Cloud Serving Systems with YCSB},
+ booktitle = {Proceedings of the 1st ACM Symposium on Cloud Computing},
+ series = {SoCC '10},
+ year = {2010},
+ isbn = {978-1-4503-0036-0},
+ location = {Indianapolis, Indiana, USA},
+ pages = {143--154},
+ numpages = {12},
+ url = {http://doi.acm.org/10.1145/1807128.1807152},
+ doi = {10.1145/1807128.1807152},
+ acmid = {1807152},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {benchmarking, cloud serving database},
+} 

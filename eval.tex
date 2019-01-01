@@ -3,7 +3,8 @@ It is worth noting that RocksDB's performance improved extensively during the la
 optimized LSM compaction scheduling~\cite{RocksDBProgress}.   
 
 \subsection{Setup}
-We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular YCSB~\cite{YCSB} benchmarking platform. 
+We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular YCSB~\cite{Cooper:2010:BCS:1807128.1807152} 
+benchmarking platform. 
 YCSB provides a framework for KV-store comparisons, through a set of common data access API's and standard workloads. 
 Most modern KV-stores implement  YCSB adapter API's. The platform decouples data access from workload generation, 
 thereby providing common ground for backend comparison. A workload is characterized by a combination of get, put, 
@@ -23,8 +24,7 @@ scenarios with respect to the available RAM. Similarly to the published RocksDB 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 The data is stored uncompressed. 
 
-\paragraph{Workloads.} 
-Our experiments leverage multiple workloads: 
+\paragraph{Workloads.} We leverage multiple workloads: 
 
 \begin{enumerate}
 \item {\em Zipf}. The key frequencies are sampled from the heavy-tailed Zipf distribution, 
@@ -54,8 +54,8 @@ external data pipeline).
 \paragraph{Evaluation methodology.} Each experiment consists of two stages. The first stage builds 
 the dataset, by filling an initially empty store with an sequence of KV-pairs, ordered by key. The second 
 phase exercises the specific scenario; all worker threads follow the same access pattern. Most experiments 
-perform 80 M data accesses. The experiments that run scans perform 4 M to 16 M accesses, depending on 
-the scan size. We run 5 experiments for each data point, and present the median metric measurement. 
+perform 80 million data accesses. The experiments that run scans perform 4 to 16 million accesses, depending 
+on the scan size. We run 5 experiments for each data point, and present the median metric measurement. 
 
 \paragraph{Configuration.} 
 We only present the performance metrics in asynchronous logging mode -- as synchronous logging 
@@ -75,35 +75,43 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \begin{figure*}[tb]
 \centering
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_P_line.pdf}
 \caption{YCSB-P}
 \label{fig:throughput:p}
 \end{subfigure}
 \hspace{0.2\linewidth}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
 \caption{YCSB-A}
 \label{fig:throughput:a}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
 \caption{YCSB-B}
 \label{fig:throughput:b}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_C_line.pdf}
 \caption{YCSB-C}
 \label{fig:throughput:c}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
 \caption{YCSB-D}
 \label{fig:throughput:d}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_E-_line.pdf}
 \caption{YCSB-E10}
 \label{fig:throughput:e10}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_E_line.pdf}
 \caption{YCSB-E100}
 \label{fig:throughput:e100}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_E+_line.pdf}
 \caption{YCSB-E1000}
 \label{fig:throughput:e1000}
 \end{subfigure}
@@ -129,7 +137,7 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 
 %\subsubsection{Throughput}
 Figure~\ref{fig:throughput} summarizes the overall system throughput (operations per second) 
-measured across all scenarios and dataset sizes. 
+across all scenarios and dataset sizes. 
 %Figure~\ref{fig:writeamp} presents write amplification under write-intensive workloads 
 %(YCSB-P and YCSB-A). 
 
@@ -199,7 +207,7 @@ We experiment with short-to-medium scans - 10, 100, and 1000 rows.
 
 \remove{
 To drive the benchmarks, we use the 
-YCSB framework in C++\footnote{\url{https://github.com/basicthinker/YCSB-C}}  
+YCSB framework in C++\footnote{}  
 
 All three systems are configured to provided persistence, namely, no data loss, by using their synchronous logging mode.
 In addition, we deploy a single partition in each of the systems in order to provide consistent scans across the entire data store.
