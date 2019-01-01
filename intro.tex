@@ -2,155 +2,109 @@
 
 
 % KV-stores are everywhere
-Key-value stores (KV-stores) are widely adopted by a broad range of applications, and are projected
+Key-value stores (KV-stores) are widely used nowadays by a broad range of applications, and are projected
 to continue to increase in popularity in years to come; market research  identifies them as the 
 ``driving factors'' of the NoSQL market, which is expected to garner \$4.2B by 2020~\cite{alliedmarketresearch}.
 
-% In many applications, data locality is in ranges
-For performance reasons,  KV-stores  commonly employ a single primary key representing 
+% In many applications, keys are composite
+For performance reasons,  KV-stores  usually  employ a \emph{composite} primary key that represents
 an agglomerate of attributes. Range scans are then used to collect all the rows associated with
-a particular attribute. For instance,  in messaging and email applications such as  Facebook Messages,
-keys are typically a concatenation of user-id and post-id, and range scans are used 
-for efficient retrieval of multiple rows, e.g., the last 100
-messages of a given user, or the hourly impression counts over the last 24 hours for a given advertiser~\cite{Borthakur:2011:AHG:1989323.1989438}. 
-Similarly, social network applications \Idit{Check linkbench}
-and analytics (Flurry).
+a particular attribute. For instance,  in messaging and email applications,  
+keys are typically a concatenation of user-id with additional fields such as thread-id, time, and post-id; 
+example queries in Facebook Messages retrieve  the last 100 messages of a given user, or the hourly impression counts %over the last 24 hours 
+for a given advertiser~\cite{Borthakur:2011:AHG:1989323.1989438}. 
+Similarly, analytics applications such as Flurry~\cite{flurry}  aggregate statistics on data identified by 
+composite keys consisting of attributes such as application-id, user-id, time, location, and so on~\cite{flurry-data-model}. 
+Another example is social networks, which store  associations representing graph edges indexed by a primary key consisting of a 
+pair of object-ids and an association type~\cite{linkbench}. 
 
+% Composite keys imply spatial data locality (in ranges) 
+Composite keys induce \emph{spatial locality} in workloads with high {temporal locality}, as 
+popular entities (for example, users) result in popular \emph{key ranges}. 
+Spatial locality may also arise with simple (non-composite) keys, for example in 
+ reverse  URLs, which  are often used as keys for web search applications. 
+While the prevalence of temporal locality (i.e., frequent access to popular entities) in real-world workloads is widely-recognized, 
+and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions such as Zipf, 
+these benchmarks fail to capture the spatial aspect of locality.
+This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys with no spatial locality.
+In this paper, we make spatial locality a first class  consideration, which 
+leads us to rethink the design principles underlying today's popular KV-stores.
 
-\Idit{LSM is not ideal for this  because of (1) write path and (2) read path.
+% LSM is the standard but not ideal for this  because of  write path  temporal grouping leading to fragmentation and write amplificaiton
+The de facto standard approach to building KV-stores today is \emph{LSM} -- log-structured merge trees~\cite{lsm}. 
+The LSM approach optimizes write performance by absorbing random writes in memory and periodically flushing 
+them as sequential files to disk. While  sequential disk access dramatically improves I/O throughput, it 
+is important to notice that the LSM design initially groups writes  into files \emph{temporally}, and not by key-range. 
+A background \emph{compaction} process later merge-sorts any number of files, grouping data by keys. 
+This approach is not ideal for workloads with high spatial locality for two reasons. 
+First, a popular key range will be fragmented across many files during long periods (between compactions). 
+Second, the compaction process is costly both in terms of performance 
+(as it consumes high disk bandwidth) and in terms of \emph{write amplification}, namely the number of physical writes 
+associated with a single application write. The latter is significant particularly in SSD as it increases disk wear. 
+The temporal grouping of data means that compaction is indiscriminate with respect to key popularity:  
+Since new (lower level) files are always merged with old (higher level) ones, 
+a ``cold'' key range that has not been accessed since the  beginning of time continues to be repeatedly re-located
+by  compactions.  
 
-We propose a better design for data with locality in ranges.
-}
+% LSM is the standard but not ideal for this also in read path.
+Because LSM's in-memory component consists only of recently-written keys, 
+it does not contain keys that are frequently read without being modified. 
+This causes \emph{read amplification}, where a read has to search for the 
+requested key in multiple locations. 
+In order to optimize the read-path, LSMs  use a cache of popular file blocks and 
+Bloom filters that reduce unnecessary file access. 
+But  a key range is typically dispersed over multiple cache blocks and Bloom filters. 
+This memory organization does not leverage spatial locality, 
+resulting in sub-optimal use of memory resources in case such locality is present.
+Furthermore, it does not naturally lend itself to range scans,
+which are common with composite keys.
 
-\remove{
-% Removed RT analytics - not sure this is our pitch
-Real-time analytics applications are on the rise in the big data world. 
-Modern decision support and machine intelligence engines strive to continuously ingest large volumes of data, while providing up-to-date insights with minimum delay. 
-Examples of such systems include Google's F1~\cite{Shute2013}, which powers its AdWords, and 
-Oath's Flurry Analytics\footnote{\url{https://developer.yahoo.com/analytics/}}, which 
-provides mobile developers with analysis tools to explore user characteristics (age, gender, location, app context, etc.) and behavior, e.g., which code paths they follow and how they churn.
-As of late 2017, the Flurry SDK is installed on 2.6B devices, and monitors 1M+ mobile apps\footnote{\url{http://flurrymobile.tumblr.com/post/169545749110/state-of-mobile-2017-mobile-stagnates}}. 
-Analytics workloads feature a combination of high ingestion rates and (concurrently executed) large range scans; their  
-data -- both ingested and queried -- is highly skewed towards popular applications, locations, users, etc. 
-Moreover, since applications like Flurry often aggregate statistics for multi-dimension composite keys (e.g., application-user-date)  
-and scan them in ranges, the skewness is reflected for key ranges rather than individual keys. 
+% LSM is not the best when the entire working set fits in memory
+Finally, we note that LSM's temporal file organization optimizes disk I/O but induces a penalty on in-memory operation. 
+For example, all keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured via a separate 
+\emph{write-ahead-log (WAL)}. 
+This increases write amplification and also makes the flushed keys unavailable for fast read from memory. 
+Whenever the system leverages sufficient DRAM to hold almost the entire working set,  such flushes lead to inefficient use of memory resources. 
+The drop in DRAM prices (more than $6.6$x since 2010~\cite{StatistaReport})  and 
+significant performance benefit DRAM offers make this scenario increasingly common.  
 
-Underlying today's real-time analytics systems are large \emph{key-value (KV)-stores}, such as RocksDB~\cite{rocks},  
-to which data is ingested at a high rate, and which simultaneously serve 
-\emph{range scans} for analytics queries. Such data stores need to be \emph{persistent} following crashes.   
-
-
-% Motivation
-The booming NoSQL market, which broadly aggregates the technologies for storage, serving and analysis of very large volumes of unstructured data, is expected to garner \$4.2B by 2020~\cite{alliedmarketresearch}. %\footnote{\url{https://www.alliedmarketresearch.com/press-release/NoSQL-market-is-expected-to-reach-4-2-billion-globally-by-2020-allied-market-research.html}}. 
-Key-value (KV)-stores~\cite{Aerospike, Bigtable, Cassandra, DynamoDB, HBase, Redis, RocksDB, Scylla} are the fastest-growing market segment among the NoSQL platforms. They offer a simple yet powerful data abstraction that is  attractive for a variety of applications, e.g., e-commerce~\cite{DynamoDB}, search indexing~\cite{Percolator}, product recommendation~\cite{NetflixCassandraSpark}, user modeling~\cite{AirbnbHBase}, etc. Modern KV-storage technologies provide scalability and speed far beyond the reach of traditional RDBMS technologies, at a fraction of cost. The new generation of relational databases~\cite{MyRocks, Phoenix} uses KV-store infrastructure as building block, in order to apply its multiple benefits to structured data management. 
-}
-
-% Analytics, DRAM, persistence
-The drop in DRAM prices (more than $6.6$x since 2010~\cite{StatistaReport}) stimulates proliferation of 
-KV-stores towards better use of memory. One extreme approach has been taken by in-memory data stores
-that store all their data in RAM. While appealing to many use cases (e.g., web caching~ֿ\cite{RedisWebCaching}, online fraud detection~\cite{Hazelcast}, and real-time bidding~\cite{AerospikeUseCRaases}), they fall short when it comes to scalability and reliability requirements. Recently, some of these products~\cite{Aerospike,Ignite,Redis,Tarantul} started supporting non-volatile
-(primarily, solid state) disk drives for both cold data storage and crash recovery. They strive to provide the user experience 
-of in-memory databases (ultra low latency, flexibility for diverse workloads) while serving very large datasets with near-zero 
-time to recovery. Our paper steps up to the challenge of building such {\em memory-centric\/} KV-stores. 
-
-\remove{
-One domain that is on the rise is real-time analytics, and it uses big data and requires long scans [support  by examples/citations]. 
-High performance is achieved by striving to keep almost all of the working data set in-memory, which is becoming increasingly feasible 
-with the drop in DRAM prices [citations].  
-Nevertheless, disks are still required for data persistence. 
-Note that even in cache-only KV-stores that rely on a separate cold storage tier for persistent archiving, 
-using a RAM-only solution for real-time query processing is undesirable, as the the penalty for crashes is extremely high; for example,  
-Facebook reported that it would take days to recover a crashed cluster from the backend persistent store, and this is expedited to take hours  
-by recovering from so-called warm clusters that hold the data in memory~\cite{Scaling-Memcache}. 
-%(try to find a citation - maybe something Facebook wrote about this). 
-This motivates optimizing key-value stores for workloads where all or most data fits in memory, while supporting persistence with fast recovery. 
-}
-
-% KV stores today are LSM
-KV-stores provide an {\em ordered map\/} API, with random read (get), random write (put), and range query 
-(scan) methods. By and large, their implementations are based on the \emph{Log-Structured Merge (LSM)} 
-tree paradigm~\cite{LSM}, which optimizes write performance by replacing random writes with sequential ones. 
-An LSM tree is organized as a collection of components, partitioned according to data update times. 
-The most recently written data resides in the in-memory map ({\em memtable\/}), and earlier-written data 
-resides in a collection of sorted immutable on-disk ({\em level}) files. Every write creates a  data version, 
-which is inserted into the memtable, and in addition, for persistence, is logged to a \emph{write-ahead-log} ({\em WAL}). Periodically, the whole memtable is flushed to disk, creating a new level file. Reads search the memtable first,
-and if the key is not found, also the level files; the latest version is retrieved. To expedite reads, popular data blocks 
-from level files are cached in memory, and Bloom filters reduce redundant accesses to disk. Scans traverse the 
-memtable and the level files in parallel, and combine the data versions in the ascending/descending order of keys. 
-In order to reduce disk reads, level files are periodically merged by a background process named \emph{compaction}.
+% Drum roll 
+We present \sys, a persistent KV-store based on a novel paradigm that diverges from the ubiquitous LSM approach.  
+Like  LSMs,  we optimize I/O by absorbing updates in memory and performing bulk writes to disk. 
+And yet unlike the LSM approach, we partition data according to key ranges and not temporally.
+Data is  organized (both on disk and in memory) in large \emph{chunks} holding contiguous key ranges.
+Popular chunks are cached in DRAM for the benefit of  both the write-path and the read-path.
+Chunks reduce the fragmentation of key ranges, resulting in 
+(1) better read and write performance for workloads with spatial locality,  and
+(2) faster range scans. 
+Moreover, since chunks  are compacted in memory, writes are 
+flushed to disk less frequently than LSM writes (relying on a WAL for persistence)
+yielding 
+(3) reduced write amplification, and 
+(4) better performance with memory-resident working sets.
  
-% LSM  drawbacks
-Despite its popularity, the LSM paradigm suffers from a number of drawbacks. 
-First, it is subject to \emph{write amplification} -- namely, each key-value pair is written multiple times. 
-WAL logging implies that updates are written at least twice, and may be written many more times due 
-to compactions. Write amplification increases disk wear (especially for SSD storage), in addition to hurting 
-performance. Second, LSMs incur \emph{read amplification} -- namely, reads may need 
-to search in multiple level files. This is partially mitigated by compaction, caching, and Bloom filters. 
-All the above, however, are less effective for scans, which do not enjoy Bloom filters and suffer from 
-caches being destroyed by compactions.  Though their impact can be reduced, both kinds of amplification 
-are inherent to the LSM design, and cannot be avoided altogether. Additionally, recovery from crashes 
-may be slow because the WAL needs to be replayed before the system proceeds to service new requests.  
-Moreover, recovery time is adversely affected by available memory: increasing the memtable size 
-reduces the flush rate, which slows down WAL recycling, and consequently prolongs recovery. 
-
-% PiWi
-%In this work we specifically target analytics workloads, with high ingestion rates and range scans of popular key ranges.
-In this work we propose a novel paradigm for KV-storage, diverging from the ubiquitous LSM approach.  
-We present \sys, an experimental {\em persistent key-value store}, which pursues the following goals: 
-\begin{enumerate}
-
-\item{\bf Consistency} -- strict linearizability~\cite{Herlihy} of all operations, in particular range scans. 
-
-\item {\bf High performance}, in terms of throughput and latency, by exploiting the workload's  
-locality better than the LSM design. \sys's advantage is biggest when the working set fits in main memory. 
-
-\item {\bf Low write amplification}, by applying in-memory compaction whenever possible to avoid 
-on-disk compaction. 
-
-\item {\bf Near-instant recovery}, by avoiding the WAL replay process upon start-up. 
-\end{enumerate}
-
-\sys\/ introduces the following principles in order to achieve these goals: 
-\begin{enumerate}
-
-\item Instead of managing log-structured storage for the whole dataset, 
-\sys\/ organizes data as a collection of micro-partitions (chunks) holding contiguous key ranges, 
-both in memory and on disk. Whereas the LSM design keeps the write and read paths separate, 
-\sys\/ unifies them by maintaining a read-write cache of popular chunks in RAM. 
-
-\item In-memory chunks (named {\em munks}) accommodate both write and read operations. 
-They are maintained mostly ordered ordered through periodic background mink {\em rebalances}, 
-in the spirit of KiWi~\cite{KiWi}. Therefore, the gets and the scans that access these munks are 
-served very efficiently. The second-tier shared {\emph{row cache}} supports the efficiency of 
-gets that cannot be served from munks. 
-
-\item Every chunk is backed by a two private files: an ordered data store (named {\em funk}) 
-and a linear WAL. The latter logs the latest writes, to facilitate recovery. In contrast 
-with the LSM approach, {\em both\/} the funk and the WAL are searched by reads that cannot 
-be served from RAM. These reads access just these two locations -- in contrast with LSM reads  
-that has to search in multiple levels. \sys\/ strives to minimize the latency and volume of sequential 
-searches by keeping its WALs trimmed and maintaining Bloom filters for WAL data. 
-
-\item Since the WALs are inherently searchable, there is no need to replay them upon recovery. 
-Therefore, \sys\/ becomes instantly available to serve data. 
-
-\item There is no need to perform costly on-disk compaction for the funks that have in-memory 
-munks; they are just re-written when the munk snapshots are flushed back to disk. For unpopular chunks, 
-the background funk rebalance process infrequently merges the funk and the WAL in the background. 
-All in all, write amplification is reduced, especially for large datasets. 
- \end{enumerate}
-
 We have implemented \sys\ in C++. We compare it to the recent release of RocksDB~\cite{rocks}, 
-an industry-leading KV-store technology based on LSM design. Our experiments, based on the popular 
-YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly surpasses RocksDB in terms of performance, 
-especially when the workload locality is high. For example, we observe up to 2.5x scan throughput, 2.2x
-get throughput, and 1.6 write throughput under high-locality workloads. We also demonstrate up to 2.5x 
-reduction in write amplification. We do not claim, however, that \sys\/ exceeds mature LSM-tree implementations 
-under all circumstances -- there are scenarios in which RocksDB perfoms better (e.g., low-locality highly dispersed 
-access patterns). The primary goal of our work is to draw attention to this new approach, leaving room for 
-future optimization. 
- 
-The rest of this paper is organized as follows ... 
+an industry-leading KV-store  based on LSM design. Our experiments, based on the popular 
+YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  RocksDB, 
+especially when spatial  locality is high. 
+For example, with composite keys and a memory-resident working set, \sys\  speeds up scans 
+by up to 3x, writes by up to 1.6x, and (single-key) reads by up to 2.2x.
+With larger working sets than the available DRAM, \sys\ outperforms RocksDB by 50\%--100\% on reads  and 
+scans, and 25\% on writes. 
+ \Idit{Check numbers.}
 
+We do not claim, however, that \sys\/ is better than a mature LSM-tree implementation
+under all circumstances -- there are scenarios in which RocksDB performs better (e.g., under low locality). 
+The primary goal of our work is to draw attention to the importance of spatial locality in 
+today's workloads, and to propose a design alternative to LSM that is better suited for such locality. 
+As with all new approaches, there is ample  room for 
+future improvements. 
+ 
+ % The rest of this paper is organized as follows ... 
+ This paper proceeds as follows:
+We present our design principles in~\cref{sec:principles} and  the \sys\ algorithm 
+in~\cref{sec:design}. We then discuss implementation details in~\cref{sec:impl} and evaluate 
+\sys\ in~\cref{sec:eval}.  Finally,~\cref{sec:related}   surveys related work and~\cref{sec:conclusions}
+concludes. 
 
 
