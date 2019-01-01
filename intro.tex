@@ -7,7 +7,7 @@ to continue to increase in popularity in years to come; market research  identif
 ``driving factors'' of the NoSQL market, which is expected to garner \$4.2B by 2020~\cite{alliedmarketresearch}.
 
 % In many applications, keys are composite
-For performance reasons,  KV-stores  usually  employ a \emph{composite} primary key that represents
+KV-stores  usually  employ a \emph{composite} primary key that represents
 an agglomerate of attributes. Range scans are then used to collect all the rows associated with
 a particular attribute. For instance,  in messaging and email applications,  
 keys are typically a concatenation of user-id with additional fields such as thread-id, time, and post-id; 
@@ -31,7 +31,7 @@ In this paper, we make spatial locality a first class  consideration, which
 leads us to rethink the design principles underlying today's popular KV-stores.
 
 % LSM is the standard but not ideal for this  because of  write path  temporal grouping leading to fragmentation and write amplificaiton
-The de facto standard approach to building KV-stores today is \emph{LSM} -- log-structured merge trees~\cite{lsm}. 
+The de facto standard approach to building KV-stores today is \emph{LSM} -- log-structured merge trees~\cite{O'Neil1996}. 
 The LSM approach optimizes write performance by absorbing random writes in memory and periodically flushing 
 them as sequential files to disk. While  sequential disk access dramatically improves I/O throughput, it 
 is important to notice that the LSM design initially groups writes  into files \emph{temporally}, and not by key-range. 
@@ -83,7 +83,7 @@ yielding
 (3) reduced write amplification, and 
 (4) better performance with memory-resident working sets.
  
-We have implemented \sys\ in C++. We compare it to the recent release of RocksDB~\cite{rocks}, 
+We have implemented \sys\ in C++. We compare it to the recent release of RocksDB~\cite{RocksDB}, 
 an industry-leading KV-store  based on LSM design. Our experiments, based on the popular 
 YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  RocksDB, 
 especially when spatial  locality is high. 
