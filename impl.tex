@@ -2,6 +2,7 @@ We implement \sys\ in C++. It is partially based on RocksDB open source library~
 Specifically, the implementation of \sys\ STables is based on the SSTable code in RocksDB since it supports similar functionality of append writes and efficient searches. 
 
 %PO array is split into PSA and per-chunk PPAs, as kiwi; DO NOT MENTION employs  helping as in KiWi. 
+\paragraph{Synchronization Data Structures}
 We note that using a single pending array to synchronize all
 operations can cause unnecessary contention.
 We mitigate this problem in our implementation by maintaining two data structures for coordinating different operations similar to the solution used in~\cite{kiwi}. The first is a per-chunk pending put array (PPA) maps each thread either to a cell in the chunk that the thread is currently attempting to put into and a corresponding version, or an indication that the thread is currently not performing a put. The second is a global pending scan array (PSA) tracks versions used by pending scans for compaction purposes; each entry consists of a version ver and a sequence number seq, as well as the scan’s key range. Each entry in the PPAs and PSA includes, in addition to the operation metadata, an aba~\footnote{ABA phenomena- ...} sequence number. 
@@ -15,5 +16,15 @@ The scan operation first publishes its intent to obtain a version in the PSA. It
 
 Finally, rebalance operations go through the PSA to collect the maximum version number of active scans that can not be reclaimed yet. If a scan publishes an intent in the PSA but not yet a version number the rebalance operation waits until a version is published or the aba number in the entry is increased. It then acquires the chunk's lock to block additional put operation. If executing a funk rebalance it also acquires the funk rebalance lock for the chunk. After completeing the rebalance operation and placing the new content of the chunk in place including the updated metadata, all locks are released.
 
+\paragraph{Dynamic Mechanisms}
+\sys\ has two dynamic mechanisms that adjust to the running workload. The \emph{chunks cache policy} is one of the core components of the system as most benefits of \sys\ are due to storing the working set in-memory. We apply a simple caching policy. 
+%It caches hot chunks  in-memory while evicting least-recentle-used (LRU) chunks off the the memory. 
+The chunks are scored based on their access frequency, using per access type counters. We employ a sliding window scoring mechanism, that scores each chunks only based on recent accesses. The sliding window is implemented by occasionally slicing the counters of all chunk by a factor of two, as was done in~\cite{tinyLFU}.
 
-\inred{TBD. Our current implementation does not support chunk merges. }
+Funk rebalance frequency is also crucial for the performance of the system. Excessive rebalances may reduce ingestion throughput, while immensely reducing funk rebalance frequency can degrade the performance of scans that are required to sequencially traverse a very long log. To this end, \sys\ exploits the per-access type counters also to determine the frequency in which each funk is rebalanced.
+
+\paragraph{Row Cache} We implement an LRU policy for the row cache. It is composed of 3 hash tables: 2 are static (read-only), and the most recent is dynamic. If a read operation does not find a key in the row cache it fetches its value from the STable and stores it in the dynamic table. If the value is present in one of the static tables but not in the dynamic one, it is moved forward to the dynamic table to indicate it is a hot key. A put operation also updates the row cache in case the key is present. We use per-bucket locks to make sure the latest version is updated in the row cache. If the key is not present in the row cache the put operation does not update the cache, to avoid over populating the cache in write dominated workloads. Upon filling the dynamic table (its size exceeds a threshold), the first table is discarded, the dynamic table becomes static and a new empty dynamic table is created.
+
+\paragraph{Supporting Merges}
+\inred{move to conclusion and future work?}
+Our current implementation does not support chunk merges. Merge operation can be supported as part of the rebalncing procedure (as was done in~\cite{kiwi}). In \sys\ this entails merging the funks of two chunks. As in the split operation, the rebalance first acquires the  rebalance locks of the chunks to be merged---to ensure exclusiveness. The content of the chunks is merged and written into a new chunk. Finally, the rebalance acquires the chunks' locks for the short period in which the content that was added to the chunks during the merge is written to the log of the new chunk, and the new chunk swaps the old chunks in the list.
