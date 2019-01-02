@@ -3,21 +3,21 @@ It is worth noting that RocksDB's performance improved extensively during the la
 optimized LSM compaction scheduling~\cite{RocksDBProgress}.   
 
 \subsection{Setup}
-We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular YCSB~\cite{Cooper:2010:BCS:1807128.1807152} 
-benchmarking platform. 
+
+\paragraph{Testbed.} We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular 
+YCSB~\cite{Cooper:2010:BCS:1807128.1807152} benchmarking platform. 
 YCSB provides a framework for KV-store comparisons, through a set of common data access API's and standard workloads. 
 Most modern KV-stores implement  YCSB adapter API's. The platform decouples data access from workload generation, 
-thereby providing common ground for backend comparison. A workload is characterized by a combination of get, put, 
-and scan accesses, as well as by a synthetic distribution of keys and values. YCSB provides a set of benchmark workloads
-inspired by real-life applications, and allows developing new ones through workload generation API's. 
+thereby providing common ground for backend comparison. 
 
+A workload is defined by a combination of get, put, and scan accesses, as well as by a synthetic distribution of keys and values. 
+YCSB provides a set of benchmark workloads inspired by real-life applications, and allows developing new ones through workload generation API's. 
 A typical YCSB instance stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
 workloads. It aggregates the key performance metrics for the scenario under test, e.g., total throughput and tail access latencies. 
 
-\paragraph{Environment.}
-Our experiment testbed is a 12-core Intel Xeon 5 machine with 4TB SSD disk. The driver application exercises 12 workers 
-(maximum parallelism). In order to guarantee a fair memory allocation to all KV-stores, we run each experiment within 
-a Linux container with 16 GB RAM. 
+Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. The driver application exercises 12 workers 
+(maximum parallelism). In order to guarantee a fair memory allocation to all KV-stores, we run each experiment 
+within a Linux container with 16 GB RAM. 
 
 \paragraph{Data.} We scale the dataset size from 4 GB to 64 GB, in order to exercise multiple locality 
 scenarios with respect to the available RAM. Similarly to the published RocksDB benchmarks, we use 
@@ -46,7 +46,6 @@ standard YCSB workload of medium spatial and temporal locality that exhibits, e.
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
 (A to E) that capture write-savvy ($50\%$ puts) to read-savvy ($95\%-100\%$ gets or scans) settings. 
-
 In order to stress the system even more on the write side, we introduce a new workload, named 
 YCSB-P, comprised of $100\%$ puts. It captures a heavy-duty data load scenario (e.g., from an 
 external data pipeline). 
@@ -62,11 +61,11 @@ We only present the performance metrics in asynchronous logging mode -- as synch
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
-most chunks are bound by 7 MB. 
+most chunks are bound by 7 MB (which translates to approximately 700 KV-pairs per chunk). 
 
-We allocate a quota of 13.5 GB RAM (out of the 16 GB container) to the munk cache and the row cache, 
-and split it between the two at a $2:1$ ratio. The log size threshold auto-tuned by \sys\/ varies from    
-$0.5$ MB to 2 MB. 
+We allocate a quota of 13.5 GB RAM (out of the 16 GB container) to the munk and row caches, 
+and split it between the two at a $2:1$ ratio. The WAL size limit, which is auto-tuned by \sys\/
+(Section~\ref{sec:impl}), varies from $0.5$ MB to 2 MB. 
 
 We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
@@ -131,8 +130,24 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \caption{YCSB-A}
 \label{fig:writeamp:a}
 \end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB write amplification, under write-intensive workloads and scaling dataset sizes.}}
+\caption{\bf{\sys\/ versus RocksDB write amplification, under write-intensive workloads (YCSB-P and YCSB-A) and scaling dataset sizes.}}
 \label{fig:writeamp}
+\end{figure*}
+
+\begin{figure*}
+\centering
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.3\linewidth}
+\caption{Disk reads}
+\label{fig:readamp:d}
+\end{subfigure}
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.25\linewidth}
+\caption{Kernel reads}
+\label{fig:readamp:k}
+\end{subfigure}
+\caption{\bf{\sys\/ versus RocksDB read amplification, under the read-only workload (YCSB-C) and scaling dataset sizes.}}
+\label{fig:readamp}
 \end{figure*}
 
 %\subsubsection{Throughput}
@@ -142,31 +157,44 @@ across all scenarios and dataset sizes.
 %(YCSB-P and YCSB-A). 
 
 \paragraph{YCSB-P (100\% put, Zipf and Zipf-range distributions).} 
-\sys's throughput is $30\%$ to $50\%$ above RocksDB's across the board 
-(Figure~\ref{fig:throughput:p}). This is explained by \sys's significant reduction 
-in disk I/O versus the LSM design in write-intensive scenarios, for all dataset sizes: 
+\sys's throughput is $30\%$ to $60\%$ above RocksDB's for Zipf-range, 
+and $10\%$ to $50\%$ for Zipf (Figure~\ref{fig:throughput:p}). 
+\sys\/ produces better throughput for Zipf-range compared to Zipf, 
+as expected for workloads with high spatial locality. In contrast, 
+RocksDB's write performance is relatively insensitive to the workload, 
+which is typical for LSM data stores.
 
-\begin{enumerate}
-\item {\em Small dataset (8GB or less).} \sys\/ accommodates munks for all chunks,
-and manages all puts in memory. The munks are flushed to disk infrequently, in order 
-to roll the chunk WAL's. In contrast, RocksDB performs on-disk compactions from time 
-to time, due to its LSM-tree structure.   
-
-\item{\em Big dataset (16 GB or more).} \sys\/ manages the popular chunks in RAM, 
-and resorts to periodic on-disk funk rebalances for the less less popular chunks. The 
-funk rebalance frequency depends on the chunk's popularity. In contrast, RocksDB 
-compactions rewrite on-disk data regardless on whether it is hot or cold. As the dataset
-becomes bigger, RocksDB spreads into more levels, hence its compactions become 
-more frequent and involve more data.  
-\end{enumerate}
+This workload's bottleneck is the persistent data reorganization 
+(funk rebalances for \sys, compactions for RocksDB). The overhead
+manifests in disk write rates, which \sys\/ reduces through better use of spatial locality. 
+For small datasets (8 GB or less), \sys\/ accommodates all puts in munks, which alleviates 
+funk rebalances altogether. For big datasets, only part of the chunks are cached, hence 
+funk rebalances start occurring. However, they mostly happen to the hottest munk-less 
+(torso) chunks. Hence, they incur less I/O than RocksDB's compactions, which do not 
+distinguish between hot and cold data. 
 
 Figure~\ref{fig:writeamp:p} corroborates the above observations, by comparing 
 \sys's write amplification to RocksDB's. \sys\/ reduces the disk write rate dramatically, 
-with the largest gain observed for big datasets (e.g., $1.15$ versus $3.03$ for the 32 GB 
-database). As a nice by-product, \sys\/ is also more efficient with respect to disk wear.  
+with the largest gain observed for big datasets (e.g., $1.29$ versus $2.92$ for the 64 GB 
+database under Zipf-range). As a nice by-product, \sys\/ is also more 
+efficient with respect to disk wear.  
 
-As expected, with small datasets \sys\/ performs better under the Zipf-range workload  
-in comparison with the Zipf workload, due to higher locality. 
+\paragraph{YCSB-C (100\% get, Zipf and Zipf-range distributions).}  
+\sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB under Zipf-range in all experiments, 
+and up to $1.6$x under Zipf for small datasets (Figure~\ref{fig:throughput:c}). Similarly to YCSB-P, 
+\sys's throughput is higher for Zipf-range, which exhibits higher spatial locality.  
+
+This workload's bottleck is RAM caching efficiency -- application-level 
+(munks and rows for \sys, blocks for RocksDB) and OS-level (filesystem pagecache). 
+Figure~\ref{fig:readamp} compares the two systems' read amplification (as proxy 
+for cache hit ratio), with respect to the number of system calls and the actual disk reads.  
+In terms of disk I/O, RocksDB's metric is slightly better -- e.g., $0.94$ versus $1.07$
+for the 64 GB dataset under the Zipf-range workload. However, RocksDB relies extensively 
+on the filesystem cache, at the expense of the user-level block cache. In the same
+setting, it performs ten times more kernel-to-user data copies than \sys.
+RocksDB developers explain that the block cache scaling potential is limited in their
+database, due to tension between its read-path and write-path RAM resources~\cite{RocksDB-default-blockcache-issue}. 
+\sys, in contrast, exploits its munk cache for both reads and writes, which leads to better RAM utilization. 
 
 \paragraph{YCSB-A (50\% put, 50\% get, Zipf and Zipf-range distributions).}
 
@@ -196,7 +224,6 @@ amplification statistics).
 
 \paragraph{YCSB-B (5\% put, 95\% get, Zipf and Zipf-prefix distributions).}
 
-\paragraph{YCSB-C (100\% get, Zipf and Zipf-range distributions).}  
 
 \paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).}
 
