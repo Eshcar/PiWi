@@ -1,26 +1,51 @@
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import csv
-from matplotlib.ticker import FuncFormatter
+
 
 x_axis = ["4GB", "8GB", "16GB", "32GB", "64GB"]
-workloads = ['S', 'P', 'A', 'B', 'C', 'E-', 'E', 'E+', 'D']
-line_color = {'Rocks Flurry': {'color': 'b', 'linestyle': '--'},
-              'Rocks Zipf': {'color': 'r', 'linestyle': '--'},
-              'Rocks Latest': {'color': 'b', 'linestyle': '--'},
-              'Piwi Flurry': {'color': 'b', 'linestyle': '-'},
-              'Piwi Zipf': {'color': 'r', 'linestyle': '-'},
-              'Piwi Latest': {'color': 'b', 'linestyle': '-'}}
+workloads = ['S', 'P', 'A', 'B', 'C', 'E-', 'E', 'E+', 'D',
+             'P_writeamplification_disk', 'A_writeamplification_disk']
+
+# These are the "Tableau 20" colors as RGB.
+tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
+             (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),
+             (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),
+             (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),
+             (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
+
+# Scale the RGB values to the [0, 1] range.
+for i in range(len(tableau20)):
+    r, g, b = tableau20[i]
+    tableau20[i] = (r / 255., g / 255., b / 255.)
+
+linewidth = 5
+marksize = 10
+rocks_linestyle = ':'
+rocks_marker = 'v'
+piwi_linestyle = '-'
+piwi_marker = 'o'
+flurry_linecolor = tableau20[0]
+zip_linecolor = tableau20[6]
+latest_linecolor = tableau20[0]
+
+line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
+              'Rocks Zipf': {'color': zip_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
+              'Rocks Latest': {'color': latest_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
+              'Piwi Flurry': {'color': flurry_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker},
+              'Piwi Zipf': {'color': zip_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker},
+              'Piwi Latest': {'color': latest_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker}}
 
 
 def draw_line_chart(chart_name, lines):
-
     fig, ax = plt.subplots()
     for line in lines:
         ax.plot(x_axis, line['data'], label=line['label'],
                 color=line_color[line['label']]['color'],
-                linestyle=line_color[line['label']]['linestyle'])
+                linestyle=line_color[line['label']]['linestyle'],
+                linewidth=line_color[line['label']]['linewidth'],
+                marker=line_color[line['label']]['marker'],
+                markersize=marksize)
 
     ax.set(xlabel='', ylabel='Throughput',
            title=chart_name)
@@ -61,8 +86,10 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
         for row in csv_reader:
             if '' not in row:
                 workload = row[0].split()[-1]
-                run = ' '.join(row[0].split()[:-1])
-                experiments[workload][run] = list(map(int, row[1:]))
+                label = ' '.join(row[0].split()[:-1])
+                if workload not in experiments:
+                    continue
+                experiments[workload][label] = list(map(float, row[1:]))
     return experiments
 
 
@@ -91,6 +118,8 @@ def main():
                          for (k, v) in experiments[workload].items()])
     # draw speedups
     for workload in workloads:
+        if 'writeamplification' in workload:
+            continue
         distributions = calculate_speedups(experiments[workload],
                                            ['Flurry', 'Zipf', 'Latest'])
         draw_speedup_chart('workload ' + workload, distributions)
