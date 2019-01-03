@@ -5,7 +5,7 @@ optimized LSM compaction algorithms~\cite{CallaghanCompaction}.
 \subsection{Setup}
 
 \paragraph{Testbed.} We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular 
-YCSB~\cite{YCSB} benchmarking platform. 
+YCSB~\cite{Cooper:2010:BCS:1807128.1807152} benchmarking platform. 
 YCSB provides a framework for KV-store comparisons, through a set of common data access API's and standard workloads. 
 Most modern KV-stores implement  YCSB adapter API's. The platform decouples data access from workload generation, 
 thereby providing common ground for backend comparison. 
@@ -145,12 +145,14 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \centering
 \hspace{0.05\linewidth}
 \begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
 \caption{Fraction of searches}
 \label{fig:readstat:dist}
 \end{subfigure}
 \hspace{0.05\linewidth}
-\begin{subfigure}{0.25\linewidth}
-\caption{Average latency}
+\begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/Latency_A.pdf}
+\caption{Disk search latency}
 \label{fig:readstat:lat}
 \end{subfigure}
 \caption{\bf{\sys\/ get operation statistics by the serving component, under the wrote-intensive workload (YCSB-A) and scaling dataset sizes.}}
@@ -165,7 +167,7 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \label{fig:readamp:d}
 \end{subfigure}
 \hspace{0.05\linewidth}
-\begin{subfigure}{0.25\linewidth}
+\begin{subfigure}{0.3\linewidth}
 \caption{System calls}
 \label{fig:readamp:k}
 \end{subfigure}
@@ -205,12 +207,11 @@ thanks to better exploitation of spatial locality. Under the Zipf workload, it i
 datasets that fit in memory, and slower for big datasets.  
 
 The bottleneck in this scenario is the on-disk search part of gets, primarily the linear search in funk logs 
-that keep filling up due to concurrent puts. Figure~\ref{fig:readstat:dist} depicts the distribution of gets 
-by the storage component that fulfilled the request, whereas Figure~\ref{fig:readstat:lat} presents the 
-average search latencies by component. For example, for the 64 GB dataset, $1.9\%$ of gets are served 
-from logs under Zipf-range, versus $4.0\%$ under Zipf. The log search latencies are 
-$1.7$ ms vs $4.4$ ms, since under Zipf the puts are more dispersed, hence the funks are rebalanced 
-less frequently and the logs grow longer. 
+that keep filling up due to concurrent puts. Searches that are served in-memory are 3 orders of magnitude 
+faster. Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage hierarchy component 
+that fulfilled the request, whereas Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
+For example, for the 64 GB dataset, $1.9\%$ of gets are served from logs under Zipf-range, versus $4.0\%$ under Zipf. 
+The log search latencies are $1.7$ ms vs $4.4$ ms, since under Zipf the puts are more dispersed, hence the funks are rebalanced less frequently and the logs grow longer. 
 
 % Bloom filter efficiency ... 
 
@@ -239,5 +240,5 @@ lack of space.
 \paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
 
 \paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-range distributions).}
-We experiment with short-to-medium scans - 10, 100, and 1000 rows. 
+We experiment with short-to-medium scans - 10, 100, and 1000 rows (Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}). 
 
