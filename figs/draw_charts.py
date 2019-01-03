@@ -314,19 +314,19 @@ def draw_latency_breakdown(chart_name, latency):
 def main():
     data = read_csv()
     
-    # experiments = data['experiments']
-    # # draw line charts
-    # for workload in workloads:
-    #     draw_line_chart('Workload ' + workload,
-    #                     [{'label': k, 'data': v}
-    #                      for (k, v) in experiments[workload].items()])
-    # # draw speedups
-    # for workload in workloads:
-    #     if 'writeamplification' in workload:
-    #         continue
-    #     distributions = calculate_speedups(experiments[workload],
-    #                                        ['Flurry', 'Zipf', 'Latest'])
-    #     draw_speedup_chart('workload ' + workload, distributions)
+    experiments = data['experiments']
+    # draw line charts
+    for workload in workloads:
+        draw_line_chart('Workload ' + workload,
+                        [{'label': k, 'data': v}
+                         for (k, v) in experiments[workload].items()])
+    # draw speedups
+    for workload in workloads:
+        if 'writeamplification' in workload:
+            continue
+        distributions = calculate_speedups(experiments[workload],
+                                           ['Flurry', 'Zipf', 'Latest'])
+        draw_speedup_chart('workload ' + workload, distributions)
 
     latency = data['latency']
 
