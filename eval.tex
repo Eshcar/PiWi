@@ -75,7 +75,7 @@ and split it between the two at a $2:1$ ratio. The WAL size limit, which is auto
 
 We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
-\subsection{Results -- Mainstream Scenarios}
+\subsection{Mainstream Scenarios}
 
 \begin{figure*}[tb]
 \centering
@@ -84,27 +84,26 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \caption{YCSB-P}
 \label{fig:throughput:p}
 \end{subfigure}
-\hspace{0.2\linewidth}
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
 \caption{YCSB-A}
 \label{fig:throughput:a}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
-\caption{YCSB-B}
-\label{fig:throughput:b}
-\end{subfigure}
-\begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_C_line.pdf}
 \caption{YCSB-C}
 \label{fig:throughput:c}
 \end{subfigure}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
-\caption{YCSB-D}
-\label{fig:throughput:d}
-\end{subfigure}
+%\begin{subfigure}{0.3\linewidth}
+%\includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
+%\caption{YCSB-B}
+%\label{fig:throughput:b}
+%\end{subfigure}
+%\begin{subfigure}{0.3\linewidth}
+%\includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
+%\caption{YCSB-D}
+%\label{fig:throughput:d}
+%å\end{subfigure}
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E-_line.pdf}
 \caption{YCSB-E10}
@@ -124,36 +123,54 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \label{fig:throughput}
 \end{figure*}
 
+\begin{figure}[th]
+\centering
+%\hspace{0.05\linewidth}
+%\begin{subfigure}{0.3\linewidth}
+\includegraphics[width=0.3\textwidth]{figs/Workload_P_writeamplification_disk_line.pdf}
+%\caption{YCSB-P}
+%\label{fig:writeamp:p}
+%\end{subfigure}
+%\hspace{0.05\linewidth}
+%\begin{subfigure}{0.3\linewidth}
+%\includegraphics[width=\textwidth]{figs/Workload_A_writeamplification_disk_line.pdf}
+%\caption{YCSB-A}
+%\label{fig:writeamp:a}
+%\end{subfigure}
+\caption{\bf{\sys\/ versus RocksDB write amplification, under the write-only workload (YCSB-P) and scaling dataset sizes.}}
+\label{fig:writeamp}
+\end{figure}
+
 \begin{figure*}
 \centering
 \hspace{0.05\linewidth}
 \begin{subfigure}{0.3\linewidth}
-\caption{YCSB-P}
-\label{fig:writeamp:p}
+\caption{Disk I/O}
+\label{fig:readamp:d}
 \end{subfigure}
 \hspace{0.05\linewidth}
 \begin{subfigure}{0.25\linewidth}
-\caption{YCSB-A}
-\label{fig:writeamp:a}
+\caption{System calls}
+\label{fig:readamp:k}
 \end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB write amplification, under write-intensive workloads (YCSB-P and YCSB-A) and scaling dataset sizes.}}
-\label{fig:writeamp}
+\caption{\bf{\sys\/ versus RocksDB read amplification, under the read-only workload (YCSB-C) and scaling dataset sizes.}}
+\label{fig:readamp}
 \end{figure*}
 
 \begin{figure*}
 \centering
 \hspace{0.05\linewidth}
 \begin{subfigure}{0.3\linewidth}
-\caption{Disk reads}
-\label{fig:readamp:d}
+\caption{YCSB-}
+\label{fig:readstat:dist}
 \end{subfigure}
 \hspace{0.05\linewidth}
 \begin{subfigure}{0.25\linewidth}
-\caption{Kernel reads}
-\label{fig:readamp:k}
+\caption{System calls}
+\label{fig:readstat:lat}
 \end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB read amplification, under the read-only workload (YCSB-C) and scaling dataset sizes.}}
-\label{fig:readamp}
+\caption{\bf{\sys\/ get statistics by storage component, under read-intensive workloads (YCSB-C) and scaling dataset sizes.}}
+\label{fig:readstat}
 \end{figure*}
 
 Unless stated otherwise, the experiments below use 12 worker threads. 
@@ -175,64 +192,57 @@ funk rebalances start occurring. However, they mostly happen to the hottest munk
 (torso) chunks. Hence, they incur less I/O than RocksDB's compactions, which do not 
 distinguish between hot and cold data. 
 
-Figure~\ref{fig:writeamp:p} corroborates the above observations, by comparing 
+Figure~\ref{fig:writeamp} corroborates the above observations, by comparing 
 \sys's write amplification to RocksDB's. \sys\/ reduces the disk write rate dramatically, 
 with the largest gain observed for big datasets (e.g., $1.29$ versus $2.92$ for the 64 GB 
 database under Zipf-range). As a nice by-product, \sys\/ is also more 
 efficient with respect to disk wear.  
 
-\paragraph{YCSB-C (100\% get, Zipf and Zipf-range distributions).}  
-\sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB under Zipf-range in all experiments, 
-and up to $1.6$x under Zipf for small datasets (Figure~\ref{fig:throughput:c}). Similarly to YCSB-P, 
-\sys's throughput is higher for Zipf-range, which exhibits higher spatial locality.  
+\paragraph{YCSB-A (50\% put, 50\% get), Zipf and Zipf-range distributions).}
+YCSB-A  is particularly challenging for \sys\/ because it exercises a high contention between gets and puts. 
+\sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB under Zipf-range (Figure~\ref{fig:throughput:a}), 
+thanks to better exploitation of spatial locality. Under the Zipf workload, it is faster than RocksDB for small
+datasets that fit in memory, and slower for big datasets.  
 
-This workload's bottleneck is RAM caching efficiency -- application-level 
-(munks and rows for \sys, blocks for RocksDB) and OS-level (filesystem pagecache). 
-Figure~\ref{fig:readamp} compares the two systems' read amplification (as proxy 
-for cache hit ratio), with respect to the number of read system calls and the actual disk reads.  
-In terms of disk I/O, RocksDB's metric is slightly better -- e.g., $0.95$ versus $1.07$
-for the 64 GB dataset under Zipf-range. However, RocksDB relies extensively 
-on the filesystem cache, at the expense of the user-level block cache. In the same
-setting, it performs almost 12 times system calls than \sys. The extensive kernel-to-user 
-copy explains the performance gap. RocksDB developers explain that the block cache scaling potential is limited in their
+The bottleneck in this scenario is the on-disk search part of gets, primarily the linear search in funk logs 
+that keep filling up due to concurrent puts. Figure~\ref{fig:readstat:dist} depicts the distribution of gets 
+by the storage component that fulfilled the request, whereas Figure~\ref{fig:readstat:lat} presents the 
+average search latencies by component. For example, for the 64 GB dataset, $1.9\%$ of gets are served 
+from logs under Zipf-range, versus $4.0\%$ under Zipf. The log search latencies are 
+$1.7$ ms vs $4.4$ ms, since under Zipf the puts are more dispersed, hence the funks are rebalanced 
+less frequently and the logs grow longer. 
+
+% Bloom filter efficiency ... 
+
+Naturally, the efficiency of in-memory caching is paramount. In the same example, the RAM hit rate is 
+$90.5\%$ versus $79\%$ for Zipf. The row cache becomes instrumental as spatial locality drops --
+e.g., it serves $32.8\%$ of gets for Zipf versus $12.4\%$ for Zipf-range. 
+
+\paragraph{YCSB-C (100\% get, Zipf and Zipf-range distributions).}  
+\sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB under Zipf-range (Figure~\ref{fig:throughput:c}),
+and up to $1.6$x under Zipf for small datasets (Figure~\ref{fig:throughput:c}).   
+
+Since this experiment only exercises the read path, we can compare \sys's RAM caching 
+efficiency to RocksDB's. Both system exploit both application-level and OS (filesystem) caches. 
+Figure~\ref{fig:readamp} compares the two systems' read amplification (as proxy for cache hit ratio), 
+with respect to the number of read system calls and the actual disk reads.  In terms of disk I/O, RocksDB 
+is slightly better -- e.g., $0.95$ versus $1.07$ for the 64 GB dataset under Zipf-range. However, it 
+relies extensively on the filesystem cache, at the expense of the user-level block cache. In the same
+setting, it performs almost 12 times more system calls than \sys, hence wasting the CPU resources on  
+kernel-to-user data copy. RocksDB developers explain that the block cache scaling potential is limited in their
 database, due to tension between its read-path and write-path RAM resources~\cite{RocksDB-default-blockcache-issue}. 
 \sys, in contrast, exploits its munk cache for both reads and writes, which leads to better RAM utilization. 
 
-When spatial locality is low, the row cache is instrumental for \sys's get performance. 
- 
-\paragraph{YCSB-A (50\% put, 50\% get, Zipf and Zipf-range distributions).}
+\paragraph{YCSB-B (5\% put, 95\% get, Zipf and Zipf-prefix distributions).} Similar to YCSB-C, illustration omitted due to 
+lack of space. 
 
-This scenario is particularly challenging because it stresses both the write and the read paths. 
-The latter exercises \sys's munk cache as well as its row cache (which was not used by the previous 
-scenario). Table~\ref{tab:hitrate} summarizes the hit rate by cache type, to explain the read performance. 
-
-Similarly to YCSB-P, we analyze two scenarios: 
-
-\begin{enumerate}
-\item {\em Small dataset.} Both \sys\/ and RocksDB exhibit near-perfect hit ratio. RocksDB needs to search 
-both its memtable and block cache, whereas \sys\/ serves all puts and gets directly from munks. Overall, it
-achieves $50\%$ to $100\%$ better throughput.
-
-\item {\em Big dataset.} \sys's read performance depends on the workload's locality. For example, 
-the Zipf-range workload is highly local, and is therefore served effectively by \sys's munk cache. 
-Its throughput is $30\%$ to $50\%$ higher than RocksDB's across the board. The Zipf workload
-is more dispersed, and therefore, \sys\/ resorts to the row cache and I/O optimizations to serve it.  
-Thanks to its fine granularity, the row cache serves a big fraction of gets that are not covered by the munks. 
-For example, for the 64 GB dataset it serves $74\%$ of the gets that miss the munk cache. The rest are served 
-from the disk data structures -- the key store and the WAL. TBD ... 
-
-\end{enumerate}
-
-The write-path behavior is similar to YCSB-P (e.g., see Figure~\ref{fig:writeamp:a} for the write
-amplification statistics). 
-
-\paragraph{YCSB-B (5\% put, 95\% get, Zipf and Zipf-prefix distributions).}
-
-
-\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).}
+\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
 
 \paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-range distributions).}
 We experiment with short-to-medium scans - 10, 100, and 1000 rows. 
+
+\subsection{Insights}
+When spatial locality is low, the row cache is instrumental for \sys's get performance. 
 
 \subsection{Results -- Recovery Scenarios}
 

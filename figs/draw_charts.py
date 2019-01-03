@@ -28,6 +28,7 @@ piwi_marker = 'o'
 flurry_linecolor = tableau20[0]
 zip_linecolor = tableau20[6]
 latest_linecolor = tableau20[0]
+myfontsize = 15
 
 line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
               'Rocks Zipf': {'color': zip_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
@@ -78,19 +79,31 @@ def draw_speedup_chart(chart_name, distributions):
 def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
     experiments = dict()
+
     for workload in workloads:
         experiments[workload] = dict()
+
+    latency_breakdown = {'flurry': dict(), 'zipfian': dict()}
 
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
-            if '' not in row:
+            if row[0] == 'Workload C latency breakdown':
+                break
+            if row[0] is not '':
                 workload = row[0].split()[-1]
                 label = ' '.join(row[0].split()[:-1])
                 if workload not in experiments:
                     continue
-                experiments[workload][label] = list(map(float, row[1:]))
-    return experiments
+                experiments[workload][label] = list(map(float, [i for i in row[1:] if i is not '']))
+        for row in csv_reader:
+            if row[0] not in latency_breakdown:
+                continue
+            distribution = row[0]
+            memory = row[1]
+            latency_breakdown[distribution][memory] = [float(val.strip('%')) for val in row[2:]]
+
+    return {'experiments': experiments, 'latency': latency_breakdown}
 
 
 def calculate_speedups(workload, distributions):
@@ -109,9 +122,78 @@ def calculate_speedups(workload, distributions):
     return result
 
 
+def draw_latency_breakdown(name, latency):
+    MUNKS_INDEX = 2
+    RC_INDEX = 6
+    KS_INDEX = 14
+
+    munks_percentage_flurry = [v[MUNKS_INDEX]
+                               for (k, v) in latency['flurry'].items()]
+    rawcache_percentage_flurry = [v[RC_INDEX]
+                                  for (k, v) in latency['flurry'].items()]
+    keystore_percentage_flurry = [v[KS_INDEX]
+                                  for (k, v) in latency['flurry'].items()]
+    bar_width = 0.5
+    munks_color = tableau20[0]
+    rc_color = tableau20[2]
+    ks_color = tableau20[4]
+    flurry_hatch = '/'
+    zipf_hatch = ''
+    munks_label = 'Munk'
+    rc_label = 'Rowcache'
+    ks_label = 'Keystore'
+
+    fig, ax = plt.subplots()
+    flurry_indices = [0, 2, 4, 6, 8]
+    ax.bar(flurry_indices, munks_percentage_flurry, bar_width,
+           color=munks_color, edgecolor='black', hatch=flurry_hatch,
+           label=munks_label)
+    ax.bar(flurry_indices, rawcache_percentage_flurry, bar_width,
+           bottom=munks_percentage_flurry, color=rc_color, edgecolor='black',
+           hatch=flurry_hatch, label=rc_label)
+    ax.bar(flurry_indices, keystore_percentage_flurry, bar_width,
+           bottom=[sum(x) for x in zip(munks_percentage_flurry,
+                                       rawcache_percentage_flurry)],
+           color=ks_color, edgecolor='black', hatch=flurry_hatch,
+           label=ks_label)
+
+    munks_percentage_zipf = [v[MUNKS_INDEX]
+                             for (k, v) in latency['zipfian'].items()]
+    rawcache_percentage_zipf = [v[RC_INDEX]
+                                for (k, v) in latency['zipfian'].items()]
+    keystore_percentage_zipf = [v[KS_INDEX]
+                                for (k, v) in latency['zipfian'].items()]
+
+    zipf_indices = [v+bar_width + 0.1 for v in flurry_indices]
+
+    ax.bar(zipf_indices, munks_percentage_zipf, bar_width,
+           color=munks_color, edgecolor='black', hatch=zipf_hatch)
+    ax.bar(zipf_indices, rawcache_percentage_zipf, bar_width,
+           bottom=munks_percentage_zipf, color=rc_color, edgecolor='black',
+           hatch=zipf_hatch)
+    ax.bar(zipf_indices, keystore_percentage_zipf, bar_width,
+           bottom=[sum(x) for x in zip(munks_percentage_zipf,
+                                       rawcache_percentage_zipf)],
+           color=ks_color, edgecolor='black', hatch=zipf_hatch)
+
+    ax.legend(loc=3, fontsize=myfontsize)
+
+    ax.set_xticks(flurry_indices+zipf_indices)
+    ax.set_xticklabels(['Flurry' for i in range(5)]
+                       + ['Zipf' for i in range(5)], rotation=45)
+
+    ax2 = ax.twiny()
+    ax2.bar(flurry_indices, [0, 0, 0, 0, 0], bar_width)
+    ax2.bar(zipf_indices, [0, 0, 0, 0, 0], bar_width)
+    ax2.set_xticks([v+bar_width/2 for v in flurry_indices], False)
+    ax2.set_xticklabels(x_axis)
+    plt.savefig(name+'_breakdown.pdf', bbox_inches='tight')
+
 def main():
-    experiments = read_csv()
-    # draw line charts:
+    data = read_csv()
+    
+    experiments = data['experiments']
+    # draw line charts
     for workload in workloads:
         draw_line_chart('Workload ' + workload,
                         [{'label': k, 'data': v}
@@ -124,9 +206,13 @@ def main():
                                            ['Flurry', 'Zipf', 'Latest'])
         draw_speedup_chart('workload ' + workload, distributions)
 
-    plt.tight_layout()
-    plt.show()
+    latency = data['latency']
+    draw_latency_breakdown('C', latency)
+
+    # plt.tight_layout()
+    # plt.show()
 
 
 if __name__ == "__main__":
     main()
+
