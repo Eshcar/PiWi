@@ -155,7 +155,7 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \caption{Disk search latency}
 \label{fig:readstat:lat}
 \end{subfigure}
-\caption{\bf{\sys\/ get operation statistics by the serving component, under the wrote-intensive workload (YCSB-A) and scaling dataset sizes.}}
+\caption{\bf{\sys\/ get operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
 \label{fig:readstat}
 \end{figure*}
 
@@ -178,12 +178,11 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 Unless stated otherwise, the experiments below use 12 worker threads. 
 
 \paragraph{YCSB-P (100\% put, Zipf and Zipf-range distributions).} 
-\sys's throughput is $30\%$ to $60\%$ above RocksDB's for Zipf-range, 
-and $10\%$ to $50\%$ for Zipf (Figure~\ref{fig:throughput:p}). 
-\sys\/ produces better throughput for Zipf-range compared to Zipf, 
-as expected for workloads with high spatial locality. In contrast, 
-RocksDB's write performance is relatively insensitive to the workload, 
-which is typical for LSM data stores.
+\sys's throughput is $30\%$ to $60\%$ above RocksDB's under Zipf-range, 
+and $10\%$ to $50\%$ under Zipf (Figure~\ref{fig:throughput:p}). 
+\sys\ achieves better throughput for Zipf-range compared to Zipf, 
+thanks to high spatial locality. In contrast, RocksDB's write performance 
+is relatively insensitive to the workload, which is typical for LSM data stores.
 
 This workload's bottleneck is the persistent data reorganization 
 (funk rebalances for \sys, compactions for RocksDB). The overhead
@@ -207,7 +206,7 @@ thanks to better exploitation of spatial locality. Under the Zipf workload, it i
 datasets that fit in memory, and slower for big datasets.  
 
 The bottleneck in this scenario is the on-disk search part of gets, primarily the linear search in funk logs 
-that keep filling up due to concurrent puts. Searches that are served in-memory are 3 orders of magnitude 
+that keep filling up due to concurrent puts. In-memory searches are three orders of magnitude 
 faster. Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage hierarchy component 
 that fulfilled the request, whereas Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
 For example, for the 64 GB dataset, $1.9\%$ of gets are served from logs under Zipf-range, versus $4.0\%$ under Zipf. 
@@ -218,6 +217,18 @@ The log search latencies are $1.7$ ms vs $4.4$ ms, since under Zipf the puts are
 Naturally, the efficiency of in-memory caching is paramount. In the same example, the RAM hit rate is 
 $90.5\%$ versus $79\%$ for Zipf. The row cache becomes instrumental as spatial locality drops --
 e.g., it serves $32.8\%$ of gets for Zipf versus $12.4\%$ for Zipf-range. 
+
+\paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-range distributions).}
+This workload is the best for \sys, since it is most sensitive to spatial locality
+that the system has been designed for. 
+We experiment with short-to-medium scans, with the number of KV-pairs to iterate through 
+sampled uniformly between 1 and 10, 100, and 1000 rows, respectively (Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}). \sys\/ achieves $1.5$x to $3$x throughput versus RocksDB under
+Zipf-range, and even $1.5$x to 2x under Zipf, in most cases. 
+
+Note that the scan speed is slightly higher for the 8GB dataset versus the 4GB dataset. 
+Both are served in memory, however, the 4GB store has less munks, and hence, there is more contention 
+betweens scans and puts, that slows down the overall progress. This phenomenon becomes insignificant 
+with longer scans. 
 
 \paragraph{YCSB-C (100\% get, Zipf and Zipf-range distributions).}  
 \sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB under Zipf-range (Figure~\ref{fig:throughput:c}),
@@ -239,6 +250,4 @@ lack of space.
 
 \paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
 
-\paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-range distributions).}
-We experiment with short-to-medium scans - 10, 100, and 1000 rows (Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}). 
 
