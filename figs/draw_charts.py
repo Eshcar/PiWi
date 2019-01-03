@@ -284,6 +284,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     latency_breakdown = {'C': {'flurry': dict(), 'zipfian': dict()},
                          'A': {'flurry': dict(), 'zipfian': dict()}}
 
+    bloom_filter_partitioning = {'A_32': {'flurry': [], 'zipfian': []}}
+    
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -300,7 +302,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
         # read latency breakdown part
         workload = 'C'
         for row in csv_reader:
-            if row[0] == 'Bloom filter':
+            if row[0] == 'bloom filter':
                 break
             if row[0] == 'Workload A latency breakdown':
                 workload = 'A'
@@ -311,38 +313,73 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             latency_breakdown[workload][distribution][memory] = \
                 [float(val.strip('%').replace(',', '')) for val in row[2:] if val is not '']
 
+        workload = 'A_32'
         for row in csv_reader:
-            print(row)
+            distribution = row[1]
+            if distribution not in bloom_filter_partitioning[workload]:
+                continue
 
+            bloom_filter_partitioning[workload][distribution].append(row)
             
-    return {'experiments': experiments, 'latency': latency_breakdown}
+    return {'experiments': experiments, 'latency': latency_breakdown,
+            'bloom_filter_partitioning': bloom_filter_partitioning}
+
+
+def draw_bloom_filter_partitions(chart_name, data):
+
+    partitions = [int(val[0]) for val in data['flurry']]
+    flurry_throughput = [int(val[2]) for val in data['flurry']]
+    zipf_throughput = [int(val[2]) for val in data['zipfian']]
+
+    fig, ax = plt.subplots()
+
+    ax.plot(partitions, flurry_throughput, label='Flurry', color=flurry_linecolor, linestyle='-', linewidth=linewidth, marker='o', markersize=marksize)
+    ax.plot(partitions, zipf_throughput, label='Zipfian', color=zip_linecolor, linestyle='-', linewidth=linewidth, marker='o', markersize=marksize)
+            # color=line_color[line['label']]['color'],
+            # linestyle=line_color[line['label']]['linestyle'],
+            # linewidth=line_color[line['label']]['linewidth'],
+            # marker=line_color[line['label']]['marker'],
+            # markersize=marksize)
+
+    ax.set(xlabel='Partitions', ylabel='Throughput',
+           title=chart_name)
+    ax.grid()
+    ax.autoscale(enable=True, axis='x', tight=True)
+
+    plt.ylim(0)
+    plt.legend(loc=1)
+    plt.savefig(chart_name.replace(' ', '_') + '.pdf', bbox_inches='tight')
+
+
 
 
 def main():
     data = read_csv()
     
-    # experiments = data['experiments']
-    # # draw line charts
-    # for workload in workloads:
-    #     draw_line_chart('Workload ' + workload,
-    #                     [{'label': k, 'data': v}
-    #                      for (k, v) in experiments[workload].items()])
-    # # draw speedups
-    # for workload in workloads:
-    #     if 'writeamplification' in workload:
-    #         continue
-    #     distributions = calculate_speedups(experiments[workload],
-    #                                        ['Flurry', 'Zipf', 'Latest'])
-    #     draw_speedup_chart('workload ' + workload, distributions)
+    experiments = data['experiments']
+    # draw line charts
+    for workload in workloads:
+        draw_line_chart('Workload ' + workload,
+                        [{'label': k, 'data': v}
+                         for (k, v) in experiments[workload].items()])
+    # draw speedups
+    for workload in workloads:
+        if 'writeamplification' in workload:
+            continue
+        distributions = calculate_speedups(experiments[workload],
+                                           ['Flurry', 'Zipf', 'Latest'])
+        draw_speedup_chart('workload ' + workload, distributions)
 
     latency = data['latency']
 
-    # draw_percentage_breakdown('Time percentage C', latency['C'])
-    # draw_percentage_breakdown('Time percentage A', latency['A'])
+    draw_percentage_breakdown('Time percentage C', latency['C'])
+    draw_percentage_breakdown('Time percentage A', latency['A'])
     
     draw_latency_breakdown('Latency C', latency['C'])
     draw_latency_breakdown('Latency A', latency['A'])
-
+    
+    draw_bloom_filter_partitions('Bloom filter', data['bloom_filter_partitioning']['A_32'])
+    
     plt.tight_layout()
     plt.show()
 
