@@ -10,7 +10,12 @@ Specifically, PebblesDB~\cite{PebblesDB} introduces fragmented LSM tree structur
 %Accordion~\cite{accordion} is a new write-path algorithm for LSM stores. 
 Accordion~\cite{accordion} maintains a small dynamic memory component to absorb write operation. This active component is frequently merged with a larger immutable in-memory component by running in-memory flush and compaction at the background. This mechanism is somewhat similar to the rebalance mechanism used in \sys, however, \sys\ applies rebalance per chunk, while Accordion runs in-memory compaction for the entire store.
 
+Unlike LSM-trees, Tucana~\cite{tucana} is a B-tree variant ($B^{\epsilon}$-tree). It uses per-leaf buffering to improve inserts and copy-on-write instead of WAL, trading compactions with smaller random I/O. 
+Like \sys\ keys and values are appended to buffers and pointers to keys are sorted in contigouos segments, thereby having improved performance in read-dominated workloads.
+Tucana uses an alternative approach to application level caching that is based on memory-mapped files (mmap). \sys\ on the other hand manages cache in memory data structures (munks and row cache).
+%Split and merge update the index in a bottom up fashion. 
+%Read and scan operations traverse the path from root to leaf. At the leaf, read operations perform binary search; scans subsequently iterate over the range of keys.
+%In read dominated workloads Tucana benefits from contigouos key segments. However random I/O prevents Tucana from outperforming LSM trees in write dominated workloads.
 
-$\epsilon^+$-trees and implelentations like Tucana~\cite{tucana}.
 
-in-memory kv stores memcached ignite redis
+In-memory kv-stores like~\cite{memcached, ignite, redis} are used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, B-tree index, and in-place updates~\cite{ignite}  more than a kv lsm store.
