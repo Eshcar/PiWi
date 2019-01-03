@@ -67,15 +67,15 @@ We only present the performance metrics in asynchronous logging mode -- as synch
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
-most chunks are bound by 7 MB (i.e., approximately 700 KV-pairs per chunk). 
+most chunks are bound by 7 MB (i.e., approximately 700 KV-pairs per chunk). The WAL size limit
+is 2 MB for write intensive workloads, and $0.5$ MB for other workloads. 
 
 We allocate a quota of 13.5 GB RAM (out of the 16 GB container) to the munk and row caches, 
-and split it between the two at a $2:1$ ratio. The WAL size limit, which is auto-tuned by \sys\/
-(Section~\ref{sec:impl}), varies from $0.5$ MB to 2 MB. 
+and split it between the two at a $2:1$ ratio. 
 
 We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
-\subsection{Mainstream Scenarios}
+\subsection{Results}
 
 \begin{figure*}[tb]
 \centering
@@ -145,6 +145,22 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \centering
 \hspace{0.05\linewidth}
 \begin{subfigure}{0.3\linewidth}
+\caption{Fraction of searches}
+\label{fig:readstat:dist}
+\end{subfigure}
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.25\linewidth}
+\caption{Average latency}
+\label{fig:readstat:lat}
+\end{subfigure}
+\caption{\bf{\sys\/ get operation statistics by the serving component, under the wrote-intensive workload (YCSB-A) and scaling dataset sizes.}}
+\label{fig:readstat}
+\end{figure*}
+
+\begin{figure*}
+\centering
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.3\linewidth}
 \caption{Disk I/O}
 \label{fig:readamp:d}
 \end{subfigure}
@@ -155,22 +171,6 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \end{subfigure}
 \caption{\bf{\sys\/ versus RocksDB read amplification, under the read-only workload (YCSB-C) and scaling dataset sizes.}}
 \label{fig:readamp}
-\end{figure*}
-
-\begin{figure*}
-\centering
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.3\linewidth}
-\caption{YCSB-}
-\label{fig:readstat:dist}
-\end{subfigure}
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.25\linewidth}
-\caption{System calls}
-\label{fig:readstat:lat}
-\end{subfigure}
-\caption{\bf{\sys\/ get statistics by storage component, under read-intensive workloads (YCSB-C) and scaling dataset sizes.}}
-\label{fig:readstat}
 \end{figure*}
 
 Unless stated otherwise, the experiments below use 12 worker threads. 
@@ -241,17 +241,3 @@ lack of space.
 \paragraph{YCSB-E (5\% put, 95\% scan, Zipf and Zipf-range distributions).}
 We experiment with short-to-medium scans - 10, 100, and 1000 rows. 
 
-\subsection{Insights}
-When spatial locality is low, the row cache is instrumental for \sys's get performance. 
-
-\subsection{Results -- Recovery Scenarios}
-
-\remove{
-To drive the benchmarks, we use the 
-YCSB framework in C++\footnote{}  
-
-All three systems are configured to provided persistence, namely, no data loss, by using their synchronous logging mode.
-In addition, we deploy a single partition in each of the systems in order to provide consistent scans across the entire data store.
-
-We do not compare with Tucana~\cite{tucana} as its code has not been available; moreover, it does not support the persistency and consistency guarantees that \sys\ provides. 
-}
