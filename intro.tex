@@ -2,7 +2,7 @@
 
 
 % KV-stores are everywhere
-Scalable key-value stores (KV-stores) are widely used nowadays by a broad range of applications, and are projected
+Key-value stores (KV-stores) are widely used nowadays by a broad range of applications, and are projected
 to continue to increase in popularity in years to come; market research  identifies them as the 
 ``driving factors'' of the NoSQL market, which is expected to garner \$4.2B by 2020~\cite{alliedmarketresearch}.
 
@@ -69,8 +69,8 @@ which are common with composite keys.
 
 % LSM is not the best when the entire working set fits in memory
 Finally, we note that LSM's temporal file organization optimizes disk I/O but induces a penalty on in-memory operation. 
-For example, all keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured via a separate 
-\emph{write-ahead-log (WAL)}. 
+For example, all keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured 
+via a separate \emph{write-ahead-log (WAL)}. 
 This increases write amplification and also makes the flushed keys unavailable for fast read from memory. 
 Whenever the system leverages sufficient DRAM to hold almost the entire working set,  such flushes lead to inefficient use of memory resources. 
 The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices})  and 
@@ -86,11 +86,15 @@ Chunks reduce the fragmentation of key ranges, resulting in
 (1) better read and write performance for workloads with spatial locality,  and
 (2) faster range scans. 
 Moreover, since chunks  are compacted in memory, writes are 
-flushed to disk less frequently than LSM writes (relying on a WAL for persistence)
+flushed to disk less frequently than LSM writes (relying on a {\inred {per-chunk WAL's}} for persistence)
 yielding 
 (3) reduced write amplification, and 
 (4) better performance with memory-resident working sets.
- 
+
+{\inred{All \sys\/ APIs (put, get, and scan) provide strong (atomic) consistency guarantees on multiprocessor CPU hardware. 
+The system employs fast concurrent data structures for in-memory processing, to scale with the number of cores. 
+Finally, \sys\/ provides near-zero failure recovery time since it has no global WAL. }}
+
 We have implemented \sys\ in C++. We compare it to the recent release of RocksDB~\cite{RocksDB}, 
 an industry-leading KV-store  based on LSM design. Our experiments, based on the popular 
 YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  RocksDB, 
