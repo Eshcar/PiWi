@@ -2,7 +2,7 @@
 
 %common lsm stores RocksDB, scylladb, HyperLevelDB, LevelDB, hbase, cassandra
 The vast majority of industrial mainstream key-value stores are  implemented as LSM data
-stores~\cite{Bigtable2008,hbase,cassandra2010,RocksDB, scylladb}, building on the foundation set by the original LSM-tree key-value store~\cite{O'Neil1996, Muth1998}.
+stores~\cite{Bigtable2008,hbase,cassandra2010,rocksdb, scylladb}, building on the foundation set by the original LSM-tree key-value store~\cite{O'Neil1996, Muth1998}.
 
 Due to their popularity, much work has been dedicated in recent years for optimizing their implementation. Some work aims to increase performance of workloads that can be served from 
 RAM by optimizing the LSM memory component~\cite{clsm2015, accordion}. Other focus on reducing write amplification and increasing throughput either by applying storage optimizations~\cite{WiscKey, PebblesDB}, defering compactions~\cite{PebblesDB, triad}, or by levereging the skewness of many workloads to tackle the problem earlier at the memory level~\cite{ accordion, triad}.
