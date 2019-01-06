@@ -6,58 +6,56 @@ the state of the data store at a unique point in time.
 
 \sys\ is geared for high-throughput analytics applications, which (1) perform many range scans; 
 (2) strive to accommodate the entire working set in RAM (for performance), and yet require  (3)
-persistence with fast recovery. 
-
-\remove{
-We now detail the key requirements from \sys\ and the design choices we made in order to meet them.
+persistence with fast recovery. We now detail the key requirements from \sys\ and the design choices we made in order to meet them.
 
 \subsection{Requirements}
-}
-We now detail the key requirements from \sys:
 
-\emph{Fast atomic scans.}
-Analytics engines typically support multi-dimensional exploration of event data, which they realize in a key-value store using composite keys.   For example, a typical  KV-map used by an application like Flurry Analytics~\cite{flurry} 
-summarizes mobile traffic statistics grouped by a combination of dimensions like  date,  user-id, and application-id.
-Queries with spatial locality that retrieve data pertaining to particular users thus need to atomically 
-retrieve the values pertaining to ranges of keys. 
-To favor analytics queries, it is important to optimize  such scans. 
- 
-\emph{High performance and low write amplification} with memory-resident working sets.
+The key requirements from \sys\ are  the following:
+%\begin{description}
+%\item[Real-time updates] -- the system should allow updates to be processed at \inred{wire speed} with \inred{sub-millisecond} latency.  
+%\item[
+\paragraph{High performance with memory-resident working sets.}
 To sustain high throughput, key-value stores nowadays leverage increasing memory sizes where they can hold most of the 
 active data set. We strive for maximum performance in this ``high performance'' case.  
-Minimizing disk writes is important not only for performance, but also in order to reduce disk wear.
 
-\emph{Fast recovery to consistent state.}
+\paragraph{Fast recovery to consistent state.}
 Because crashes are inevitable, the mean-time-to-recover from crashes should be kept short.
-Like other popular KV-stores~\cite{rocksdb,leveldb,hbase}, \sys\ supports \emph{asynchronous} persistence, 
+Like other popular KV-stores~\cite{RocksDB,leveldb,hbase}, \sys\ supports \emph{asynchronous} persistence, 
 where put requests are buffered in memory and periodically persisted to disk in bulk. 
 This approach significantly reduces the latency of put operations, which do not wait for their data to be persisted.
-The downside of this approach, is potential loss of the most recently written data upon crash. 
-\remove{For example, 
+The downside of this approach, is potential loss of the most recently written data upon crash. For example, 
 if data is flushed to disk every $10$ seconds, then put operations executed in the last $10$ seconds before the crash 
 may be undone. 
-Nevertheless, \sys\ ensures}
-It is required that \emph{data consistency} is preserved following recovery, in the sense that 
+Nevertheless, \sys\ ensures that \emph{data consistency} is preserved following recovery, in the sense that 
 if some put is lost, all ensuing (and thus possibly dependent) puts are lost as well, and the recovery is to a well 
 defined execution point some time before the crash.
  
-\remove{
+\paragraph{Fast atomic scans.}
+ Analytics engines typically support multi-dimensional exploration of event data, 
+ which they realize in a key-value store using composite keys.   
+ \remove{For example, a typical  KV-map used by an application like Flurry Analytics~\cite{flurry} 
+ summarizes mobile traffic statistics grouped by a combination of dimensions like  date,  user-id, and application-id.}
+A query that retrieves data pertaining to a particular {\inred{dimension}} thus needs to atomically 
+retrieve the values pertaining to a range of keys. To favor analytics queries, it is important to optimize such scans. 
+ 
  \paragraph{Low write amplification.} 
- Minimizing disk writes is important not only for performance, but also in order to reduce disk wear.
-}
+ Minimizing disk writes is important not only for performance, but also for disk wear reduction.
+
+% \end{description} 
 
 \subsection{Design choices}
 
 Given the aforementioned requirements, we make the following design choices in \sys:
 
 \paragraph{Chunk-based organization for fast access.}
-We organize data --  both in-memory and on-disk --  in large \emph{chunks}  pertaining to  key ranges.  This allows us to support range scans efficiently, with  high cache locality and minimal loading of new memory pages. 
+We organize data --  both in-memory and on-disk --  in large \emph{chunks}  pertaining to  key ranges.  
+This enables efficient support of range scans, with  high cache locality and minimal loading of new memory pages. 
 %Both the read and the write path go through chunks. 
 Each chunk has a file representation called  \emph{funk}, and may be cached in-memory in a  \emph{munk} data structure.
 
 We use a number of techniques to optimize in-memory  access, including partially sorting keys in each chunk and 
 indexing munks. 
-To expedite access to  keys whose chunks are only on-disk  (i.e., have no munks), 
+To expedite access to  keys whose chunks ore only on-disk  (i.e., have no munks), 
 individual popular keys are cached in a \emph{row cache}, 
 and \emph{Bloom filters} are used to limit excessive access to disk. 
 
@@ -65,7 +63,7 @@ and \emph{Bloom filters} are used to limit excessive access to disk.
 \paragraph{Multi-versioning for atomic scans.} \sys\ employs multi-versioning along with
 copy-on-write to keep data versions required by atomic scans. 
 In other words, if a put attempts to overwrite a key  required by an active scan, then a new version is created alongside the 
-existing one, whereas versions that are not needed by any scan are not retained. 
+existing one, whereas old versions that are not needed by any scan are not retained. 
 Thus, version management incurs a low overhead (as it occurs only on scans). It also defines a simple rule for garbage collecting old versions.
 %\item[Lightweight puts] -- \sys\ allows put operations to proceed quickly by `dumping' their data to the appropriate file (and possibly) memory chunk; it amortizes the cost of optimizing the chunk's organization (by sorting and compaction) across many puts.  
 \paragraph{Infrequent disk compactions.} 
