@@ -30,7 +30,7 @@ in the primary key.}}
 Composite keys induce \emph{spatial locality} in workloads with high {temporal locality}, as 
 popular entities (for example, users) result in popular \emph{key ranges}. 
 Spatial locality may also arise with simple (non-composite) keys, for example in 
- reverse  URLs, which  are often used as keys for web search applications. 
+ reverse  URLs, which  are often used as keys for web search indexing~\cite{Cho:1998:ECT:297805.297835}. 
 While the prevalence of temporal locality (i.e., frequent access to popular entities) in real-world workloads is widely-recognized, 
 and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions such as Zipf, 
 these benchmarks fail to capture the spatial aspect of locality.
@@ -73,7 +73,7 @@ For example, all keys -- including popular ones -- are flushed to disk periodica
 \emph{write-ahead-log (WAL)}. 
 This increases write amplification and also makes the flushed keys unavailable for fast read from memory. 
 Whenever the system leverages sufficient DRAM to hold almost the entire working set,  such flushes lead to inefficient use of memory resources. 
-The drop in DRAM prices (more than $6.6$x since 2010~\cite{StatistaReport})  and 
+The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices})  and 
 significant performance benefit DRAM offers make this scenario increasingly common.  
 
 % Drum roll 
@@ -96,17 +96,15 @@ an industry-leading KV-store  based on LSM design. Our experiments, based on the
 YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  RocksDB, 
 especially when spatial  locality is high. 
 For example, with composite keys and a memory-resident working set, \sys\  speeds up scans 
-by up to 3x, writes by up to 1.6x, and (single-key) reads by up to 2.2x.
-With larger working sets than the available DRAM, \sys\ outperforms RocksDB by 50\%--100\% on reads  and 
-scans, and 25\% on writes. 
- \Idit{Check numbers.}
+by up to 3x, puts by up to $1.6$x, and gets by up to $2.2$x. With larger working sets than the 
+available DRAM, \sys\ still outperforms RocksDB by $50\% - 100\%$ on gets  and scans, 
+and $30\%$ on writes. 
 
 We do not claim, however, that \sys\/ is better than a mature LSM-tree implementation
 under all circumstances -- there are scenarios in which RocksDB performs better (e.g., under low locality). 
 The primary goal of our work is to draw attention to the importance of spatial locality in 
 today's workloads, and to propose a design alternative to LSM that is better suited for such locality. 
-As with all new approaches, there is ample  room for 
-future improvements. 
+As with all new approaches, there is ample  room for future improvements. 
  
  % The rest of this paper is organized as follows ... 
  This paper proceeds as follows:
@@ -114,5 +112,3 @@ We present our design principles in~\cref{sec:principles} and  the \sys\ algorit
 in~\cref{sec:design}. We then discuss implementation details in~\cref{sec:impl} and evaluate 
 \sys\ in~\cref{sec:eval}.  Finally,~\cref{sec:related}   surveys related work and~\cref{sec:conclusions}
 concludes. 
-
-
