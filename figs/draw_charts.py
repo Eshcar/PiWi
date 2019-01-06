@@ -175,7 +175,7 @@ def draw_percentage_breakdown(chart_name, latency):
 
     ax.set_xticks(flurry_indices+zipf_indices)
     ax.set_xticklabels([renamings('Flurry') for i in range(5)]
-                       + ['Zipf' for i in range(5)], rotation=60)
+                       + ['Zipf' for i in range(5)], rotation=80, fontsize=myfontsize)
 
     ax.set_xlabel('Distribution', fontsize=myfontsize)
     ax.set_ylabel('% Searches', fontsize=myfontsize)
@@ -265,12 +265,13 @@ def draw_latency_breakdown(chart_name, latency):
 
     ax.set_xticks(flurry_indices+zipf_indices)
     ax.set_xticklabels([renamings('Flurry') for i in range(3)]
-                       + ['Zipf' for i in range(3)], rotation=45)
-    # ax.set_yscale("log", nonposy='clip')
-    ax.set(xlabel='', ylabel='[msec]',
-           title=chart_name)
+                       + ['Zipf' for i in range(3)], rotation=45, fontsize=myfontsize)
 
+    ax.set_xlabel('Distribution', fontsize=myfontsize)
+
+    ax.set_ylabel('[msec]', fontsize=myfontsize)
     ax2 = ax.twiny()
+    ax2.set_xlabel('Dataset Size', fontsize=myfontsize)
     ax2.bar(flurry_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
     ax2.bar(zipf_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
     ax2.set_xticks([v+bar_width/2 for v in flurry_indices], False)
@@ -414,7 +415,7 @@ def main():
     
     
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":
