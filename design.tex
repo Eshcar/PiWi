@@ -59,15 +59,14 @@ A subset of the chunks is also cached in memory to allow fast access, where each
 \emph{munk (memory chunk)}  data structure. 
 Munks are volatile and can be removed and recreated from funks at any time.
 % Thus, multiple \emph{generations} of munks may exist for a chunk throughout its life time.
-Munks that are not cached are denoted \emph{munk-less}.
+Chunks that are not cached are denoted \emph{munk-less}.
 
 At run-time, \sys\ holds in memory a linked list of chunk metadata objects as well as 
 a \emph{chunk index}, which is a sorted map from keys to chunks (e.g., a sorted array, skip list, or search tree).
 Note that since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks. 
-A typical metadata object is smaller than 1KB, whereas the size of a funk or munk 
-remove{that holds 10K to 100K keys 
-ranges between 1M to 100M depending on the data size.} 
-ranges between 10s to 100s of MBs.
+A typical metadata object is smaller than 1 KB, whereas typical funk or munk 
+\remove{that holds 10K to 100K keys  ranges between 1M to 100M depending on the data size.} 
+is 3-4 orders of magnitude bigger. 
 
 A munk holds key-value pairs in an array-based linked list.  
 \remove{
