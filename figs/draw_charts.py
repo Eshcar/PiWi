@@ -4,8 +4,7 @@ import csv
 
 
 x_axis = ["4GB", "8GB", "16GB", "32GB", "64GB"]
-workloads = ['S', 'P', 'A', 'B', 'C', 'E-', 'E', 'E+', 'D',
-             'P_writeamplification_disk', 'A_writeamplification_disk']
+workloads = ['S', 'P', 'A', 'B', 'C', 'E-', 'E', 'E+', 'D']
 
 # These are the "Tableau 20" colors as RGB.
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
@@ -30,6 +29,11 @@ zip_linecolor = tableau20[6]
 latest_linecolor = tableau20[0]
 myfontsize = 15
 
+munks_label = 'Munk Cache'
+rc_label = 'Row Cache'
+wb_label = 'Log'
+ks_label = 'SStable'
+
 line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
               'Rocks Zipf': {'color': zip_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
               'Rocks Latest': {'color': latest_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
@@ -38,23 +42,27 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
               'Piwi Latest': {'color': latest_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker}}
 
 
-def draw_line_chart(chart_name, lines):
+def renamings(label):
+    return label.replace('Flurry', 'Zipf-range')
+def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1):
     fig, ax = plt.subplots()
     for line in lines:
-        ax.plot(x_axis, line['data'], label=line['label'],
+        ax.plot(x_axis, line['data'], label=renamings(line['label']),
                 color=line_color[line['label']]['color'],
                 linestyle=line_color[line['label']]['linestyle'],
                 linewidth=line_color[line['label']]['linewidth'],
                 marker=line_color[line['label']]['marker'],
                 markersize=marksize)
 
-    ax.set(xlabel='', ylabel='Throughput',
-           title=chart_name)
+    # ax.set(xlabel=, ylabel='',
+    #        title=chart_name, )
+    ax.set_xlabel('Dataset Size', fontsize=myfontsize)
+    ax.set_ylabel(yaxis, fontsize=myfontsize)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
     plt.ylim(0)
-    plt.legend(loc=1)
-    plt.savefig(chart_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
+    ax.legend(loc=legend, fontsize=myfontsize)
+    plt.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
 
 def draw_speedup_chart(chart_name, distributions):
@@ -114,10 +122,7 @@ def draw_percentage_breakdown(chart_name, latency):
     ks_color = tableau20[4]
     flurry_hatch = ''
     zipf_hatch = '/'
-    munks_label = 'Munk'
-    rc_label = 'Rowcache'
-    wb_label = 'Writebuffer'
-    ks_label = 'Keystore'
+
 
     fig, ax = plt.subplots()
 
@@ -169,13 +174,15 @@ def draw_percentage_breakdown(chart_name, latency):
     ax.legend(loc=3, fontsize=myfontsize)
 
     ax.set_xticks(flurry_indices+zipf_indices)
-    ax.set_xticklabels(['Flurry' for i in range(5)]
-                       + ['Zipf' for i in range(5)], rotation=45)
+    ax.set_xticklabels([renamings('Flurry') for i in range(5)]
+                       + ['Zipf' for i in range(5)], rotation=60)
 
-    ax.set(xlabel='', ylabel='%',
-           title=chart_name)
+    ax.set_xlabel('Distribution', fontsize=myfontsize)
+    ax.set_ylabel('% Searches', fontsize=myfontsize)
+
     
     ax2 = ax.twiny()
+    ax2.set_xlabel('Dataset Size', fontsize=myfontsize)
     ax2.bar(flurry_indices, [0, 0, 0, 0, 0], bar_width)
     ax2.bar(zipf_indices, [0, 0, 0, 0, 0], bar_width)
     ax2.set_xticks([v+bar_width/2 for v in flurry_indices], False)
@@ -189,13 +196,13 @@ def draw_latency_breakdown(chart_name, latency):
     WB_INDEX = 12
     KS_INDEX = 16
 
-    munks_percentage_flurry = [v[MUNKS_INDEX]
+    munks_percentage_flurry = [v[MUNKS_INDEX] / 1000
                                for (k, v) in latency['flurry'].items()][2:]
-    rawcache_percentage_flurry = [v[RC_INDEX]
+    rawcache_percentage_flurry = [v[RC_INDEX] / 1000
                                   for (k, v) in latency['flurry'].items()][2:]
-    wb_percentage_flurry = [v[WB_INDEX]
+    wb_percentage_flurry = [v[WB_INDEX] / 1000
                             for (k, v) in latency['flurry'].items()][2:]
-    keystore_percentage_flurry = [v[KS_INDEX]
+    keystore_percentage_flurry = [v[KS_INDEX] / 1000
                                   for (k, v) in latency['flurry'].items()][2:]
 
     bar_width = 0.5
@@ -205,10 +212,7 @@ def draw_latency_breakdown(chart_name, latency):
     ks_color = tableau20[4]
     flurry_hatch = ''
     zipf_hatch = '/'
-    munks_label = 'Munk'
-    rc_label = 'Rowcache'
-    wb_label = 'Writebuffer'
-    ks_label = 'Keystore'
+
 
     fig, ax = plt.subplots()
     
@@ -231,13 +235,13 @@ def draw_latency_breakdown(chart_name, latency):
            color=ks_color, edgecolor='black', hatch=flurry_hatch,
            label=ks_label)
 
-    munks_percentage_zipf = [v[MUNKS_INDEX]
+    munks_percentage_zipf = [v[MUNKS_INDEX] / 1000
                              for (k, v) in latency['zipfian'].items()][2:]
-    rawcache_percentage_zipf = [v[RC_INDEX]
+    rawcache_percentage_zipf = [v[RC_INDEX] / 1000
                                 for (k, v) in latency['zipfian'].items()][2:]
-    wb_percentage_zipf = [v[WB_INDEX]
-                            for (k, v) in latency['zipfian'].items()][2:]
-    keystore_percentage_zipf = [v[KS_INDEX]
+    wb_percentage_zipf = [v[WB_INDEX] / 1000
+                          for (k, v) in latency['zipfian'].items()][2:]
+    keystore_percentage_zipf = [v[KS_INDEX] / 1000
                                 for (k, v) in latency['zipfian'].items()][2:]
 
     zipf_indices = [v+bar_width + 0.1 for v in flurry_indices]
@@ -260,15 +264,15 @@ def draw_latency_breakdown(chart_name, latency):
     ax.legend(loc=2, fontsize=myfontsize)
 
     ax.set_xticks(flurry_indices+zipf_indices)
-    ax.set_xticklabels(['Flurry' for i in range(5)]
-                       + ['Zipf' for i in range(5)], rotation=45)
+    ax.set_xticklabels([renamings('Flurry') for i in range(3)]
+                       + ['Zipf' for i in range(3)], rotation=45)
     # ax.set_yscale("log", nonposy='clip')
-    ax.set(xlabel='', ylabel='[usec]',
+    ax.set(xlabel='', ylabel='[msec]',
            title=chart_name)
 
     ax2 = ax.twiny()
-    ax2.bar(flurry_indices, [0.1, 0.1, 0.1, 0.1, 0.1][2:], bar_width)
-    ax2.bar(zipf_indices, [0.1, 0.1, 0.1, 0.1, 0.1][2:], bar_width)
+    ax2.bar(flurry_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
+    ax2.bar(zipf_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
     ax2.set_xticks([v+bar_width/2 for v in flurry_indices], False)
     ax2.set_xticklabels(x_axis)
     plt.savefig(chart_name.replace(' ', '_')+'.pdf', bbox_inches='tight')
@@ -285,11 +289,15 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                          'A': {'flurry': dict(), 'zipfian': dict()}}
 
     bloom_filter_partitioning = {'A_32': {'flurry': [], 'zipfian': []}}
-    
+
+    amplifications = {'P': dict(),
+                      'A': dict(),
+                      'C': dict()}
+
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
-            if row[0] == 'Workload C latency breakdown':
+            if row[0] == 'read_write_amplification':
                 break
             if row[0] is not '':
                 workload = row[0].split()[-1]
@@ -299,6 +307,16 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                 experiments[workload][label] = \
                     list(map(float, [i for i in row[1:] if i is not '']))
 
+        # read/write amplification
+        for row in csv_reader:
+            if row[0] == 'Workload C latency breakdown':
+                break
+            if row[0] is '':
+                continue
+            workload = row[0].split()[2]
+            if workload not in amplifications:
+                continue
+            amplifications[workload][row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
         # read latency breakdown part
         workload = 'C'
         for row in csv_reader:
@@ -322,7 +340,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             bloom_filter_partitioning[workload][distribution].append(row)
             
     return {'experiments': experiments, 'latency': latency_breakdown,
-            'bloom_filter_partitioning': bloom_filter_partitioning}
+            'bloom_filter_partitioning': bloom_filter_partitioning,
+            'amplifications': amplifications}
 
 
 def draw_bloom_filter_partitions(chart_name, data):
@@ -335,11 +354,6 @@ def draw_bloom_filter_partitions(chart_name, data):
 
     ax.plot(partitions, flurry_throughput, label='Flurry', color=flurry_linecolor, linestyle='-', linewidth=linewidth, marker='o', markersize=marksize)
     ax.plot(partitions, zipf_throughput, label='Zipfian', color=zip_linecolor, linestyle='-', linewidth=linewidth, marker='o', markersize=marksize)
-            # color=line_color[line['label']]['color'],
-            # linestyle=line_color[line['label']]['linestyle'],
-            # linewidth=line_color[line['label']]['linewidth'],
-            # marker=line_color[line['label']]['marker'],
-            # markersize=marksize)
 
     ax.set(xlabel='Partitions', ylabel='Throughput',
            title=chart_name)
@@ -352,7 +366,6 @@ def draw_bloom_filter_partitions(chart_name, data):
 
 
 
-
 def main():
     data = read_csv()
     
@@ -361,24 +374,44 @@ def main():
     for workload in workloads:
         draw_line_chart('Workload ' + workload,
                         [{'label': k, 'data': v}
-                         for (k, v) in experiments[workload].items()])
+                         for (k, v) in experiments[workload].items()], yaxis='KOPS')
     # draw speedups
-    for workload in workloads:
-        if 'writeamplification' in workload:
-            continue
-        distributions = calculate_speedups(experiments[workload],
-                                           ['Flurry', 'Zipf', 'Latest'])
-        draw_speedup_chart('workload ' + workload, distributions)
+    # for workload in workloads:
+    #     if 'writeamplification' in workload:
+    #         continue
+    #     distributions = calculate_speedups(experiments[workload],
+    #                                        ['Flurry', 'Zipf', 'Latest'])
+    #     draw_speedup_chart('workload ' + workload, distributions)
 
     latency = data['latency']
 
     draw_percentage_breakdown('Time percentage C', latency['C'])
     draw_percentage_breakdown('Time percentage A', latency['A'])
-    
+
     draw_latency_breakdown('Latency C', latency['C'])
     draw_latency_breakdown('Latency A', latency['A'])
     
     draw_bloom_filter_partitions('Bloom filter', data['bloom_filter_partitioning']['A_32'])
+
+    amplifications = data['amplifications']
+    # P write amplification disk:
+    draw_line_chart('P_write_amplification_disk',
+                    [{'label': ' '.join(k.split()[0:2]), 'data': v}
+                     for (k, v) in amplifications['P'].items() if 'disk' in k],
+                    yaxis='Amplification', legend=3)
+
+
+    # C read amplification disk:
+    draw_line_chart('C_read_amplification_disk',
+                    [{'label': ' '.join(k.split()[0:2]), 'data': v}
+                     for (k, v) in amplifications['C'].items() if 'disk' in k],
+                    yaxis='Amplification', legend=3)
+
+    draw_line_chart('C_read_amplification_kernel',
+                    [{'label': ' '.join(k.split()[0:2]), 'data': v}
+                     for (k, v) in amplifications['C'].items() if 'kernel' in k],
+                    yaxis='Amplification', legend=3)
+    
     
     plt.tight_layout()
     plt.show()
