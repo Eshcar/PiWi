@@ -35,7 +35,7 @@ The data is stored uncompressed.
 \begin{enumerate}
 \item {\em Zipf}. The key frequencies are sampled from the heavy-tailed Zipf distribution, 
 following the description in~\cite{Gray:1994:QGB:191839.191886}, with $\theta = 0.8$. 
-The keys themselves are sampled uniformly at random from the whole data range. Zipf exhibits 
+The key locations are sampled uniformly at random from the whole data range. Zipf exhibits 
 medium temporal locality (e.g., the most popular key's frequency is approximately $0.7\%$), 
 and no spatial locality. This is a standard YCSB workload that captures a multitude of use cases 
 -- e.g., a web page cache distribution by URL. 
@@ -45,7 +45,7 @@ and no spatial locality. This is a standard YCSB workload that captures a multit
 a workload of high spatial locality, e.g., message threads~\cite{Borthakur:2011:AHG:1989323.1989438}. 
 
 \item {\em Latest}. New KV-pairs are inserted in sequential key order; the most recently inserted ones are 
-the  most popular (the sampled key's position wrt from the most recent key is distributed Zipf). This is a 
+the  most popular (the sampled key's position wrt the most recent key is distributed Zipf). This is a 
 standard YCSB workload of medium spatial and temporal locality that exhibits, e.g., status updates and reads. 
 
 \end{enumerate}
@@ -66,13 +66,13 @@ on the scan size. We run 5 experiments for each data point, and present the medi
 We only present the performance metrics in asynchronous logging mode -- as synchronous logging 
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
-most chunks are bound by 7 MB (i.e., approximately 700 KV-pairs per chunk). The WAL size limit
-is 2 MB for write intensive workloads, and $0.5$ MB for other workloads. The Bloom filters for 
-munk-less funks are partitioned 16-way.  
-
 We allocate a quota of 13.5 GB RAM (out of the 16 GB container) to the munk and row caches, 
 and split it between the two at a $2:1$ ratio. 
+
+The Bloom filters for munk-less funks are partitioned 16-way.  
+We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
+most chunks are bound by 7 MB (i.e., approximately 7000 KV-pairs per chunk). The funk log
+size limit is 2 MB for write intensive workloads, and 512 KB for other workloads.
 
 We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
@@ -129,14 +129,14 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 and $10\%$ to $50\%$ under Zipf (Figure~\ref{fig:throughput:p}). 
 \sys\ achieves better throughput for Zipf-range compared to Zipf, 
 thanks to high spatial locality. In contrast, RocksDB's write performance 
-is relatively insensitive to the workload, which is typical for LSM data stores.
+is relatively insensitive to the distribution, which is typical for LSM data stores.
 
 This workload's bottleneck is the persistent data reorganization 
 (funk rebalances for \sys, compactions for RocksDB). The overhead
 manifests in disk write rates, which \sys\/ reduces through better use of spatial locality. 
 For small datasets (8 GB or less), \sys\/ accommodates all puts in munks, which alleviates 
 funk rebalances altogether. For big datasets, only part of the chunks are cached, hence 
-funk rebalances start occurring. However, they mostly happen to the hottest munk-less 
+funk rebalances start occurring. However, they mostly happen to munk-less 
 (torso) chunks. Hence, they incur less I/O than RocksDB's compactions, which do not 
 distinguish between hot and cold data. 
 
@@ -157,7 +157,9 @@ that keep filling up due to concurrent puts. In-memory searches are three orders
 faster. Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage hierarchy component 
 that fulfilled the request, whereas Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
 For example, for the 64 GB dataset, $1.9\%$ of gets are served from logs under Zipf-range, versus $4.0\%$ under Zipf. 
-The log search latencies are $1.7$ ms vs $4.4$ ms, since under Zipf the puts are more dispersed, hence the funks are rebalanced less frequently and the logs grow longer. 
+The log search latencies are $1.7$ ms vs $4.4$ ms. This happens because under Zipf the puts are more dispersed, 
+hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently, i.e., the logs grow longer
+and searching them becomes slower. 
 
 % Bloom filter efficiency ... 
 
@@ -201,8 +203,8 @@ illustration omitted due to lack of space.
 \hline 
 & 4GB & 8GB & 16GB & 32GB & 64GB \\
 \hline 
-RocksDB, Zipf-range & 1.93	& 2.15 & 2.29 & 2.54	& 2.92\\
-\sys, Zipf-range &  1.42	 & 1.38	& 1.27	& 1.30	& 1.29\\
+RocksDB, Zipf-range & 1.93	& 2.15 & 2.29 & 2.54	& {\bf {2.92}}\\
+\sys, Zipf-range &  1.42	 & 1.38	& 1.27	& 1.30	& {\bf {1.29}}\\
 \hline 
 RocksDB, Zipf & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\ 
 \sys, Zipf & 1.41& 1.37	& 1.15	& 1.13	& 1.31 \\
@@ -244,39 +246,6 @@ RocksDB, Zipf & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 \label{fig:readstat}
 \end{figure}
 
-\begin{table}
-{\small{
-\begin{tabular}{|l|c|c|c|c|c|}
-\hline 
-& 4GB & 8GB & 16GB & 32GB & 64GB \\
-\hline 
-RocksDB, bytes &  0.05 &	0.11 & 0.20 & 0.47 & 0.95\\
-\sys, bytes &  0.0 &	0.0 &	0.11	& 0.80	& 1.07 \\
-\hline 
-RocksDB, syscall & 3.84	& 4.01	& 4.14	& 4.28	& 4.37 \\ 
-\sys, syscall  & 0.0 & 0.0	& 0.10 & 0.24 & 0.41\\
-\hline 
-\end{tabular}
-}}
-\remove{
-\centering
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/C_read_amplification_disk_line.pdf}
-\caption{Disk I/O}
-\label{fig:readamp:d}
-\end{subfigure}
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/C_read_amplification_kernel_line.pdf}
-\caption{System calls}
-\label{fig:readamp:k}
-\end{subfigure}}
-
-\caption{\bf{\sys\/ versus RocksDB read amplification, in terms of bytes and system calls, 
-under the read-only workload (YCSB-C), Zipf-range distribution and scaling dataset sizes.}}
-\label{fig:readamp}
-\end{table}
 %\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
 
 \section{Insights}
@@ -292,11 +261,72 @@ distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 16
 \label{fig:scalability}
 \end{figure}
 
-\paragraph{Log parameters.} 
-We explore the system throughput sensitivity to WAL configuration parameters, for the 64 GB dataset, 
-We exercise the YCSB-A and YCSB-E scenarios. Figure~\ref{fig:wal:sz} depicts the dependency on the 
-log size limit. Here, too low a threshold (less then 256 KB) causes frequent funk rebalances, which 
-destroys the performance. On the other hand, too high a threshold (4 MB) causes longer latencies, 
-in both gets and scans. 
+\begin{table}
+{\small{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline 
+& 4GB & 8GB & 16GB & 32GB & 64GB \\
+\hline 
+RocksDB, bytes &  0.05 &	0.11 & 0.20 & 0.47 & 0.95\\
+\sys, bytes &  0.0 &	0.0 &	0.11	& 0.80	& 1.07 \\
+\hline 
+RocksDB, syscall & 3.84	& 4.01	& 4.14	& 4.28	& {\bf {4.37}} \\ 
+\sys, syscall  & 0.0 & 0.0	& 0.10 & 0.24 & {\bf {0.41}} \\
+\hline 
+\end{tabular}
+}}
+\caption{\bf{\sys\/ versus RocksDB read amplification, in terms of bytes and system calls, 
+under the read-only workload (YCSB-C), Zipf-range distribution and scaling dataset sizes.}}
+\label{fig:readamp}
+\end{table}
 
-Figure~\ref{fig:wal:bf} depicts the dependency on the Bloom filter split factor. 
+\paragraph{Funk-log configuration.} 
+We explore the system throughput sensitivity to funk-log configuration parameters, for the 64 GB dataset, 
+under the YCSB-A scenario. 
+
+Table~\ref{fig:wal:sz} depicts the throughput dependency on the log size limit. Here, too low a threshold (e.g., 128 KB) 
+causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4 MB) 
+lets the logs grow bigger, and slows down all types of reads. Our experiments are therefore tuned to 2 MB logs under write-intensive 
+workloads. In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512 KB threshold to avoid high tail
+latencies. 
+
+\begin{table*}
+\centering
+\begin{subfigure}{0.55\linewidth}
+{\small{
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline 
+& 128KB & 256KB & 512KB & 1MB & 2MB & 4MB\\
+\hline 
+Zipf-range & 50.2	& 55.5 & 80.7	& 134.1 & {\bf {157.5}} & 149.5 \\
+Zipf & 27.8	& 30.9 & 36.1	& 58.3	& {\bf {68.3}}	& 68.1 \\
+%\hline 
+%YCSB-E, Zipf-range & 29.1	& 36.4 & 36.9	& 37.3	& {\inred{30.4}} & 	37.1 \\
+%YCSB-E, Zipf & 16.1 & 16.3 &	15.8	& 15.8 &	16.4 &	15.8 \\
+\hline
+\end{tabular}
+}}
+\caption{Throughput (Kops) vs log size}
+\label{fig:wal:sz}
+\end{subfigure}
+%\hspace{0.09\linewidth}
+\begin{subfigure}{0.35\linewidth}
+{\small{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline 
+& 1 & 2 & 4 & 8 & 16\\
+\hline 
+Zipf-range & 134.7 & 133.5 & 140.1 & 152.5 & {\bf {157.4}} \\
+Zipf & 36.3 & 39.2 & 46.3 & 56.0 & {\bf {59.9}} \\
+\hline 
+\end{tabular}
+}}
+\caption{Throughput (Kops) vs Bloom filter split factor}
+\label{fig:wal:bf}
+\end{subfigure}
+\caption{\bf{\sys\/ throughput, under the mixed read-write workload (YCSB-A), 64GB dataset, and varying funk log configuration parameters.}}
+\label{fig:wal}
+\end{table*}
+
+Table~\ref{fig:wal:bf} depicts the throughput dependency on the Bloom filter split factor. 
+Partitioning to 16 mini-filters gives the best result, which explains the default parameter choice. 
