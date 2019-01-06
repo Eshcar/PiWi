@@ -68,7 +68,8 @@ is approximately 10 times slower, thereby trivializing the results of every scen
 
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
 most chunks are bound by 7 MB (i.e., approximately 700 KV-pairs per chunk). The WAL size limit
-is 2 MB for write intensive workloads, and $0.5$ MB for other workloads. 
+is 2 MB for write intensive workloads, and $0.5$ MB for other workloads. The Bloom filters for 
+munk-less funks are partitioned 16-way.  
 
 We allocate a quota of 13.5 GB RAM (out of the 16 GB container) to the munk and row caches, 
 and split it between the two at a $2:1$ ratio. 
@@ -141,23 +142,23 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \label{fig:writeamp}
 \end{figure}
 
-\begin{figure*}
+\begin{figure}
 \centering
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.3\linewidth}
+%\hspace{0.05\linewidth}
+\begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
 \caption{Fraction of searches}
 \label{fig:readstat:dist}
 \end{subfigure}
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.3\linewidth}
+%\hspace{0.05\linewidth}
+\begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Latency_A.pdf}
 \caption{Disk search latency}
 \label{fig:readstat:lat}
 \end{subfigure}
-\caption{\bf{\sys\/ get operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
+\caption{\bf{\sys\/ {\em get\/} operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
 \label{fig:readstat}
-\end{figure*}
+\end{figure}
 
 \begin{figure*}
 \centering
@@ -175,7 +176,7 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \label{fig:readamp}
 \end{figure*}
 
-Unless stated otherwise, the experiments below use 12 worker threads. 
+All experiments in this section use 12 worker threads. 
 
 \paragraph{YCSB-P (100\% put, Zipf and Zipf-range distributions).} 
 \sys's throughput is $30\%$ to $60\%$ above RocksDB's under Zipf-range, 
@@ -222,8 +223,8 @@ e.g., it serves $32.8\%$ of gets for Zipf versus $12.4\%$ for Zipf-range.
 This workload is the best for \sys, since it is most sensitive to spatial locality
 that the system has been designed for. 
 We experiment with short-to-medium scans, with the number of KV-pairs to iterate through 
-sampled uniformly between 1 and 10, 100, and 1000 rows, respectively (Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}). \sys\/ achieves $1.5$x to $3$x throughput versus RocksDB under
-Zipf-range, and even $1.5$x to 2x under Zipf, in most cases. 
+sampled uniformly between 1 and 10, 100, and 1000 rows, respectively (Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}). 
+\sys\/ achieves $1.5$x to $3$x throughput versus RocksDB under Zipf-range, and even $1.5$x to 2x under Zipf, in most cases. 
 
 Note that the scan speed is slightly higher for the 8GB dataset versus the 4GB dataset. 
 Both are served in memory, however, the 4GB store has less munks, and hence, there is more contention 
@@ -245,9 +246,29 @@ kernel-to-user data copy. RocksDB developers explain that the block cache scalin
 database, due to tension between its read-path and write-path RAM resources~\cite{RocksDB-default-blockcache-issue}. 
 \sys, in contrast, exploits its munk cache for both reads and writes, which leads to better RAM utilization. 
 
-\paragraph{YCSB-B (5\% put, 95\% get, Zipf and Zipf-prefix distributions).} Similar to YCSB-C, illustration omitted due to 
-lack of space. 
+\paragraph{YCSB-B and YCSB-D (5\% put, 95\% get, Zipf, Zipf-prefix and Latest distributions).} Similar to YCSB-C, 
+illustration omitted due to lack of space. 
 
-\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
+%\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
 
+\section{Insights}
 
+\paragraph{Vertical scalabiliy.} 
+Figure~\ref{fig:scalability} illustrates the \sys's throughput scaling for the 64 GB dataset, under the Zipf and Zipf-range 
+distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 16 worker threads.  
+
+\begin{figure}[th]
+\centering
+%\includegraphics[width=0.3\textwidth]{figs/Workload_P_writeamplification_disk_line.pdf}
+\caption{\bf{\sys\/ scalability with the number of application threads.}}
+\label{fig:scalability}
+\end{figure}
+
+\paragraph{Log parameters.} 
+We explore the system throughput sensitivity to WAL configuration parameters, for the 64 GB dataset, 
+We exercise the YCSB-A and YCSB-E scenarios. Figure~\ref{fig:wal:sz} depicts the dependency on the 
+log size limit. Here, too low a threshold (less then 256 KB) causes frequent funk rebalances, which 
+destroys the performance. On the other hand, too high a threshold (4 MB) causes longer latencies, 
+in both gets and scans. 
+
+Figure~\ref{fig:wal:bf} depicts the dependency on the Bloom filter split factor. 
