@@ -5,7 +5,7 @@ optimized LSM compaction algorithms~\cite{CallaghanCompaction}.
 \subsection{Setup}
 
 \paragraph{Testbed.} We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular 
-YCSB~\cite{Cooper:2010:BCS:1807128.1807152} benchmarking platform. 
+YCSB~\cite{YCSB} benchmarking platform. 
 YCSB provides a framework for KV-store comparisons, through a set of common data access API's and standard workloads. 
 Most modern KV-stores implement  YCSB adapter API's. The platform decouples data access from workload generation, 
 thereby providing common ground for backend comparison. 
@@ -15,9 +15,9 @@ YCSB provides a set of benchmark workloads inspired by real-life applications, a
 generation API's. A typical YCSB instance stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
 workloads. %It aggregates the key performance metrics for the scenario under test.  
 
-Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. The driver application exercises up to 12 workers 
-(maximum parallelism). In order to guarantee a fair memory allocation to all KV-stores, we run each experiment 
-within a Linux container with 16 GB RAM. 
+Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. Unless otherwise stated, the driver application 
+exercises 12 workers in all experiments. In order to guarantee a fair memory allocation to all KV-stores, we run each 
+experiment within a Linux container with 16 GB RAM. 
 
 \paragraph{Metrics.} At the high level, we study the throughput and tail latency metrics produced by YCSB. 
 In order to explain the results, we also explore the system write amplification (bytes written to storage over 
@@ -124,60 +124,6 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \label{fig:throughput}
 \end{figure*}
 
-\begin{figure}[th]
-\centering
-%\hspace{0.05\linewidth}
-%\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=0.3\textwidth]{figs/P_write_amplification_disk_line.pdf}
-%\caption{YCSB-P}
-%\label{fig:writeamp:p}
-%\end{subfigure}
-%\hspace{0.05\linewidth}
-%\begin{subfigure}{0.3\linewidth}
-%\includegraphics[width=\textwidth]{figs/Workload_A_writeamplification_disk_line.pdf}
-%\caption{YCSB-A}
-%\label{fig:writeamp:a}
-%\end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB write amplification, under the write-only workload (YCSB-P) and scaling dataset sizes.}}
-\label{fig:writeamp}
-\end{figure}
-
-\begin{figure}
-\centering
-%\hspace{0.05\linewidth}
-\begin{subfigure}{0.49\linewidth}
-\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
-\caption{Fraction of searches}
-\label{fig:readstat:dist}
-\end{subfigure}
-%\hspace{0.05\linewidth}
-\begin{subfigure}{0.49\linewidth}
-\includegraphics[width=\textwidth]{figs/Latency_A.pdf}
-\caption{Disk search latency}
-\label{fig:readstat:lat}
-\end{subfigure}
-\caption{\bf{\sys\/ {\em get\/} operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
-\label{fig:readstat}
-\end{figure}
-
-\begin{figure*}
-\centering
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.3\linewidth}
-\caption{Disk I/O}
-\label{fig:readamp:d}
-\end{subfigure}
-\hspace{0.05\linewidth}
-\begin{subfigure}{0.3\linewidth}
-\caption{System calls}
-\label{fig:readamp:k}
-\end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB read amplification, under the read-only workload (YCSB-C) and scaling dataset sizes.}}
-\label{fig:readamp}
-\end{figure*}
-
-All experiments in this section use 12 worker threads. 
-
 \paragraph{YCSB-P (100\% put, Zipf and Zipf-range distributions).} 
 \sys's throughput is $30\%$ to $60\%$ above RocksDB's under Zipf-range, 
 and $10\%$ to $50\%$ under Zipf (Figure~\ref{fig:throughput:p}). 
@@ -194,7 +140,7 @@ funk rebalances start occurring. However, they mostly happen to the hottest munk
 (torso) chunks. Hence, they incur less I/O than RocksDB's compactions, which do not 
 distinguish between hot and cold data. 
 
-Figure~\ref{fig:writeamp} corroborates the above observations, by comparing 
+Table~\ref{fig:writeamp} corroborates the above observations, by comparing 
 \sys's write amplification to RocksDB's. \sys\/ reduces the disk write rate dramatically, 
 with the largest gain observed for big datasets (e.g., $1.29$ versus $2.92$ for the 64 GB 
 database under Zipf-range). As a nice by-product, \sys\/ is also more 
@@ -237,7 +183,7 @@ and up to $1.6$x under Zipf for small datasets (Figure~\ref{fig:throughput:c}).
 
 Since this experiment only exercises the read path, we can compare \sys's RAM caching 
 efficiency to RocksDB's. Both system exploit both application-level and OS (filesystem) caches. 
-Figure~\ref{fig:readamp} compares the two systems' read amplification (as proxy for cache hit ratio), 
+Table~\ref{fig:readamp} compares the two systems' read amplification (as proxy for cache hit ratio), 
 with respect to the number of read system calls and the actual disk reads.  In terms of disk I/O, RocksDB 
 is slightly better -- e.g., $0.95$ versus $1.07$ for the 64 GB dataset under Zipf-range. However, it 
 relies extensively on the filesystem cache, at the expense of the user-level block cache. In the same
@@ -249,6 +195,88 @@ database, due to tension between its read-path and write-path RAM resources~\cit
 \paragraph{YCSB-B and YCSB-D (5\% put, 95\% get, Zipf, Zipf-prefix and Latest distributions).} Similar to YCSB-C, 
 illustration omitted due to lack of space. 
 
+\begin{table}[th]
+{\small{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline 
+& 4GB & 8GB & 16GB & 32GB & 64GB \\
+\hline 
+RocksDB, Zipf-range & 1.93	& 2.15 & 2.29 & 2.54	& 2.92\\
+\sys, Zipf-range &  1.42	 & 1.38	& 1.27	& 1.30	& 1.29\\
+\hline 
+RocksDB, Zipf & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\ 
+\sys, Zipf & 1.41& 1.37	& 1.15	& 1.13	& 1.31 \\
+\hline 
+\end{tabular}
+}}
+%\centering
+%\hspace{0.05\linewidth}
+%\begin{subfigure}{0.3\linewidth}
+%\includegraphics[width=0.3\textwidth]{figs/P_write_amplification_disk_line.pdf}
+%\caption{YCSB-P}
+%\label{fig:writeamp:p}
+%\end{subfigure}
+%\hspace{0.05\linewidth}
+%\begin{subfigure}{0.3\linewidth}
+%\includegraphics[width=\textwidth]{figs/Workload_A_writeamplification_disk_line.pdf}
+%\caption{YCSB-A}
+%\label{fig:writeamp:a}
+%\end{subfigure}
+\caption{\bf{\sys\/ versus RocksDB write amplification, under the write-only workload (YCSB-P) and scaling dataset sizes.}}
+\label{fig:writeamp}
+\end{table}
+
+\begin{figure}
+\centering
+%\hspace{0.05\linewidth}
+\begin{subfigure}{0.49\linewidth}
+\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
+\caption{Fraction of searches}
+\label{fig:readstat:dist}
+\end{subfigure}
+%\hspace{0.05\linewidth}
+\begin{subfigure}{0.49\linewidth}
+\includegraphics[width=\textwidth]{figs/Latency_A.pdf}
+\caption{Disk search latency}
+\label{fig:readstat:lat}
+\end{subfigure}
+\caption{\bf{\sys\/ {\em get\/} operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
+\label{fig:readstat}
+\end{figure}
+
+\begin{table}
+{\small{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline 
+& 4GB & 8GB & 16GB & 32GB & 64GB \\
+\hline 
+RocksDB, bytes &  0.05 &	0.11 & 0.20 & 0.47 & 0.95\\
+\sys, bytes &  0.0 &	0.0 &	0.11	& 0.80	& 1.07 \\
+\hline 
+RocksDB, syscall & 3.84	& 4.01	& 4.14	& 4.28	& 4.37 \\ 
+\sys, syscall  & 0.0 & 0.0	& 0.10 & 0.24 & 0.41\\
+\hline 
+\end{tabular}
+}}
+\remove{
+\centering
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/C_read_amplification_disk_line.pdf}
+\caption{Disk I/O}
+\label{fig:readamp:d}
+\end{subfigure}
+\hspace{0.05\linewidth}
+\begin{subfigure}{0.3\linewidth}
+\includegraphics[width=\textwidth]{figs/C_read_amplification_kernel_line.pdf}
+\caption{System calls}
+\label{fig:readamp:k}
+\end{subfigure}}
+
+\caption{\bf{\sys\/ versus RocksDB read amplification, in terms of bytes and system calls, 
+under the read-only workload (YCSB-C), Zipf-range distribution and scaling dataset sizes.}}
+\label{fig:readamp}
+\end{table}
 %\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
 
 \section{Insights}
