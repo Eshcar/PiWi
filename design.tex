@@ -15,7 +15,7 @@ Finally, Section~\ref{ssec:flush-recovery} discusses flushing data to disk and f
 \centerline{
 \includegraphics[width=\columnwidth]{PiWi.png}
 }
-\caption{\sys\ data layout.}
+\caption{\bf{\sys\ data layout.}}
 \label{fig:layout}
 \end{figure}
 
@@ -40,7 +40,7 @@ That is, the \code{log} is more up-to-date.
 \centerline{
 \includegraphics[width=\columnwidth]{funk.png}
 }
-\caption{A \sys\ funk consists of a sorted \code{SSTable} and an unsorted \code{log} holding the most recent updates.}
+\caption{\bf{A \sys\ funk consists of a sorted \code{SSTable} and an unsorted \code{log} holding the most recent updates.}}
 \label{fig:funk}
 \end{figure}
 
@@ -464,14 +464,14 @@ changes back to active after we
 migrate the \code{log}'s new tail to the new chunk and swing the funk pointer in the chunk.
 
 
-\begin{figure}[htb]
+\begin{figure}[tb]
 \centerline{
 \includegraphics[width=\columnwidth]{state-diagram.png}
 }
-\caption{Chunk life cycle; immutable states are grey and mutable ones are white.
+\caption{\bf{Chunk life cycle; immutable states are grey and mutable ones are white.
 Chunk splits  create new chunks in immutable \emph{baby} status, which changes to the mutable \emph{child} state once they 
 are indexed. When the appropriate funks are created, the chunks become \emph{active}. All rebalance operations go through an 
-\emph{asleep} state when the chunk is immutable.}
+\emph{asleep} state when the chunk is immutable.}}
 \label{fig:status}
 \end{figure}
 
@@ -550,7 +550,7 @@ incarnation & last checkpointed version \\
 1 &  956\\
 \end{tabular}
 \end{center}
-\caption{Example recovery table during incarnation $2$.}
+\caption{\bf{Example recovery table during incarnation $2$.}}
 \label{table:recovery}
 \end{table} 
  
