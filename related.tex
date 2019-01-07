@@ -1,15 +1,15 @@
 
 
 %common lsm stores RocksDB, scylladb, HyperLevelDB, LevelDB, hbase, cassandra
-The vast majority of industrial mainstream key-value stores are  implemented as LSM trees~\cite{hbase, 
+The vast majority of industrial mainstream NoSQL KV-stores are  implemented as LSM trees~\cite{hbase, 
 RocksDB, scylladb, Bigtable2008, cassandra2010}, building on the foundation set by O'Neil 
-et. al.~\cite{O'Neil1996, Muth1998}. They largely replaced the classic B-trees~\cite{Knuth:1997}
+et. al.~\cite{O'Neil1996, Muth1998}. They largely replaced B-trees~\cite{Knuth:1997}
 thanks to better write speed. 
 
 Due to LSM design popularity, much effort has been invested into working around its bottlenecks.
 A variety of compaction strategies has been implemented in production systems~\cite{CallaghanCompaction, 
 ScyllaCompaction} and research prototypes~\cite{triad, PebblesDB}. Other suggestions include storage
-optimizations~\cite{WiscKey, PebblesDB}, boost of in-memory parallelism~\cite{clsm2015}, or leveraging 
+optimizations~\cite{WiscKey, PebblesDB}, boost of in-memory parallelism~\cite{clsm2015, scylladb}, or leveraging 
 the workload redundancies to defer disk flushes~\cite{triad, accordion}. 
 
 For example, PebblesDB~\cite{PebblesDB} introduces fragmented LSM trees, in which level files are 
@@ -36,6 +36,12 @@ and zero-time consistent recovery.
 %Read and scan operations traverse the path from root to leaf. At the leaf, read operations perform binary search; scans subsequently iterate over the range of keys.
 %In read dominated workloads Tucana benefits from contigouos key segments. However random I/O prevents Tucana from outperforming LSM trees in write dominated workloads.
 
-In-memory KV-stores~\cite{ignite, redis, memcached, aerospike} have been originally used as volatile 
+In-memory KV-stores~\cite{ignite, redis, memcached, Srinivasan:2016:AAR:3007263.3007276} have originally emerged as fast volatile 
+data storage, e.g., web and application caches. Over time, most of them evolved to support durability,
+albeit as a second-class citizen in most cases. 
+%For example, Ignite~\cite{ignite} uses a B-tree index with in-place random updates. 
+These systems resemble \sys\/ in their memory-centric approach. 
+However, we are unaware of their consistency guarantees or performance wrt disk-resident data. 
 
-used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, B-tree index, and in-place updates~\cite{ignite}  more than a kv lsm store.
+%Their persistent storage support is based on either B-tree~\cite{ignite} or LSM-tree design~\cite{redis}. 
+%used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, , and in-place updates~\cite{ignite}  more than a kv lsm store.
