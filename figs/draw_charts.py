@@ -42,16 +42,16 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
               'Piwi Latest': {'color': latest_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker}}
 
 
-
 def renamings(label):
 
     new_label = label.replace('Flurry', 'Zipf-range')\
-                     .replace('Piwi', 'YodelDB')
+                     .replace('Piwi', 'YodelDB')\
+                     .replace('Zipfian', 'Zipf')
 
     return new_label
 
 
-def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper=None, x=x_axis):
+def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper=None, x=x_axis, x_label='dataset Size'):
     fig, ax = plt.subplots()
     for line in lines:
         ax.plot(x, line['data'], label=renamings(line['label']),
@@ -61,7 +61,7 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper
                 marker=line['style']['marker'],
                 markersize=marksize)
 
-    ax.set_xlabel('Dataset Size', fontsize=myfontsize)
+    ax.set_xlabel(x_label, fontsize=myfontsize)
     ax.set_ylabel(yaxis, fontsize=myfontsize)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
@@ -454,8 +454,8 @@ def draw_scalability_charts(data):
                   'C Flurry': {'color': tableau20[4], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
                   'C Zipfian': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
-    lines = [{'label': k, 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
-    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=None, x=[0,2,4,8,12])
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
+    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=None, x=[1,2,4,8,12], x_label='Threads')
     
 def main():
     data = read_csv()
