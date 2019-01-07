@@ -1,4 +1,4 @@
-We extensively compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
+We extensively compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2.  %, available Oct 24, 2018.  
 It is worth noting that RocksDB's performance improved significantly during the last two years, primarily through 
 optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   
 
@@ -120,7 +120,7 @@ We tune all RocksDB runtime parameters in accordance with its system performance
 \caption{YCSB-E1000}
 \label{fig:throughput:e1000}
 \end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB throughput, under multiple workloads and scaling dataset sizes.}}
+\caption{\bf{\sys\/ versus RocksDB throughput (Kops), under multiple workloads and scaling dataset sizes.}}
 \label{fig:throughput}
 \end{figure*}
 
@@ -160,8 +160,6 @@ For example, for the 64 GB dataset, $1.9\%$ of gets are served from logs under Z
 The log search latencies are $1.7$ ms vs $4.4$ ms. This happens because under Zipf the puts are more dispersed, 
 hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently, i.e., the logs grow longer
 and searching them becomes slower. 
-
-% Bloom filter efficiency ... 
 
 Naturally, the efficiency of in-memory caching is paramount. In the same example, the RAM hit rate is 
 $90.5\%$ versus $79\%$ for Zipf. The row cache becomes instrumental as spatial locality drops --
@@ -221,7 +219,7 @@ RocksDB, Zipf & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 %\hspace{0.05\linewidth}
 \begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Latency_A.pdf}
-\caption{Disk search latency}
+\caption{Disk (tail) search latency}
 \label{fig:readstat:lat}
 \end{subfigure}
 \caption{\bf{\sys\/ {\em get\/} operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
@@ -243,25 +241,6 @@ kernel-to-user data copy. RocksDB developers explain that the block cache scalin
 database, due to tension between its read-path and write-path RAM resources~\cite{RocksDB-default-blockcache-issue}. 
 \sys, in contrast, exploits its munk cache for both reads and writes, which leads to better RAM utilization. 
 
-\paragraph{YCSB-B and YCSB-D (5\% put, 95\% get, Zipf, Zipf-prefix and Latest distributions).} Similar to YCSB-C, 
-illustration omitted due to lack of space. 
-
-%\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, illustration omitted due to lack of space. 
-
-%\subsection{Insights}
-
-\paragraph{Vertical scalabiliy.} 
-Figure~\ref{fig:scalability} illustrates the \sys's throughput scaling for the 64 GB dataset, under the Zipf and Zipf-range 
-distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 16 worker threads.  
-YCSB-C (read-only scenario) scales near perfectly (11.2x for Zipf-range, 9.5x for Zipf). 
-
-\begin{figure}[th]
-\centering
-%\includegraphics[width=0.3\textwidth]{figs/Workload_P_writeamplification_disk_line.pdf}
-\caption{\bf{\sys\/ scalability with the number of application threads.}}
-\label{fig:scalability}
-\end{figure}
-
 \begin{table}
 {\small{
 \begin{tabular}{|l|c|c|c|c|c|}
@@ -280,6 +259,36 @@ RocksDB, syscall & 3.84	& 4.01	& 4.14	& 4.28	& {\bf {4.37}} \\
 under the read-only workload (YCSB-C), Zipf-range distribution and scaling dataset sizes.}}
 \label{fig:readamp}
 \end{table}
+
+\paragraph{YCSB-B (5\% put, 95\% get, Zipf, Zipf-prefix distributions).} Similar to YCSB-C, 
+plot omitted for lack of space. 
+
+\paragraph{YCSB-D (5\% put, 95\% get, Latest distribution).} Similar to YCSB-C, Figure~\ref{fig:throughput:d}
+depicts the results. 
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.3\textwidth]{figs/Workload_D_line.pdf}
+\caption{\bf{\sys\/ versus RocksDB throughput, under the YCSB-D workload and scaling dataset sizes.}}
+\label{fig:throughput:d}
+\end{figure}
+
+\paragraph{Vertical scalabiliy.} 
+Figure~\ref{fig:scalability} illustrates the \sys's throughput scaling for the 64 GB dataset, under the Zipf and Zipf-range 
+distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 12 worker threads.  
+As expected, YCSB-C (read-only scenario) scales near perfectly (9.4x for Zipf-range, 7.7x for Zipf). 
+The other workloads scale slower, due to read-write and write-write contention as well as background munk and funk rebalances. 
+Here, YCSB-P scales 3.8x for both distributions at 8 threads. YCSB-A scales 6.4x for Zipf-range and 4.6x for Zipf
+at 12 threads. 
+
+\begin{figure}[th]
+\centering
+\includegraphics[width=0.3\textwidth]{figs/scalability_line.pdf}
+\caption{\bf{\sys\/ scalability with the number of threads for 
+the 64 GB dataset, under the YCSB-A, YCSB-C and YCSB-P workloads
+and varying parallelism. }}
+\label{fig:scalability}
+\end{figure}
 
 \paragraph{Funk-log configuration.} 
 We explore the system throughput sensitivity to funk-log configuration parameters, for the 64 GB dataset, 

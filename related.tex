@@ -9,7 +9,7 @@ thanks to better write speed.
 Due to LSM design popularity, much effort has been invested into working around its bottlenecks.
 A variety of compaction strategies has been implemented in production systems~\cite{CallaghanCompaction, 
 ScyllaCompaction} and research prototypes~\cite{triad, PebblesDB}. Other suggestions include storage
-optimizations~\cite{WiscKey, PebblesDB}, boost of in-memory parallelism~\cite{clsm2015, scylladb}, or leveraging 
+optimizations~\cite{WiscKey, PebblesDB}, boost of in-memory parallelism~\cite{scylladb, clsm2015}, or leveraging 
 the workload redundancies to defer disk flushes~\cite{triad, accordion}. 
 
 For example, PebblesDB~\cite{PebblesDB} introduces fragmented LSM trees, in which level files are 
