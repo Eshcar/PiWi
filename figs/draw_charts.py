@@ -42,7 +42,6 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
               'Piwi Latest': {'color': latest_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker}}
 
 
-ylim = {'P': 380, 'A': 580, 'C': 1280, 'E-': 580, 'E': 260, 'E+': 30, 'S': None, 'B': None, 'D': None}
 
 def renamings(label):
 
@@ -52,16 +51,15 @@ def renamings(label):
     return new_label
 
 
-def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper=None):
+def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper=None, x=x_axis):
     fig, ax = plt.subplots()
     for line in lines:
-        ax.plot(x_axis, line['data'], label=renamings(line['label']),
-                color=line_color[line['label']]['color'],
-                linestyle=line_color[line['label']]['linestyle'],
-                linewidth=line_color[line['label']]['linewidth'],
-                marker=line_color[line['label']]['marker'],
+        ax.plot(x, line['data'], label=renamings(line['label']),
+                color=line['style']['color'],
+                linestyle=line['style']['linestyle'],
+                linewidth=line['style']['linewidth'],
+                marker=line['style']['marker'],
                 markersize=marksize)
-
 
     ax.set_xlabel('Dataset Size', fontsize=myfontsize)
     ax.set_ylabel(yaxis, fontsize=myfontsize)
@@ -70,7 +68,7 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper
 
     y_bottom = min(0, ax.get_ylim()[0])
     y_top = ax.get_ylim()[1]
-    if ylim is not None:
+    if y_upper is not None:
         y_top = y_upper
     ax.set_ylim(y_bottom, y_top)
     ax.legend(loc=legend, fontsize=myfontsize)
@@ -307,6 +305,10 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                       'A': dict(),
                       'C': dict()}
 
+    scalability = { 
+        
+    }
+    
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -346,15 +348,22 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
         workload = 'A_32'
         for row in csv_reader:
+            if row[0] == 'scalability':
+                break
             distribution = row[1]
             if distribution not in bloom_filter_partitioning[workload]:
                 continue
 
             bloom_filter_partitioning[workload][distribution].append(row)
+
+        for row in csv_reader:
+            if (row[0] != ''):
+                scalability[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
             
     return {'experiments': experiments, 'latency': latency_breakdown,
             'bloom_filter_partitioning': bloom_filter_partitioning,
-            'amplifications': amplifications}
+            'amplifications': amplifications,
+            'scalability': scalability}
 
 
 def draw_bloom_filter_partitions(chart_name, data):
@@ -378,18 +387,23 @@ def draw_bloom_filter_partitions(chart_name, data):
     plt.savefig(chart_name.replace(' ', '_') + '.pdf', bbox_inches='tight')
 
 
+def draw_line_charts(data):
 
-def main():
-    data = read_csv()
+
+
+    ylim = {'P': 380, 'A': 580, 'C': 1280, 'E-': 580, 'E': 260, 'E+': 30, 'S': None, 'B': None, 'D': None}
     
     experiments = data['experiments']
     # draw line charts
     for workload in workloads:
         draw_line_chart('Workload ' + workload,
-                        [{'label': k, 'data': v}
+                        [{'label': k, 'data': v, 'style': line_color[k]}
                          for (k, v) in experiments[workload].items()],
                         yaxis='Kops', y_upper=ylim[workload])
-    # draw speedups
+
+
+def draw_speedup_charts(data):
+    experiments = data['experiments']
     for workload in workloads:
         if 'writeamplification' in workload:
             continue
@@ -397,6 +411,8 @@ def main():
                                            ['Flurry', 'Zipf', 'Latest'])
         draw_speedup_chart('workload ' + workload, distributions)
 
+
+def draw_latency_charts(data):
     latency = data['latency']
 
     draw_percentage_breakdown('Time percentage C', latency['C'])
@@ -404,28 +420,52 @@ def main():
 
     draw_latency_breakdown('Latency C', latency['C'])
     draw_latency_breakdown('Latency A', latency['A'])
-    
+
+
+def draw_bloom_filter_charts(data):
     draw_bloom_filter_partitions('Bloom filter', data['bloom_filter_partitioning']['A_32'])
 
+
+def draw_ampl_charts(data):
     amplifications = data['amplifications']
     # P write amplification disk:
     draw_line_chart('P_write_amplification_disk',
-                    [{'label': ' '.join(k.split()[0:2]), 'data': v}
+                    [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
                      for (k, v) in amplifications['P'].items() if 'disk' in k],
                     yaxis='Amplification', legend=3)
 
     # C read amplification disk:
     draw_line_chart('C_read_amplification_disk',
-                    [{'label': ' '.join(k.split()[0:2]), 'data': v}
+                    [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
                      for (k, v) in amplifications['C'].items() if 'disk' in k],
                     yaxis='Amplification', legend=3)
 
     draw_line_chart('C_read_amplification_kernel',
-                    [{'label': ' '.join(k.split()[0:2]), 'data': v}
+                    [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
                      for (k, v) in amplifications['C'].items() if 'kernel' in k],
                     yaxis='Amplification', legend=3)
+
+
+def draw_scalability_charts(data):
+    line_color = {'P Flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'P Zipfian': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'A Flurry': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'A Zipfian': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'C Flurry': {'color': tableau20[4], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'C Zipfian': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
+    lines = [{'label': k, 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
+    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=None, x=[0,2,4,8,12])
     
+def main():
+    data = read_csv()
+
+    draw_line_charts(data)
+    draw_speedup_charts(data)
+    draw_latency_charts(data)
+    draw_bloom_filter_charts(data)
+    draw_ampl_charts(data)
+    draw_scalability_charts(data)
     plt.tight_layout()
     plt.show()
 
