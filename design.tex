@@ -29,13 +29,13 @@ At run-time, a list of all chunks metadata is kept in RAM, where each chunk's da
 (consisting of keys in the corresponding range and values associated with them) 
 is kept on disk (for persistence), and possibly in memory (for fast access). 
 
-On disk, each chunk is associated with a  \emph{funk (file chunk)} as illustrated in 
-Figure~\ref{fig:funk}. A funk
-consists of two files:   
-a compacted and sorted  key-value map \emph{SSTable} and a write buffer \emph{log}. When a funk is created, the \code{SSTable} holds all the chunk's keys with corresponding values, and the \code{log}  is empty.
+On disk, each chunk is associated with a  \emph{funk (file chunk)}.% as illustrated in Figure~\ref{fig:funk}. 
+A funk consists of two files:  a compacted and sorted  key-value map \emph{SSTable} (Bigtable terminology~\cite{Bigtable2008}) 
+and a write buffer \emph{log}. When a funk is created, the \code{SSTable} holds all the chunk's keys with corresponding values, and the \code{log}  is empty.
 New key-value pairs are subsequently appended to the unsorted \code{log}. If a key is over-written, it remains in the \code{SSTable} associated with the old value, and is included in the \code{log} with the new one.
 That is, the \code{log} is more up-to-date.
 
+\remove{
 \begin{figure}[tb]
 \centerline{
 \includegraphics[width=\columnwidth]{funk.png}
@@ -43,6 +43,7 @@ That is, the \code{log} is more up-to-date.
 \caption{\bf{A \sys\ funk consists of a sorted \code{SSTable} and an unsorted \code{log} holding the most recent updates.}}
 \label{fig:funk}
 \end{figure}
+}
 
 This structure allows us to benefit from sorted searches on the \code{SSTable}, and at the same time
 allows for updating chunks without re-writing existing data, thus minimizing write amplification.
@@ -61,10 +62,10 @@ Munks are volatile and can be removed and recreated from funks at any time.
 % Thus, multiple \emph{generations} of munks may exist for a chunk throughout its life time.
 %Chunks that are not cached are denoted \emph{munk-less}.
 
-At run-time, \sys\ holds in memory a linked list of chunk metadata objects as well as 
-a \emph{chunk index}, which is a sorted map from keys to chunks (e.g., a sorted array, skip list, or search tree).
+At run-time, \sys\ holds in memory a list of chunk metadata objects as well as 
+a \emph{chunk index} -- a sorted map from keys to chunks (e.g., a sorted array, skiplist, or search tree).
 Note that since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks
-(1KB instead of 10s-100s of MBs)
+({\inred{typically, less than 1 KB instead of tens of MBs}}).
 
 A munk holds key-value pairs in an array-based linked list.  
 \remove{

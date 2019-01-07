@@ -290,16 +290,6 @@ and varying parallelism. }}
 \label{fig:scalability}
 \end{figure}
 
-\paragraph{Funk-log configuration.} 
-We explore the system throughput sensitivity to funk-log configuration parameters, for the 64 GB dataset, 
-under the YCSB-A scenario. 
-
-Table~\ref{fig:wal:sz} depicts the throughput dependency on the log size limit. Here, too low a threshold (e.g., 128 KB) 
-causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4 MB) 
-lets the logs grow bigger, and slows down all types of reads. Our experiments are therefore tuned to 2 MB logs under write-intensive 
-workloads. In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512 KB threshold to avoid high tail
-latencies. 
-
 \begin{table*}
 \centering
 \begin{subfigure}{0.55\linewidth}
@@ -337,6 +327,15 @@ Zipf & 36.3 & 39.2 & 46.3 & 56.0 & {\bf {59.9}} \\
 \caption{\bf{\sys\/ throughput, under the mixed read-write workload (YCSB-A), 64GB dataset, and varying funk log configuration parameters.}}
 \label{fig:wal}
 \end{table*}
+\paragraph{Funk-log configuration.} 
+We explore the system throughput sensitivity to funk-log configuration parameters, for the 64 GB dataset, 
+under the YCSB-A scenario. 
+
+Table~\ref{fig:wal:sz} depicts the throughput dependency on the log size limit. Here, too low a threshold (e.g., 128 KB) 
+causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4 MB) 
+lets the logs grow bigger, and slows down all types of reads. Our experiments are therefore tuned to 2 MB logs under write-intensive 
+workloads. In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512 KB threshold to avoid high tail
+latencies. 
 
 Table~\ref{fig:wal:bf} depicts the throughput dependency on the Bloom filter split factor. 
 Partitioning to 16 mini-filters gives the best result, which explains the default parameter choice. 
