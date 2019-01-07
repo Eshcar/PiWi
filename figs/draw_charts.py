@@ -51,7 +51,8 @@ def renamings(label):
     return new_label
 
 
-def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper=None, x=x_axis, x_label='dataset Size'):
+def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
+                    y_upper=None, x=x_axis, x_label='dataset Size', x_bottom=None):
     fig, ax = plt.subplots()
     for line in lines:
         ax.plot(x, line['data'], label=renamings(line['label']),
@@ -71,6 +72,9 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper
     if y_upper is not None:
         y_top = y_upper
     ax.set_ylim(y_bottom, y_top)
+
+    if x_bottom is not None:
+        ax.set_xlim(x_bottom, ax.get_xlim()[1])
     ax.legend(loc=legend, fontsize=myfontsize)
     plt.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -455,16 +459,16 @@ def draw_scalability_charts(data):
                   'C Zipfian': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
-    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=None, x=[1,2,4,8,12], x_label='Threads')
+    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=350, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
     
 def main():
     data = read_csv()
 
-    draw_line_charts(data)
-    draw_speedup_charts(data)
-    draw_latency_charts(data)
-    draw_bloom_filter_charts(data)
-    draw_ampl_charts(data)
+    # draw_line_charts(data)
+    # draw_speedup_charts(data)
+    # draw_latency_charts(data)
+    # draw_bloom_filter_charts(data)
+    # draw_ampl_charts(data)
     draw_scalability_charts(data)
     plt.tight_layout()
     plt.show()
