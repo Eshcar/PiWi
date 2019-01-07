@@ -42,9 +42,17 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
               'Piwi Latest': {'color': latest_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker}}
 
 
+ylim = {'P': 380, 'A': 580, 'C': 1280, 'E-': 580, 'E': 260, 'E+': 30, 'S': None, 'B': None, 'D': None}
+
 def renamings(label):
-    return label.replace('Flurry', 'Zipf-range')
-def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1):
+
+    new_label = label.replace('Flurry', 'Zipf-range')\
+                     .replace('Piwi', 'YodelDB')
+
+    return new_label
+
+
+def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1, y_upper=None):
     fig, ax = plt.subplots()
     for line in lines:
         ax.plot(x_axis, line['data'], label=renamings(line['label']),
@@ -54,13 +62,17 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1):
                 marker=line_color[line['label']]['marker'],
                 markersize=marksize)
 
-    # ax.set(xlabel=, ylabel='',
-    #        title=chart_name, )
+
     ax.set_xlabel('Dataset Size', fontsize=myfontsize)
     ax.set_ylabel(yaxis, fontsize=myfontsize)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
-    plt.ylim(0)
+
+    y_bottom = min(0, ax.get_ylim()[0])
+    y_top = ax.get_ylim()[1]
+    if ylim is not None:
+        y_top = y_upper
+    ax.set_ylim(y_bottom, y_top)
     ax.legend(loc=legend, fontsize=myfontsize)
     plt.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -375,14 +387,15 @@ def main():
     for workload in workloads:
         draw_line_chart('Workload ' + workload,
                         [{'label': k, 'data': v}
-                         for (k, v) in experiments[workload].items()], yaxis='KOPS')
+                         for (k, v) in experiments[workload].items()],
+                        yaxis='Kops', y_upper=ylim[workload])
     # draw speedups
-    # for workload in workloads:
-    #     if 'writeamplification' in workload:
-    #         continue
-    #     distributions = calculate_speedups(experiments[workload],
-    #                                        ['Flurry', 'Zipf', 'Latest'])
-    #     draw_speedup_chart('workload ' + workload, distributions)
+    for workload in workloads:
+        if 'writeamplification' in workload:
+            continue
+        distributions = calculate_speedups(experiments[workload],
+                                           ['Flurry', 'Zipf', 'Latest'])
+        draw_speedup_chart('workload ' + workload, distributions)
 
     latency = data['latency']
 
@@ -401,7 +414,6 @@ def main():
                      for (k, v) in amplifications['P'].items() if 'disk' in k],
                     yaxis='Amplification', legend=3)
 
-
     # C read amplification disk:
     draw_line_chart('C_read_amplification_disk',
                     [{'label': ' '.join(k.split()[0:2]), 'data': v}
@@ -415,7 +427,7 @@ def main():
     
     
     plt.tight_layout()
-    # plt.show()
+    plt.show()
 
 
 if __name__ == "__main__":
