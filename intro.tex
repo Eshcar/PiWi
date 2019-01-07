@@ -4,24 +4,22 @@ to continue to increase in popularity in years to come; market research  identif
 ``driving factors'' of the NoSQL market, which is expected to garner \$4.2B by 2020~\cite{alliedmarketresearch}.
 
 % In many applications, keys are composite
-{\inred {KV-stores provide a simple programming model. 
-The data is an ordered collection of ($k,v$) pairs. The application can perform random writes ({\em put}($k,v$)), 
-random reads ({\em get}($k$)), and range queries ({\em scan}($k_1,k_2$)). The flip side of this simplicity is the 
-developer's responsibility for careful schema design. A common design pattern is the use of \emph{composite} 
-keys that represent}} an agglomerate of attributes. {\inred{The attribute that is most important for range query
-performance is used as primary key prefix. }}  
+KV-stores provide a simple programming model. 
+The data is an ordered collection of key-values pairs. The application can perform random writes, 
+random reads, and range queries. A common design pattern is the use of \emph{composite} 
+keys that represent an agglomerate of attributes, where the attribute that is most important for range query
+performance is the key prefix. 
 %Range scans are then used to collect all the rows associated with a particular attribute. 
 For instance,  in messaging and email applications, keys are typically a concatenation of user id with additional fields 
 such as thread id, time, and post id. Example queries in Facebook Messenger retrieve, e.g., the last 100 messages for a 
 given user~\cite{Borthakur:2011:AHG:1989323.1989438}. %, or the hourly impression counts %over the last 24 hours for a given advertiser. 
-In social networks such as Facebook, associations representing graph edges are indexed by a primary key consisting of a 
+In social networks such as Facebook, associations representing graph edges are indexed by a key consisting of a 
 pair of object ids and an association type~\cite{Armstrong:2013:LDB:2463676.2465296}.
-{\inred{Example queries retrieve an association of specific type, 
-e.g., all friendship relations for a given user id.  
+An example queries retrieves all friendship relations for a given user id.  
 Mobile analytics services such as Flurry Analtyics~\cite{flurry} aggregate statistics 
 on data identified by composite keys consisting of attributes such as app id, device, time, location, 
 event id, etc. The query API~\cite{flurry-api} is app id-centric, hence this dimension comes first 
-in the primary key.}}
+in the key.
 
 % Composite keys imply spatial data locality (in ranges) 
 Composite keys induce \emph{spatial locality} in workloads with high {temporal locality}, as 
@@ -69,28 +67,28 @@ Finally, we note that LSM's temporal file organization optimizes disk I/O but in
 For example, all keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured 
 via a separate \emph{write-ahead-log (WAL)}. 
 This increases write amplification and also makes the flushed keys unavailable for fast read from memory. 
-Whenever the system leverages sufficient DRAM to hold almost the entire working set,  such flushes lead to inefficient use of memory resources. 
+This is particularly wasteful if the system incorporates sufficient DRAM to hold almost the entire working set. 
 The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices})  and 
 significant performance benefit DRAM offers make this scenario increasingly common.  
 
 % Drum roll 
-We present \sys, a persistent KV-store based on a novel paradigm that diverges from the ubiquitous LSM approach.  
+We present \sys, a persistent KV-store whose design diverges from the ubiquitous LSM approach.  
 Like  LSMs,  we optimize I/O by absorbing updates in memory and performing bulk writes to disk. 
-And yet unlike the LSM approach, we partition data according to key ranges and not temporally.
+And yet unlike LSMs, we partition data according to key ranges and not temporally.
 Data is  organized (both on disk and in memory) in large \emph{chunks} holding contiguous key ranges.
-Popular chunks are cached in DRAM for the benefit of  both the write-path and the read-path.
+Popular chunks are cached in RAM for the benefit of  both the write-path and the read-path.
 Chunks reduce the fragmentation of key ranges, resulting in 
 (1) better read and write performance for workloads with spatial locality,  and
 (2) faster range scans. 
 Moreover, since chunks  are compacted in memory, writes are 
-flushed to disk less frequently than LSM writes (relying on a {\inred {per-chunk WAL's}} for persistence)
+flushed to disk less frequently than LSM writes (relying on a per-chunk WAL for persistence)
 yielding 
 (3) reduced write amplification, and 
 (4) better performance with memory-resident working sets.
 
-{\inred{All \sys\/ APIs (put, get, and scan) provide strong (atomic) consistency guarantees on multiprocessor CPU hardware. 
+All \sys\/ APIs (put, get, and scan) provide strong (atomic) consistency guarantees on multiprocessor CPU hardware. 
 The system employs fast concurrent data structures for in-memory processing, to scale with the number of cores. 
-Finally, \sys\/ provides near-zero failure recovery time since it has no global WAL. }}
+Finally, \sys\/ provides near-zero failure recovery time since it does not need to replay WAL on recovery.
 
 We have implemented \sys\ in C++. We compare it to the recent release of RocksDB~\cite{RocksDB}, 
 an industry-leading KV-store  based on LSM design. Our experiments, based on the popular 
@@ -98,7 +96,7 @@ YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  Ro
 especially when spatial  locality is high. 
 For example, with composite keys and a memory-resident working set, \sys\  speeds up scans 
 by up to 3x, puts by up to $1.6$x, and gets by up to $2.2$x. With larger working sets than the 
-available DRAM, \sys\ still outperforms RocksDB by $50\% - 100\%$ on gets  and scans, 
+available RAM, \sys\ still outperforms RocksDB by $50\% - 100\%$ on gets  and scans, 
 and $30\%$ on writes. 
 
 We do not claim, however, that \sys\/ is better than a mature LSM-tree implementation

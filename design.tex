@@ -1,11 +1,11 @@
 
 % The API of \sys\ is presented in Section~\ref{ssec:api}. 
-Section~\ref{ssec:layout}  discusses \sys's data organization. 
+\cref{ssec:layout}  discusses \sys's data organization. 
 We introduce mechanisms for supporting 
-atomic scans  in Section~\ref{ssec:scans}, and describe \sys's
- normal (maintenance-free) operation flow  in Section~\ref{ssec:ops}.  
-The data structure's maintenance is discussed in Section~\ref{ssec:rebalance}.
-Finally, Section~\ref{ssec:flush-recovery} discusses flushing data to disk and failure recovery.
+atomic scans  in \cref{ssec:scans}, and describe \sys's
+ normal (maintenance-free) operation flow  in \cref{ssec:ops}.  
+The data structure's maintenance is discussed in \cref{ssec:rebalance}.
+Finally, \cref{ssec:flush-recovery} discusses flushing data to disk and failure recovery.
 
 
 \subsection{Data organization}
@@ -22,10 +22,10 @@ Finally, Section~\ref{ssec:flush-recovery} discusses flushing data to disk and f
 \paragraph{Chunks, funks, and munks.}
 
 \sys's data layout is depicted in Figure~\ref{fig:layout}.
-Similarly to BTrees and other disk-friendly and cache-friendly data structures~\cite{kiwi}, 
-\sys\ organizes data in fixed-size \emph{chunks}, each holding a contiguous key range.
+%Similarly to BTrees and other disk-friendly and cache-friendly data structures~\cite{kiwi}, 
+\sys\ organizes data in fixed-size chunks, each holding a contiguous key range.
 This improves the efficiency of both disk access and memory access, in particular, for  range scans. 
-At run-time, a list of all chunks is kept in RAM, where each chunk's data 
+At run-time, a list of all chunks metadata is kept in RAM, where each chunk's data 
 (consisting of keys in the corresponding range and values associated with them) 
 is kept on disk (for persistence), and possibly in memory (for fast access). 
 
@@ -59,14 +59,12 @@ A subset of the chunks is also cached in memory to allow fast access, where each
 \emph{munk (memory chunk)}  data structure. 
 Munks are volatile and can be removed and recreated from funks at any time.
 % Thus, multiple \emph{generations} of munks may exist for a chunk throughout its life time.
-Chunks that are not cached are denoted \emph{munk-less}.
+%Chunks that are not cached are denoted \emph{munk-less}.
 
 At run-time, \sys\ holds in memory a linked list of chunk metadata objects as well as 
 a \emph{chunk index}, which is a sorted map from keys to chunks (e.g., a sorted array, skip list, or search tree).
-Note that since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks. 
-A typical metadata object is smaller than 1 KB, whereas typical funk or munk 
-\remove{that holds 10K to 100K keys  ranges between 1M to 100M depending on the data size.} 
-is 3-4 orders of magnitude bigger. 
+Note that since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks
+(1KB instead of 10s-100s of MBs)
 
 A munk holds key-value pairs in an array-based linked list.  
 \remove{
@@ -77,15 +75,14 @@ When a munk is created,
 it is sorted by key, so each cell's successor in the linked list is the ensuing cell in the array.
 As new keys are added, they create bypasses in the linked list, and consecutive keys in the
 list are no longer necessarily adjacent in the array. Nevertheless, as long as 
-a sizeable prefix of the  array  is sorted (called \emph{sorted prefix}), bypasses are short in expectation.
+a sizeable prefix of the  array  is sorted, bypasses are short in expectation.
 \remove{Key removals, in turn, leave obsolete values in the munk, so it is no longer compacted.}
 
 
 As key-value pairs are added, overwritten, and removed munks and funks need to undergo reorganization. This includes  
 (1) \emph{compaction} to deallocate removed and overwritten data, 
-(2) \emph{sorting} keys to make searches more efficient,  
-(3) \emph{splitting} overflowing chunks, and
-(4) \emph{merging} under-utilized ones.
+(2) \emph{sorting} keys to make searches more efficient,  and
+(3) \emph{splitting} overflowing chunks.
 All reorganizations are performed by \sys's \emph{rebalance} operation.
 If the chunk has a munk, then rebalance compacts and sorts the munk in-memory by creating a new 
 (compacted and sorted) munk instead of the existing one. 
@@ -96,23 +93,21 @@ Splits  create new chunks as well as new  funks (and possibly munks) associated 
 As long as a chunk  is memory-resident, the munk data structure serves both the read-path and the write-path for keys in this chunk's range. 
 In this case, the chunk metadata is quickly located using the index, and its munk's sorted prefix allows for fast binary search.
 Thus, \sys\ is particularly fast when almost the entire working set is memory-resident. 
-We take two measures to mitigate the performance penalty of accessing keys in munk-less   chunks, 
- as we now explain.
+We take two measures to mitigate the performance penalty of accessing keys in munk-less chunks.
 
 First, we keep a \emph{row cache} holding popular key-value pairs from munk-less chunks. Note that unlike munks, which cache key ranges, the row
 cache holds individual keys, and is thus more effective in dealing with point queries (gets as opposed to scans) with no
-spatial locality (i.e., popular keys are not adjacent in the key space). 
-%\sys\ uses both data structures, and so
-So popular key ranges %are associated with munks (and 
+spatial locality.
+Thus, popular key ranges %are associated with munks (and 
 can be scanned quickly from munks, 
 while  isolated popular keys %are included in the row cache for efficient gets.
 can be quickly found using the row cache.
 
-For working sets that are  larger than the available RAM size, these two caches might not suffice, and so a certain portion of reads are served from disk. Here, the slowest step is the sequential search of the \code{log}. 
-If a key indeed resides in the 
-\code{log} (and is not cached in RAM), there is no way around that -- we need to locate it in the \code{log} in order to find 
-its associated value. Hence, we would like to reduce \code{log} searches to a minimum. 
-To this end, each munk-less chunk holds a \emph{Bloom filter} for the corresponding funk's \code{log}.
+For working sets that are  larger than the available RAM, these two caches might not suffice, and so a certain portion of reads are served from disk. Here, the slowest step is the sequential search of the \code{log}. 
+If an uncached key indeed resides in the 
+\code{log} we need to locate it in the \code{log} in order to find 
+its associated value. To reduce \code{log} searches to a minimum,
+each munk-less chunk holds a \emph{Bloom filter} for the corresponding funk's \code{log}.
 \remove{this is a statistical data structure that summarizes a set of keys so that 
 when queried for a key that is included in it always returns true (no false negatives), 
 and otherwise returns false with some high probability (low false positive probability).}
@@ -128,15 +123,15 @@ content of part of the \code{log}; this allows us to know not only whether or no
 \paragraph{Chunk metadata structure.}
 
 The metadata structure is given in Algorithm~\ref{alg:chunk}. 
-The first field is its \code{status}, which is explained in Section~\ref{ssec:rebalance}  below. 
-It next holds a pointer to the appropriate funk, and, if applicable, also munk, as well as a pointer to the next 
+The first field is its \code{status}, which is explained in \cref{ssec:rebalance}  below. 
+It next holds a pointer to the appropriate funk, and either a munk or a Bloom filter, as well as a pointer to the next 
 chunk in the chunk linked list.
 \remove{
 It further keeps the generation number of its latest munk, \code{gen}, and a per-generation sequence number,
 \code{seq}, which, in case there is an active munk, is the index of the next free cell in the munk's  \code{karray}  and \code{varray}. The chunk's \code{gen} and \code{seq} are stored together in one 64-bit word to allow 
 atomic access to both of them. 
 }
-It further includes a Bloom filter as explained above.
+%It further includes a Bloom filter as explained above.
 Finally, the chunk includes locks to synchronize concurrent access by multiple threads, as explained below.
 
 \begin{algorithm}[htb]
@@ -161,7 +156,7 @@ Finally, the chunk includes locks to synchronize concurrent access by multiple t
 
 \paragraph{Thread synchronization.}
 
-The replacement of a chunk (due to a split) or rebalance of a funk or munk (see Section~\ref{ssec:rebalance}) %associated with a given chunk 
+The replacement of a chunk (due to a split) or rebalance of a funk or munk %(see Section~\ref{ssec:rebalance}) %associated with a given chunk 
 must be executed atomically, and moreover, must be synchronized with concurrent puts. 
 This is controlled by the chunk's \emph{rebalanceLock}, which is held for short time periods
 during chunk, funk, and munk replacements.  It is a shared/exclusive lock, acquired in shared mode 
@@ -178,7 +173,7 @@ In addition to the chunk list and chunk index, \sys\ keeps a \emph{global versio
 The PO is used to synchronize puts with scans, as well as for  garbage collection purposes (old 
 versions not needed by any active scan can be reclaimed).
 We note that using a single pending array to synchronize all operations can cause contention, which we
-mitigate in our implementation by tracking the pending puts in per-chunk arrays as done in~\cite{kiwi} (see Section~\ref{sec:impl}). 
+mitigate in our implementation by tracking the pending puts in per-chunk arrays as done in~\cite{kiwi} (see~\cref{sec:impl}). 
 
 \subsection{Multi-versioning for atomic scans}
 \label{ssec:scans}
