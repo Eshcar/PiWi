@@ -8,6 +8,7 @@ This section provides details about some of our implementation choices.
 Whenever a new chunk is created (upon split), the index is rebuilt and the reference to it is atomically flipped. 
 We found this simple implementation to be fastest since splits are infrequent. 
 
+\remove{
 \paragraph{Synchronization data structures.}
 %We note that 
 Using a single pending array to synchronize all
@@ -31,6 +32,7 @@ A scan operation first publishes its intent to obtain a version in the \code{PSA
 
 A munk rebalance iterates through the \code{PSA} to collect the maximum version number among the active scans that cannot be reclaimed yet. If a scan published its intent in the \code{PSA} but published no version number yet, the rebalance waits until either the version is published or the ABA number in the entry is increased. 
 \remove{It then acquires the chunk's lock to block additional put operation. If executing a funk rebalance it also acquires the funk rebalance lock for the chunk. After completeing the rebalance operation and placing the new content of the chunk in place including the updated metadata, all locks are promoted.
+}
 }
 
 %\paragraph{Adaptive mechanisms.} \sys\ applies two dynamic mechanisms that adapt to the workload. 
@@ -58,9 +60,10 @@ If the key is not present in the cache, the put does not update it, to avoid ove
 After a get, the up-to-date version is added to in the head table unless it is already there.
 If the key's version also exists in another table, its value is shared by the two versions, to avoid duplication.
 
+\remove{
 \paragraph{Chunk merges support.}
 %\inred{move to conclusion and future work?}
 Our current implementation does not support chunk merges (to defragment the store after massive data deletion). This could be done as 
 part of the rebalance procedure (see~\cite{kiwi}).
-\remove{In \sys\ this entails merging the funks of two chunks. As in the split operation, the rebalance first acquires the  rebalance locks of the chunks to be merged---to ensure exclusiveness. The content of the chunks is merged and written into a new chunk. Finally, the rebalance acquires the chunks' locks for the short period in which the content that was added to the chunks during the merge is written to the log of the new chunk, and the new chunk swaps the old chunks in the list.
+In \sys\ this entails merging the funks of two chunks. As in the split operation, the rebalance first acquires the  rebalance locks of the chunks to be merged---to ensure exclusiveness. The content of the chunks is merged and written into a new chunk. Finally, the rebalance acquires the chunks' locks for the short period in which the content that was added to the chunks during the merge is written to the log of the new chunk, and the new chunk swaps the old chunks in the list.
 }
