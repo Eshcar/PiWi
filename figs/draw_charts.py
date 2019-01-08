@@ -44,7 +44,7 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
 
 def renamings(label):
 
-    new_label = label.replace('Flurry', 'Zipf-range')\
+    new_label = label.replace('Flurry', 'Zipf-composite')\
                      .replace('Piwi', 'YodelDB')\
                      .replace('Zipfian', 'Zipf')\
                      .replace('Rocks', 'RocksDB')
@@ -52,8 +52,16 @@ def renamings(label):
     return new_label
 
 
+def export_legend(legend, filename="legend.png", expand=[-5,-5,5,5]):
+    fig = legend.figure
+    fig.canvas.draw()
+    bbox = legend.get_window_extent()
+    bbox = bbox.from_extents(*(bbox.extents + np.array(expand)))
+    bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(filename, dpi="figure", bbox_inches=bbox)
+
 def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
-                    y_upper=None, x=x_axis, x_label='dataset Size', x_bottom=None):
+                    y_upper=None, x=x_axis, x_label='dataset Size', x_bottom=None, legend_image=False):
     fig, ax = plt.subplots()
     for line in lines:
         ax.plot(x, line['data'], label=renamings(line['label']),
@@ -77,9 +85,20 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
     if x_bottom is not None:
         ax.set_xlim(x_bottom, ax.get_xlim()[1])
 
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels, loc=legend, fontsize=myfontsize)
-    plt.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
+    if legend_image:
+        figsize = (0.1, 0.1)
+        fig_leg = plt.figure(figsize=figsize)
+        ax_leg = fig_leg.add_subplot(111)
+        # add the legend from the previous axes
+        ax_leg.legend(*ax.get_legend_handles_labels(), loc='center', ncol=4)
+        # hide the axes frame and the x/y labels
+        ax_leg.axis('off')
+        fig_leg.savefig('legend.pdf', bbox_inches='tight')
+    else:
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, loc=legend, fontsize=myfontsize)
+
+    fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
 
 def draw_speedup_chart(chart_name, distributions):
@@ -401,14 +420,16 @@ def draw_line_charts(data):
     experiments = data['experiments']
     # draw line charts
     for workload in workloads:
-        
         lines = [{'label': k, 'data': v, 'style': line_color[k]}
                  for (k, v) in experiments[workload].items()]
         if len(lines) == 4:
             lines = [lines[1], lines[3], lines[0], lines[2]]
+            legend_image=True
+        else:
+            legend_image=False
         draw_line_chart('Workload ' + workload,
                         lines,
-                        yaxis='Kops', y_upper=ylim[workload])
+                        yaxis='Kops', y_upper=ylim[workload], legend_image=legend_image)
 
 
 def draw_speedup_charts(data):
@@ -474,9 +495,9 @@ def main():
     # draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
-    draw_scalability_charts(data)
-    # plt.tight_layout()
-    plt.show()
+    # draw_scalability_charts(data)
+    plt.tight_layout()
+    # plt.show()
 
 
 if __name__ == "__main__":
