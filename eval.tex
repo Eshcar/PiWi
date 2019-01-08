@@ -1,82 +1,98 @@
-We extensively compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
+We  compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
 It is worth noting that RocksDB's performance improved significantly during the last two years, primarily through 
 optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   
 
-\subsection{Setup}
+The experiment setup is described in \cref{ssec:setup} and the results are presented in \cref{ssec:results}. 
 
-\paragraph{Testbed.} We employ a C++ implementation~\cite{Cpp-YCSB} of a widely popular 
-YCSB~\cite{YCSB} benchmarking platform. 
-YCSB provides a framework for KV-store comparisons, through a set of common data access API's and standard workloads. 
-Most modern KV-stores implement  YCSB adapter API's. The platform decouples data access from workload generation, 
+\subsection{Setup}
+\label{ssec:setup} 
+
+\paragraph{Testbed.} We employ a C++ implementation~\cite{Cpp-YCSB} of YCSB~\cite{YCSB}, the  de facto standard  
+benchmarking platform for KV-stores. 
+YCSB provides a standard set of APIs and a workload suite. 
+% Most modern KV-stores implement  YCSB adapter API's. 
+The platform decouples data access from workload generation, 
 thereby providing common ground for backend comparison. 
 
-A workload is defined by a combination of get, put, and scan accesses, as well as by a synthetic distribution of keys and values. 
-YCSB provides a set of benchmark workloads inspired by real-life applications, and allows developing new ones through workload 
-generation API's. A typical YCSB instance stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
+A workload is defined by  (1) the ratio of get, put, and scan accesses, and (2) access pattern defined as a synthetic distribution of keys. 
+YCSB provides a basic set of benchmarks  inspired by real-life applications, and allows developing new ones through workload 
+generation APIs. A typical YCSB instance stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
 workloads. %It aggregates the key performance metrics for the scenario under test.  
 
 Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. Unless otherwise stated, the driver application 
 exercises 12 workers in all experiments. In order to guarantee a fair memory allocation to all KV-stores, we run each 
-experiment within a Linux container with 16 GB RAM. 
+experiment within a Linux container with 16GB RAM. 
 
-\paragraph{Metrics.} At the high level, we study the throughput and tail latency metrics produced by YCSB. 
-In order to explain the results, we also explore the system write amplification (bytes written to storage over 
-bytes passed from application) and read amplification (bytes read from storage over bytes passed to application), 
+\paragraph{Metrics.} Our primary performance metrics are \emph{throughput} and \emph{tail latency}, as produced by YCSB. 
+In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
+In order to explain the results, we also explore \emph{read amplification} (bytes read from storage over bytes passed to application), 
 as well as the number of read and write system calls. The OS performance counters are retrieved from the Linux
 proc filesystem. 
 
-\paragraph{Data.} We scale the dataset size from 4 GB to 64 GB, in order to exercise multiple locality 
-scenarios with respect to the available RAM. Similarly to the published RocksDB benchmarks, we use 
+\paragraph{Workloads.} 
+We scale the dataset size from 4GB to 64GB, in order to exercise multiple locality 
+scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks, we use 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 The data is stored uncompressed. 
 
-\paragraph{Workloads.} We leverage multiple workloads: 
+We study three different access patterns (key-access distributions):  
 
 \begin{enumerate}
-\item {\em Zipf}. The key frequencies are sampled from the heavy-tailed Zipf distribution, 
+\item {\em Zipf-simple} -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
+Key access frequencies are sampled from the heavy-tailed Zipf distribution, 
 following the description in~\cite{Gray:1994:QGB:191839.191886}, with $\theta = 0.8$. 
-The key locations are sampled uniformly at random from the whole data range. Zipf exhibits 
+The ranking is over a random permutation of the entire key range, so popular keys are uniformly dispersed.
+% The key locations are sampled uniformly at random from the whole data range. 
+This workload exhibits 
 medium temporal locality (e.g., the most popular key's frequency is approximately $0.7\%$), 
-and no spatial locality. This is a standard YCSB workload that captures a multitude of use cases 
--- e.g., a web page cache distribution by URL. 
+and no spatial locality. 
+%This is a standard YCSB workload that captures a multitude of use cases  -- e.g., a web page cache distribution by URL. 
 
-\item {\em Zipf-range}. Similar to Zipf ($\theta=0.8$), except that we sample the key's $14$ most significant bits
-(MSBs) rather than the complete key. The remainder of the key sampled uniformly at random. Zipf-range exhibits
-a workload of high spatial locality, e.g., message threads~\cite{Borthakur:2011:AHG:1989323.1989438}. 
+\item {\em Zipf-composite}  -- a Zipfian distribution over composite keys. 
+The key's $14$ most significant bits comprise the primary attribute. Both the primary attribute and 
+the remainder of the key are drawn from Zipf ($\theta=0.8$) distributions over their ranges. 
+Zipf-composite exhibits high spatial locality, representing workloads 
+with composite keys, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
+social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics engines~\cite{flurry}. 
 
-\item {\em Latest}. New KV-pairs are inserted in sequential key order; the most recently inserted ones are 
-the  most popular (the sampled key's position wrt the most recent key is distributed Zipf). This is a 
-standard YCSB workload of medium spatial and temporal locality that exhibits, e.g., status updates and reads. 
+\item {\em Latest-simple} -- frequent access to recently added keys. 
+ KV-pairs are inserted in sequential key order; the read keys' distribution is skewed towards recently added ones. 
+Specifically, the sampled key's position wrt the most recent key is distributed Zipf. This is a 
+standard YCSB workload with medium spatial and temporal locality that represents, e.g., status updates and reads. 
 
 \end{enumerate}
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
-(A to E) that capture write-savvy ($50\%$ puts) to read-savvy ($95\%-100\%$ gets or scans) settings. 
+(A to E) that range from write-savvy ($50\%$ puts) to read-savvy ($95\%-100\%$ gets or scans) settings. 
 In order to stress the system even more on the write side, we introduce a new workload, named 
 YCSB-P, comprised of $100\%$ puts. It captures a heavy-duty data load scenario (e.g., from an 
 external data pipeline). 
 
-\paragraph{Evaluation methodology.} Each experiment consists of two stages. The first stage builds 
+\paragraph{Evaluation methodology and configuration.} Each experiment consists of two stages. The first stage builds 
 the dataset, by filling an initially empty store with an sequence of KV-pairs, ordered by key. The second 
 phase exercises the specific scenario; all worker threads follow the same access pattern. Most experiments 
 perform 80 million data accesses. The experiments that run scans perform 4 to 16 million accesses, depending 
 on the scan size. We run 5 experiments for each data point, and present the median metric measurement. 
 
-\paragraph{Configuration.} 
-We only present the performance metrics in asynchronous logging mode -- as synchronous logging 
+%\paragraph{Configuration.} 
+We only present the performance metrics in asynchronous logging mode, since synchronous logging 
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-We allocate a quota of 12 GB RAM (out of the 16 GB container) to the munk and row caches, 
-and split it between the two at a $2:1$ ratio. The row cache uses 3 hash tables.  
-
+In \sys, we allocate 8GB to munks and 4GB to the row cache \inred{unless explicitly indicated otherwise}, 
+so together they consume 12GB out of the 16GB container. 
+The row cache uses three hash tables.  
 The Bloom filters for munk-less funks are partitioned 16-way.  
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
-most chunks are bound by 7 MB (i.e., approximately 7000 KV-pairs per chunk). The funk log
-size limit is 2 MB for write intensive workloads, and 512 KB for other workloads.
+chunks can grow up to 7MB  (approximately 7000 KV-pairs) before being compacted. 
+\inred{
+The funk log
+size limit is 2MB for write intensive workloads, and 512KB for other workloads.
+}
 
-We tune all RocksDB runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
+We tune all of RocksDB's runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
-\subsection{Results -- Normal Execution}
+\subsection{Results}
+\label{ssec:results} 
 
 \begin{figure*}[tb]
 \centering
