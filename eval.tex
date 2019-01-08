@@ -1,4 +1,4 @@
-We extensively compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2.  %, available Oct 24, 2018.  
+We extensively compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
 It is worth noting that RocksDB's performance improved significantly during the last two years, primarily through 
 optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   
 
@@ -66,8 +66,8 @@ on the scan size. We run 5 experiments for each data point, and present the medi
 We only present the performance metrics in asynchronous logging mode -- as synchronous logging 
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-We allocate a quota of 13.5 GB RAM (out of the 16 GB container) to the munk and row caches, 
-and split it between the two at a $2:1$ ratio. 
+We allocate a quota of 12 GB RAM (out of the 16 GB container) to the munk and row caches, 
+and split it between the two at a $2:1$ ratio. The row cache uses 3 hash tables.  
 
 The Bloom filters for munk-less funks are partitioned 16-way.  
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
@@ -143,7 +143,7 @@ distinguish between hot and cold data.
 Table~\ref{fig:writeamp} corroborates the above observations, by comparing 
 \sys's write amplification to RocksDB's. \sys\/ reduces the disk write rate dramatically, 
 with the largest gain observed for big datasets (e.g., $1.29$ versus $2.92$ for the 64 GB 
-database under Zipf-range). As a nice by-product, \sys\/ is also more 
+database under Zipf-range). As a by-product, \sys\/ is also more 
 efficient with respect to disk wear.  
 
 \paragraph{YCSB-A (50\% put, 50\% get), Zipf and Zipf-range distributions).}
@@ -286,7 +286,7 @@ at 12 threads.
 \includegraphics[width=0.3\textwidth]{figs/scalability_line.pdf}
 \caption{\bf{\sys\/ scalability with the number of threads for 
 the 64 GB dataset, under the YCSB-A, YCSB-C and YCSB-P workloads
-and varying parallelism. }}
+and varying degrees of parallelism. }}
 \label{fig:scalability}
 \end{figure}
 
