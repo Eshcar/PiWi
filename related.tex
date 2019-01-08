@@ -2,14 +2,14 @@
 
 %common lsm stores RocksDB, scylladb, HyperLevelDB, LevelDB, hbase, cassandra
 The vast majority of industrial mainstream NoSQL KV-stores are  implemented as LSM trees~\cite{hbase, 
-RocksDB, scylladb, Bigtable2008, cassandra2010}, building on the foundation set by O'Neil 
-et. al.~\cite{O'Neil1996, Muth1998}. 
+RocksDB, scylladb, Bigtable2008, cassandra2010}, building on the foundations set by O'Neil 
+et al.~\cite{O'Neil1996, Muth1998}. 
 
 Due to LSM design popularity, much effort has been invested into working around its bottlenecks.
 A variety of compaction strategies has been implemented in production systems~\cite{CallaghanCompaction, 
 ScyllaCompaction} and research prototypes~\cite{triad, PebblesDB}. Other suggestions include storage
 optimizations~\cite{WiscKey, PebblesDB}, boost of in-memory parallelism~\cite{scylladb, clsm2015}, or leveraging 
-the workload redundancies to defer disk flushes~\cite{triad, accordion}. 
+ workload redundancies to defer disk flushes~\cite{triad, accordion}. 
 
 For example, PebblesDB~\cite{PebblesDB} introduces fragmented LSM trees, in which level files are 
 sliced into {\em guards\/} of increasing granularity and organized in a skiplist-like layout. This structure 
@@ -19,20 +19,19 @@ in SStables, also in order to reduce amplification. This optimization is orthogo
 and could benefit our work as well. Accordion~\cite{accordion} splits the LSM in-memory buffer into mutable 
 and immutable levels, which are periodically merged in the background similarly to traditional compaction, 
 in order to reduce disk flushes. This mechanism is similar to munk rebalance in \sys, 
-however, the latter rebalance data at the chunk level.
+but the latter rebalances data at the chunk level and so benefits from spatial locality.
 %maintains a small dynamic  to absorb write operation. This active component is frequently merged with a larger immutable in-memory component by running at the background. 
 
 \sys's design resembles classic B-trees~\cite{Knuth:1998:ACP:280635} by supporting direct random updates to leaf blocks (chunks). 
 It resolves the B-tree write throughput issue through munks and in-memory compaction. B-trees, which were 
 designed for read-intensive environments, did not focus on strong guarantees in concurrent  read-write settings. 
-Kiwi~\cite{kiwi} is a modern theoretically sound B-tree designed for in-memory systems; \sys\/ extends its principles
-to persistent storage. 
+%Kiwi~\cite{kiwi} is a modern theoretically sound B-tree designed for in-memory systems; \sys\/ extends its principles to persistent storage. 
 
-In the recent years, $B^{\epsilon}$-trees~\cite{Brodal:2003:LBE:644108.644201} have emerged 
+In  recent years, $B^{\epsilon}$-trees~\cite{Brodal:2003:LBE:644108.644201} have emerged 
 as promising way to organize data. They are used in production KV-stores~\cite{TokuDB} and filesystems~\cite{BetrFS}. 
 $B^{\epsilon}$-tree is a B-tree variant that uses overflow buffers in internal nodes as well as leaves, trading buffer 
-compactions for random I/O. \sys\/ applies similar ideas to leaf-level storage.  Unlike \sys, we are not aware of any 
-$B^{\epsilon}$-tree implementations that provide atomic scans and zero-time consistent recovery. 
+compactions for random I/O. \sys\/ applies similar ideas to leaf-level storage.  We are not aware of any 
+$B^{\epsilon}$-tree implementation that provides atomic scans and zero-time consistent recovery as \sys\ does. 
 %Similarly to \sys, keys and values are appended to buffers, and pointers to keys are sorted in contiguous segments, 
 %thereby improving read performance. 
 
@@ -44,7 +43,7 @@ data storage, e.g., web and application caches. Over time, most of them evolved 
 albeit as a second-class citizen in most cases. 
 %For example, Ignite~\cite{ignite} uses a B-tree index with in-place random updates. 
 These systems resemble \sys\/ in their memory-centric approach. 
-However, we are unaware of their consistency guarantees or performance wrt disk-resident data. 
+However, we are unaware of their consistency guarantees or performance optimizations with respect  to disk-resident data in such systems. 
 
 %Their persistent storage support is based on either B-tree~\cite{ignite} or LSM-tree design~\cite{redis}. 
 %used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, , and in-place updates~\cite{ignite}  more than a kv lsm store.
