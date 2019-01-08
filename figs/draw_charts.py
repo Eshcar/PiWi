@@ -46,7 +46,7 @@ def renamings(label):
     
     # order is important
     rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
-              'Flurry': 'Zipf-composit', 'Latest': 'Latest-simple'}
+              'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple'}
     for key in rename.keys():
         if key in label:
             return label.replace(key, rename[key]).replace('Piwi', 'YoDB').replace('Rocks', 'RocksDB')
