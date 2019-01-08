@@ -136,7 +136,15 @@ We tune all of RocksDB's runtime parameters in accordance with its system perfor
 \caption{YCSB-E1000}
 \label{fig:throughput:e1000}
 \end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB throughput (Kops), under multiple workloads and scaling dataset sizes.}}
+\begin{subfigure}{\linewidth}
+\centerline{
+\includegraphics[width=0.9\textwidth]{figs/legend.pdf}
+\vspace{-5mm}
+}
+\end{subfigure}
+\caption{
+{\sys\/ versus RocksDB throughput (Kops), under multiple workloads and scaling dataset sizes.}
+}
 \label{fig:throughput}
 \end{figure*}
 
@@ -200,7 +208,7 @@ between scans and puts, which slows down the overall progress.
 & 4GB & 8GB & 16GB & 32GB & 64GB \\
 \hline 
 RocksDB, Zipf-range & 1.93	& 2.15 & 2.29 & 2.54	& {\bf {2.92}}\\
-\sys, Zipf-range &  1.42	 & 1.38	& 1.27	& 1.30	& {\bf {1.29}}\\
+\sys, Zipf-range &  1.42	 & 1.38	& 1.27	& 1.30	& { {1.29}}\\
 \hline 
 RocksDB, Zipf & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\ 
 \sys, Zipf & 1.41& 1.37	& 1.15	& 1.13	& 1.31 \\
@@ -220,7 +228,7 @@ RocksDB, Zipf & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 %\caption{YCSB-A}
 %\label{fig:writeamp:a}
 %\end{subfigure}
-\caption{\bf{\sys\/ versus RocksDB write amplification, under the write-only workload (YCSB-P) and scaling dataset sizes.}}
+\caption{{\sys\/ versus RocksDB write amplification, under the write-only workload (YCSB-P) and scaling dataset sizes.}}
 \label{fig:writeamp}
 \end{table}
 
@@ -238,7 +246,7 @@ RocksDB, Zipf & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 \caption{Disk (tail) search latency}
 \label{fig:readstat:lat}
 \end{subfigure}
-\caption{\bf{\sys\/ {\em get\/} operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
+\caption{{\sys\/ {\em get\/} operation statistics by the serving component, under the mixed read-write workload (YCSB-A) and scaling dataset sizes.}}
 \label{fig:readstat}
 \end{figure}
 
@@ -271,7 +279,7 @@ RocksDB, syscall & 3.84	& 4.01	& 4.14	& 4.28	& {\bf {4.37}} \\
 \hline 
 \end{tabular}
 }}
-\caption{\bf{\sys\/ versus RocksDB read amplification, in terms of bytes and system calls, 
+\caption{{\sys\/ versus RocksDB read amplification, in terms of bytes and system calls, 
 under the read-only workload (YCSB-C), Zipf-range distribution and scaling dataset sizes.}}
 \label{fig:readamp}
 \end{table}
@@ -285,7 +293,7 @@ depicts the results.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.3\textwidth]{figs/Workload_D_line.pdf}
-\caption{\bf{\sys\/ versus RocksDB throughput, under the YCSB-D workload and scaling dataset sizes.}}
+\caption{{\sys\/ versus RocksDB throughput, under the YCSB-D workload and scaling dataset sizes.}}
 \label{fig:throughput:d}
 \end{figure}
 
@@ -300,7 +308,7 @@ at 12 threads.
 \begin{figure}[th]
 \centering
 \includegraphics[width=0.3\textwidth]{figs/scalability_line.pdf}
-\caption{\bf{\sys\/ scalability with the number of threads for 
+\caption{{\sys\/ scalability with the number of threads for 
 the 64 GB dataset, under the YCSB-A, YCSB-C and YCSB-P workloads
 and varying degrees of parallelism. }}
 \label{fig:scalability}
@@ -340,7 +348,7 @@ Zipf & 36.3 & 39.2 & 46.3 & 56.0 & {\bf {59.9}} \\
 \caption{Throughput (Kops) vs Bloom filter split factor}
 \label{fig:wal:bf}
 \end{subfigure}
-\caption{\bf{\sys\/ throughput, under the mixed read-write workload (YCSB-A), 64GB dataset, and varying funk log configuration parameters.}}
+\caption{{\sys\/ throughput, under the mixed read-write workload (YCSB-A), 64GB dataset, and varying funk log configuration parameters.}}
 \label{fig:wal}
 \end{table*}
 \paragraph{Funk-log configuration.} 
