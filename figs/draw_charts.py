@@ -43,7 +43,7 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
 
 
 def renamings(label):
-    
+
     # order is important
     rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
               'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple'}
@@ -247,7 +247,7 @@ def draw_latency_breakdown(chart_name, latency):
 
     fig, ax = plt.subplots()
     
-    flurry_indices = [0, 2, 4, 6, 8][2:]
+    flurry_indices = [0, 2, 4, 7, 10][2:]
     # ax.bar(flurry_indices, munks_percentage_flurry, bar_width,
     #        color=munks_color, edgecolor='black', hatch=flurry_hatch,
     #        label=munks_label)
@@ -259,10 +259,7 @@ def draw_latency_breakdown(chart_name, latency):
                                        rawcache_percentage_flurry)],
            color=wb_color, edgecolor='black', hatch=flurry_hatch,
            label=wb_label)
-    ax.bar(flurry_indices, keystore_percentage_flurry, bar_width,
-           bottom=[sum(x) for x in zip(munks_percentage_flurry,
-                                       rawcache_percentage_flurry,
-                                       wb_percentage_flurry)],
+    ax.bar([index+bar_width for index in flurry_indices], keystore_percentage_flurry, bar_width,
            color=ks_color, edgecolor='black', hatch=flurry_hatch,
            label=ks_label)
 
@@ -275,7 +272,7 @@ def draw_latency_breakdown(chart_name, latency):
     keystore_percentage_zipf = [v[KS_INDEX] / 1000
                                 for (k, v) in latency['zipfian'].items()][2:]
 
-    zipf_indices = [v+bar_width + 0.1 for v in flurry_indices]
+    zipf_indices = [v+bar_width*2 + 0.1 for v in flurry_indices]
 
     # ax.bar(zipf_indices, munks_percentage_zipf, bar_width,
     #        color=munks_color, edgecolor='black', hatch=zipf_hatch)
@@ -286,15 +283,12 @@ def draw_latency_breakdown(chart_name, latency):
            bottom=[sum(x) for x in zip(munks_percentage_zipf,
                                        rawcache_percentage_zipf)],
            color=wb_color, edgecolor='black', hatch=zipf_hatch)
-    ax.bar(zipf_indices, keystore_percentage_zipf, bar_width,
-           bottom=[sum(x) for x in zip(munks_percentage_zipf,
-                                       rawcache_percentage_zipf,
-                                       wb_percentage_zipf)],
+    ax.bar([index + bar_width for index in zipf_indices], keystore_percentage_zipf, bar_width,
            color=ks_color, edgecolor='black', hatch=zipf_hatch)
 
     ax.legend(loc=2, fontsize=myfontsize)
 
-    ax.set_xticks(flurry_indices+zipf_indices)
+    ax.set_xticks([v+bar_width/2 for v in flurry_indices]+[v+bar_width/2 for v in zipf_indices])
     ax.set_xticklabels([renamings('Flurry') for i in range(3)]
                        + [renamings('Zipf') for i in range(3)], rotation=80, fontsize=myfontsize+5)
 
@@ -305,7 +299,8 @@ def draw_latency_breakdown(chart_name, latency):
     ax2.set_xlabel('Dataset Size', fontsize=myfontsize+5)
     ax2.bar(flurry_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
     ax2.bar(zipf_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
-    ax2.set_xticks([v+bar_width/2 for v in flurry_indices], False)
+
+    ax2.set_xticks([4.75, 7.25, 10.5], False)
     ax2.set_xticklabels(x_axis, fontsize=myfontsize+5)
     plt.savefig(chart_name.replace(' ', '_')+'.pdf', bbox_inches='tight')
 
@@ -483,14 +478,14 @@ def draw_scalability_charts(data):
 def main():
     data = read_csv()
 
-    draw_line_charts(data)
-    draw_speedup_charts(data)
+    # draw_line_charts(data)
+    # draw_speedup_charts(data)
     draw_latency_charts(data)
-    draw_bloom_filter_charts(data)
-    draw_ampl_charts(data)
-    draw_scalability_charts(data)
+    # draw_bloom_filter_charts(data)
+    # draw_ampl_charts(data)
+    # draw_scalability_charts(data)
     plt.tight_layout()
-    # plt.show()
+    plt.show()
 
 
 if __name__ == "__main__":
