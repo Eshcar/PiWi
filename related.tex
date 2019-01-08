@@ -3,8 +3,7 @@
 %common lsm stores RocksDB, scylladb, HyperLevelDB, LevelDB, hbase, cassandra
 The vast majority of industrial mainstream NoSQL KV-stores are  implemented as LSM trees~\cite{hbase, 
 RocksDB, scylladb, Bigtable2008, cassandra2010}, building on the foundation set by O'Neil 
-et. al.~\cite{O'Neil1996, Muth1998}. They largely replaced B-trees~\cite{Knuth:1997}
-thanks to better write speed. 
+et. al.~\cite{O'Neil1996, Muth1998}. 
 
 Due to LSM design popularity, much effort has been invested into working around its bottlenecks.
 A variety of compaction strategies has been implemented in production systems~\cite{CallaghanCompaction, 
@@ -23,18 +22,22 @@ in order to reduce disk flushes. This mechanism is similar to munk rebalance in 
 however, the latter rebalance data at the chunk level.
 %maintains a small dynamic  to absorb write operation. This active component is frequently merged with a larger immutable in-memory component by running at the background. 
 
-A recent alternative to the LSM-tree design is $B^{\epsilon}$-tree~\cite{Brodal:2003:LBE:644108.644201} -- a 
-B-tree variant that uses overflow buffers in internal nodes as well as leaves, trading compactions for faster random I/O. 
-Similarly to \sys, keys and values are appended to buffers, and pointers to keys are sorted in contigouos segments, 
-thereby improving read performance. $B^{\epsilon}$-trees are used in production KV-stores~\cite{TokuDB} and filesystems~\cite{BetrFS}. 
-Tucana~\cite{tucana} is a $B^{\epsilon}$-tree optimization that uses three techniques to reduce overheads: copy-on-write, private allocation, 
-and memory-mapped I/O. However, unlike \sys, we are not aware of any $B^{\epsilon}$-tree implementations that provide atomic scans 
-and zero-time consistent recovery. 
+\sys's design resembles classic B-trees~\cite{Knuth:1998:ACP:280635} by supporting direct random updates to leaf blocks (chunks). 
+It resolves the B-tree write throughput issue through munks and in-memory compaction. B-trees, which were 
+designed for read-intensive environments, did not focus on strong guarantees in concurrent  read-write settings. 
+Kiwi~\cite{kiwi} is a modern theoretically sound B-tree designed for in-memory systems; \sys\/ extends its principles
+to persistent storage. 
 
-%\sys\ on the other hand manages cache in memory data structures (munks and row cache).
-%Split and merge update the index in a bottom up fashion. 
-%Read and scan operations traverse the path from root to leaf. At the leaf, read operations perform binary search; scans subsequently iterate over the range of keys.
-%In read dominated workloads Tucana benefits from contigouos key segments. However random I/O prevents Tucana from outperforming LSM trees in write dominated workloads.
+In the recent years, $B^{\epsilon}$-trees~\cite{Brodal:2003:LBE:644108.644201} have emerged 
+as promising way to organize data. They are used in production KV-stores~\cite{TokuDB} and filesystems~\cite{BetrFS}. 
+$B^{\epsilon}$-tree is a B-tree variant that uses overflow buffers in internal nodes as well as leaves, trading buffer 
+compactions for random I/O. \sys\/ applies similar ideas to leaf-level storage.  Unlike \sys, we are not aware of any 
+$B^{\epsilon}$-tree implementations that provide atomic scans and zero-time consistent recovery. 
+%Similarly to \sys, keys and values are appended to buffers, and pointers to keys are sorted in contiguous segments, 
+%thereby improving read performance. 
+
+Tucana~\cite{tucana} is a $B^{\epsilon}$-tree optimization that uses three techniques to reduce overheads: copy-on-write, 
+private allocation, and memory-mapped I/O. \sys\/ could incorporate some of these to further improve performance. 
 
 In-memory KV-stores~\cite{ignite, redis, memcached, Srinivasan:2016:AAR:3007263.3007276} have originally emerged as fast volatile 
 data storage, e.g., web and application caches. Over time, most of them evolved to support durability,
