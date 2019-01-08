@@ -46,7 +46,8 @@ def renamings(label):
 
     new_label = label.replace('Flurry', 'Zipf-range')\
                      .replace('Piwi', 'YodelDB')\
-                     .replace('Zipfian', 'Zipf')
+                     .replace('Zipfian', 'Zipf')\
+                     .replace('Rocks', 'RocksDB')
 
     return new_label
 
@@ -75,7 +76,9 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
 
     if x_bottom is not None:
         ax.set_xlim(x_bottom, ax.get_xlim()[1])
-    ax.legend(loc=legend, fontsize=myfontsize)
+
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, loc=legend, fontsize=myfontsize)
     plt.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
 
@@ -393,16 +396,18 @@ def draw_bloom_filter_partitions(chart_name, data):
 
 def draw_line_charts(data):
 
-
-
     ylim = {'P': 380, 'A': 580, 'C': 1280, 'E-': 580, 'E': 260, 'E+': 30, 'S': None, 'B': None, 'D': None}
-    
+
     experiments = data['experiments']
     # draw line charts
     for workload in workloads:
+        
+        lines = [{'label': k, 'data': v, 'style': line_color[k]}
+                 for (k, v) in experiments[workload].items()]
+        if len(lines) == 4:
+            lines = [lines[1], lines[3], lines[0], lines[2]]
         draw_line_chart('Workload ' + workload,
-                        [{'label': k, 'data': v, 'style': line_color[k]}
-                         for (k, v) in experiments[workload].items()],
+                        lines,
                         yaxis='Kops', y_upper=ylim[workload])
 
 
@@ -464,13 +469,13 @@ def draw_scalability_charts(data):
 def main():
     data = read_csv()
 
-    # draw_line_charts(data)
+    draw_line_charts(data)
     # draw_speedup_charts(data)
     # draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
     draw_scalability_charts(data)
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
 
 
