@@ -2,7 +2,12 @@ We  compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-stor
 It is worth noting that RocksDB's performance improved significantly during the last two years, primarily through 
 optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   
 
-The experiment setup is described in \cref{ssec:setup} and the results are presented in \cref{ssec:results}. 
+The experiment setup is described in \cref{ssec:setup}. 
+Performance results for \sys\ and RocksDB in 
+different workloads are presented in \cref{ssec:results}. 
+\cref{ssec:drill} analyzes \sys\ under different parameter settings and with a varying number of threads.
+\cref{ssec:recover} evaluates its recovery mechanism. 
+ 
 
 \subsection{Setup}
 \label{ssec:setup} 
@@ -91,7 +96,7 @@ size limit is 2MB for write intensive workloads, and 512KB for other workloads.
 
 We tune all of RocksDB's runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
-\subsection{Results}
+\subsection{Performance in different workloads}
 \label{ssec:results} 
 
 \begin{figure*}[tb]
@@ -272,25 +277,25 @@ between scans and puts, which slows down   progress.
 
 {\bf Read-dominated.} 
 YCSB-B, YCSB-C, and YCSB-D  are all read-dominated.  
-We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}).
+We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}), 
 \sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB with composite keys,
 and up to $1.6$x   with simple ones.   
 YCSB-D (5\% put, 95\% get, Latest-simple distribution, Figure~\ref{fig:throughput:d})
 and 
 YCSB-B (5\% put, 95\% get) achieve similar results (the latter is  omitted). 
 
-Since this experiment only exercises the read path, we can compare \sys's RAM caching 
-efficiency to RocksDB's. Both system exploit both application-level and OS (filesystem) caches. 
-Table~\ref{fig:readamp} compares the two systems' read amplification (as proxy for cache hit ratio), 
-with respect to the number of read system calls and the actual disk reads.  In terms of disk I/O, RocksDB 
-is slightly better -- e.g., $0.95$ versus $1.07$ for the 64 GB dataset under Zipf-range. However, it 
-relies extensively on the filesystem cache, at the expense of the user-level block cache. In the same
-setting, it performs almost 12 times more system calls than \sys, hence wasting the CPU resources on  
+Since YCSB-C only exercises the read path, performance hinges on 
+caching efficiency. Both \sys\ and RocksDB benefit from  OS (filesystem) caching in addition to application-lelvel caches. 
+Table~\ref{fig:readamp} compares the two systems' read amplification (as a proxy for cache hit ratio) with composite keys, 
+in terms of (1) actual disk bytes read and (2) read system calls.  Under the former metric, 
+RocksDB is slightly better in large data  sets. However, it relies extensively on the filesystem cache -- in the 64GB data set, 
+%, at the expense of the user-level block cache. In the same setting, 
+it performs almost 12 times as many system calls as \sys,  wasting the CPU resources on  
 kernel-to-user data copy. RocksDB developers explain that the block cache scaling potential is limited in their
 database, due to tension between its read-path and write-path RAM resources~\cite{RocksDB-default-blockcache-issue}. 
 \sys, in contrast, exploits its munk cache for both reads and writes, which leads to better RAM utilization. 
 
-\begin{table}
+\begin{table}[htb]
 {\small{
 \begin{tabular}{|l|c|c|c|c|c|}
 \hline 
@@ -305,7 +310,7 @@ RocksDB, syscall & 3.84	& 4.01	& 4.14	& 4.28	& {\bf {4.37}} \\
 \end{tabular}
 }}
 \caption{{\sys\/ versus RocksDB read amplification, in terms of bytes and system calls, 
-under the read-only workload (YCSB-C), Zipf-range distribution and scaling dataset sizes.}}
+under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 \label{fig:readamp}
 \end{table}
 
@@ -318,6 +323,10 @@ under the read-only workload (YCSB-C), Zipf-range distribution and scaling datas
 \caption{{\sys\/ versus RocksDB throughput, under the YCSB-D workload and scaling dataset sizes.}}
 \label{fig:throughput:d}
 \end{figure}
+
+
+\subsection{\sys\ Parameter exploration}
+\label{ssec:drill} 
 
 \paragraph{Vertical scalabiliy.} 
 Figure~\ref{fig:scalability} illustrates the \sys's throughput scaling for the 64 GB dataset, under the Zipf and Zipf-range 
@@ -386,4 +395,7 @@ latencies.
 Table~\ref{fig:wal:bf} depicts the throughput dependency on the Bloom filter split factor. 
 Partitioning to 16 mini-filters gives the best result, which explains the default parameter choice. 
 
-\subsection{Results -- Recovery}
+
+
+\subsection{Recovery results}
+\label{ssec:recover} 
