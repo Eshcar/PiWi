@@ -32,9 +32,9 @@ experiment within a Linux container with 16GB RAM.
 \inred{ and \emph{tail latency}}, 
 as produced by YCSB. 
 In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
-In order to explain the results, we also explore \emph{read amplification} (bytes read from storage over bytes passed to application), 
-as well as the number of read \inred{ and write} system calls. The OS performance counters are retrieved from the Linux
-proc filesystem. 
+In order to explain the results, we also explore \emph{read amplification} (in terms of bytes as well as number of system calls per application read).  
+%as well as the number of read \inred{ and write} system calls. 
+The OS performance counters are retrieved from the Linux proc filesystem. 
 
 \paragraph{Workloads.} 
 We scale the dataset size from 4GB to 64GB, in order to exercise multiple locality 
@@ -91,10 +91,8 @@ The row cache uses three hash tables.
 The Bloom filters for munk-less funks are partitioned 16-way.  
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
 chunks can grow up to 7MB  (approximately 7000 KV-pairs) before being compacted. 
-\inred{
-The funk log
-size limit is 2MB for write intensive workloads, and 512KB for other workloads.
-}
+The funk log size limit is 2MB. 
+% \inred{for write intensive workloads, and 512KB for other workloads.}
 
 We tune all of RocksDB's runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
@@ -388,17 +386,14 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 
 \paragraph{Configuration parameters.} 
 We explore the system's  sensitivity to funk-log configuration parameters, for the most challenging 64GB dataset,
-\inred{under the YCSB-A and YCSB-E scenarios}. 
+under the challenging YCSB-A scenario. We note  that other workloads are less affected by these parameters.
 
 The left hand side of 
 Table~\ref{fig:wal} depicts the throughput dependency on the log size limit. A low threshold (e.g., 128KB) 
 causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4MB) 
 lets the logs grow bigger, and slows down gets and scans Our experiments are therefore tuned to use 2MB logs under write-intensive 
 workloads.
-\inred{
- In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512KB threshold to avoid high tail
-latencies. 
-}
+%\inred{ In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512KB threshold to avoid high tail latencies. }
 
 The right hand side of 
 Table~\ref{fig:wal} depicts the throughput dependency on the Bloom filter split factor. 
