@@ -5,7 +5,7 @@ optimized LSM compaction algorithms~\cite{CallaghanCompaction}.
 The experiment setup is described in \cref{ssec:setup}. 
 Performance results for \sys\ and RocksDB in 
 different workloads are presented in \cref{ssec:results}. 
-\cref{ssec:drill} analyzes \sys\ under different parameter settings and with a varying number of threads.
+\cref{ssec:drill} analyzes \sys\ under different parameter settings and with a varying parallelism.
 \cref{ssec:recover} evaluates its recovery mechanism. 
  
 
@@ -197,7 +197,7 @@ database under Zipf-composite). Thus, \sys\/ also reduces disk wear.
 \hline 
 Zipf-composite: &  \multicolumn{5}{c}{}  \\
 RocksDB & 1.93	& 2.15 & 2.29 & 2.54	& {\bf {2.92}}\\
-\sys &  1.42	 & 1.38	& 1.27	& 1.30	& { {1.29}}\\
+\sys &  1.42	 & 1.38	& 1.27	& 1.30	& { {\bf 1.29}}\\
 \hline 
 Zipf-simple: &  \multicolumn{5}{c}{}   \\
 RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\ 

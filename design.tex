@@ -176,7 +176,8 @@ In addition to the chunk list and chunk index, \sys\ keeps a \emph{global versio
 The PO is used to synchronize puts with scans, as well as for  garbage collection purposes (old 
 versions not needed by any active scan can be reclaimed).
 We note that using a single pending array to synchronize all operations can cause contention, which we
-mitigate in our implementation by tracking the pending puts in per-chunk arrays as done in~\cite{kiwi} (see supplamented material for details).%~\cref{sec:impl}). 
+mitigate in our implementation by tracking the pending puts in per-chunk arrays as done in~\cite{kiwi}. 
+%(see the supplemented material for details).%~\cref{sec:impl}). 
 
 \subsection{Multi-versioning for atomic scans}
 \label{ssec:scans}
@@ -512,7 +513,7 @@ In the synchronous mode,
 the funks always reflect all completed updates. In this case, recovery is straightforward: we simply construct
 the chunks linked list and chunk index from the funks on disk, and then the database is immediately ready to serve new requests, populating munks and Bloom filters on-demand.  
 
-In the asynchronous mode, some suffix of the  data written before a crash may be lost, but we always 
+In the asynchronous mode, some suffix of the  data written before a crash may be lost, but we  
 ensure that the data store \emph{consistently} reflects a \emph{prefix} of the  values written.
 For example, if \code{put(k1, v1)} completes before \code{put(k2, v2)} 
 is invoked and then the system crashes, then following the recovery, 
