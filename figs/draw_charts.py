@@ -43,28 +43,23 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
 
 
 def renamings(label):
+    
+    # order is important
+    rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
+              'Flurry': 'Zipf-composit', 'Latest': 'Latest-simple'}
+    for key in rename.keys():
+        if key in label:
+            return label.replace(key, rename[key]).replace('Piwi', 'YoDB').replace('Rocks', 'RocksDB')
 
-    new_label = label.replace('Flurry', 'Zipf-composite')\
-                     .replace('Piwi', 'YodelDB')\
-                     .replace('Zipfian', 'Zipf')\
-                     .replace('Rocks', 'RocksDB')
-
-    return new_label
+    return label
 
 
-def export_legend(legend, filename="legend.png", expand=[-5,-5,5,5]):
-    fig = legend.figure
-    fig.canvas.draw()
-    bbox = legend.get_window_extent()
-    bbox = bbox.from_extents(*(bbox.extents + np.array(expand)))
-    bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
-    fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
 def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
-                    y_upper=None, x=x_axis, x_label='dataset Size', x_bottom=None, legend_image=False):
+                    y_upper=None, x=x_axis, x_label='Dataset size', x_bottom=None, legend_image=False):
     fig, ax = plt.subplots()
     for line in lines:
-        ax.plot(x, line['data'], label=renamings(line['label']),
+        ax.plot(x, line['data'], label=line['label'],
                 color=line['style']['color'],
                 linestyle=line['style']['linestyle'],
                 linewidth=line['style']['linewidth'],
@@ -211,18 +206,18 @@ def draw_percentage_breakdown(chart_name, latency):
 
     ax.set_xticks(flurry_indices+zipf_indices)
     ax.set_xticklabels([renamings('Flurry') for i in range(5)]
-                       + ['Zipf' for i in range(5)], rotation=80, fontsize=myfontsize)
+                       + [renamings('Zipf') for i in range(5)], rotation=80, fontsize=myfontsize+5)
 
-    ax.set_xlabel('Distribution', fontsize=myfontsize)
-    ax.set_ylabel('% Searches', fontsize=myfontsize)
+    ax.set_xlabel('Distribution', fontsize=myfontsize+5)
+    ax.set_ylabel('% Searches', fontsize=myfontsize+5)
 
     
     ax2 = ax.twiny()
-    ax2.set_xlabel('Dataset Size', fontsize=myfontsize)
+    ax2.set_xlabel('Dataset Size', fontsize=myfontsize+5)
     ax2.bar(flurry_indices, [0, 0, 0, 0, 0], bar_width)
     ax2.bar(zipf_indices, [0, 0, 0, 0, 0], bar_width)
     ax2.set_xticks([v+bar_width/2 for v in flurry_indices], False)
-    ax2.set_xticklabels(x_axis)
+    ax2.set_xticklabels(x_axis, fontsize=myfontsize+5)
     plt.savefig(chart_name.replace(' ', '_') + '.pdf', bbox_inches='tight')
 
 
@@ -301,17 +296,17 @@ def draw_latency_breakdown(chart_name, latency):
 
     ax.set_xticks(flurry_indices+zipf_indices)
     ax.set_xticklabels([renamings('Flurry') for i in range(3)]
-                       + ['Zipf' for i in range(3)], rotation=45, fontsize=myfontsize)
+                       + [renamings('Zipf') for i in range(3)], rotation=80, fontsize=myfontsize+5)
 
-    ax.set_xlabel('Distribution', fontsize=myfontsize)
+    ax.set_xlabel('Distribution', fontsize=myfontsize+5)
 
-    ax.set_ylabel('[msec]', fontsize=myfontsize)
+    ax.set_ylabel('[msec]', fontsize=myfontsize+5)
     ax2 = ax.twiny()
-    ax2.set_xlabel('Dataset Size', fontsize=myfontsize)
+    ax2.set_xlabel('Dataset Size', fontsize=myfontsize+5)
     ax2.bar(flurry_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
     ax2.bar(zipf_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
     ax2.set_xticks([v+bar_width/2 for v in flurry_indices], False)
-    ax2.set_xticklabels(x_axis)
+    ax2.set_xticklabels(x_axis, fontsize=myfontsize+5)
     plt.savefig(chart_name.replace(' ', '_')+'.pdf', bbox_inches='tight')
 
 
@@ -331,10 +326,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                       'A': dict(),
                       'C': dict()}
 
-    scalability = { 
-        
-    }
-    
+    scalability = {}
+
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -415,12 +408,12 @@ def draw_bloom_filter_partitions(chart_name, data):
 
 def draw_line_charts(data):
 
-    ylim = {'P': 380, 'A': 580, 'C': 1280, 'E-': 580, 'E': 260, 'E+': 30, 'S': None, 'B': None, 'D': None}
+    # ylim = {'P': 380, 'A': 580, 'C': 1280, 'E-': 580, 'E': 260, 'E+': 30, 'S': None, 'B': None, 'D': None}
 
     experiments = data['experiments']
     # draw line charts
     for workload in workloads:
-        lines = [{'label': k, 'data': v, 'style': line_color[k]}
+        lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]}
                  for (k, v) in experiments[workload].items()]
         if len(lines) == 4:
             lines = [lines[1], lines[3], lines[0], lines[2]]
@@ -429,7 +422,7 @@ def draw_line_charts(data):
             legend_image=False
         draw_line_chart('Workload ' + workload,
                         lines,
-                        yaxis='Kops', y_upper=ylim[workload], legend_image=legend_image)
+                        yaxis='Kops', legend_image=legend_image)
 
 
 def draw_speedup_charts(data):
@@ -485,17 +478,17 @@ def draw_scalability_charts(data):
                   'C Zipfian': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
-    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=350, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
+    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=450, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
     
 def main():
     data = read_csv()
 
     draw_line_charts(data)
-    # draw_speedup_charts(data)
-    # draw_latency_charts(data)
-    # draw_bloom_filter_charts(data)
-    # draw_ampl_charts(data)
-    # draw_scalability_charts(data)
+    draw_speedup_charts(data)
+    draw_latency_charts(data)
+    draw_bloom_filter_charts(data)
+    draw_ampl_charts(data)
+    draw_scalability_charts(data)
     plt.tight_layout()
     # plt.show()
 
