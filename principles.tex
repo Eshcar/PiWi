@@ -37,7 +37,7 @@ In addition to performance, we seek to minimize disk writes in order to reduce d
 Because crashes are inevitable, the mean-time-to-recover from crashes should be kept short.
 Like other popular KV-stores~\cite{RocksDB,leveldb,hbase}, \sys\ supports \emph{asynchronous} persistence, 
 where put requests are buffered in memory and periodically persisted to disk in bulk. 
-This approach significantly reduces the latency of put operations, which do not wait for their data to be persisted~\cite{asynchOverSync}.
+This approach significantly reduces the latency of put operations, which do not wait for their data to be persisted.
 The downside of this approach is potential loss of recently written data upon crash. 
 \remove{For example, 
 if data is flushed to disk every $10$ seconds, then put operations executed in the last $10$ seconds before the crash 
