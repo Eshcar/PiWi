@@ -28,10 +28,12 @@ Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. Unless otherwi
 exercises 12 workers in all experiments. In order to guarantee a fair memory allocation to all KV-stores, we run each 
 experiment within a Linux container with 16GB RAM. 
 
-\paragraph{Metrics.} Our primary performance metrics are \emph{throughput} and \emph{tail latency}, as produced by YCSB. 
+\paragraph{Metrics.} Our primary performance metric is \emph{throughput} 
+\inred{ and \emph{tail latency}}, 
+as produced by YCSB. 
 In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
 In order to explain the results, we also explore \emph{read amplification} (bytes read from storage over bytes passed to application), 
-as well as the number of read and write system calls. The OS performance counters are retrieved from the Linux
+as well as the number of read \inred{ and write} system calls. The OS performance counters are retrieved from the Linux
 proc filesystem. 
 
 \paragraph{Workloads.} 
@@ -96,24 +98,24 @@ size limit is 2MB for write intensive workloads, and 512KB for other workloads.
 
 We tune all of RocksDB's runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
 
-\subsection{Performance in different workloads}
+\subsection{\sys\ vs.\ RocksDB in different workloads}
 \label{ssec:results} 
 
 \begin{figure*}[tb]
 \centering
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_P_line.pdf}
-\caption{YCSB-P}
+\caption{YCSB-P -- put-only}
 \label{fig:throughput:p}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
-\caption{YCSB-A}
+\caption{YCSB-A -- mixed read/write}
 \label{fig:throughput:a}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_C_line.pdf}
-\caption{YCSB-C}
+\caption{YCSB-C -- read-only}
 \label{fig:throughput:c}
 \end{subfigure}
 %\begin{subfigure}{0.3\linewidth}
@@ -128,17 +130,17 @@ We tune all of RocksDB's runtime parameters in accordance with its system perfor
 %å\end{subfigure}
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E-_line.pdf}
-\caption{YCSB-E10}
+\caption{YCSB-E10 -- short scans}
 \label{fig:throughput:e10}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E_line.pdf}
-\caption{YCSB-E100}
+\caption{YCSB-E100 -- medium scans}
 \label{fig:throughput:e100}
 \end{subfigure}
 \begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E+_line.pdf}
-\caption{YCSB-E1000}
+\caption{YCSB-E1000 -- long scans}
 \label{fig:throughput:e1000}
 \end{subfigure}
 \begin{subfigure}{\linewidth}
@@ -148,7 +150,8 @@ We tune all of RocksDB's runtime parameters in accordance with its system perfor
 }
 \end{subfigure}
 \caption{
-{\sys\/ versus RocksDB throughput (Kops), under multiple workloads and scaling dataset sizes.}
+{\sys\/ versus RocksDB throughput (Kops), under multiple workloads with Zipf distributions over composite (two-component) and
+simple (non-composite) keys and scaling dataset sizes.}
 }
 \label{fig:throughput}
 \end{figure*}
@@ -190,15 +193,15 @@ database under Zipf-composite). Thus, \sys\/ also reduces disk wear.
 \begin{table}[htb]
 \centerline{
 {\small{
-\begin{tabular}{|lccccc|}
+\begin{tabular}{lccccc}
 \hline 
  & 4GB & 8GB & 16GB & 32GB & 64GB \\
 \hline 
-Zipf-composite: &  \multicolumn{5}{c|}{}  \\
+Zipf-composite: &  \multicolumn{5}{c}{}  \\
 RocksDB & 1.93	& 2.15 & 2.29 & 2.54	& {\bf {2.92}}\\
 \sys &  1.42	 & 1.38	& 1.27	& 1.30	& { {1.29}}\\
 \hline 
-Zipf-simple: &  \multicolumn{5}{c|}{}   \\
+Zipf-simple: &  \multicolumn{5}{c}{}   \\
 RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\ 
 \sys & 1.41& 1.37	& 1.15	& 1.13	& 1.31 \\
 \hline 
@@ -218,7 +221,7 @@ RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 %\caption{YCSB-A}
 %\label{fig:writeamp:a}
 %\end{subfigure}
-\caption{{\sys\/ versus RocksDB write amplification, under the write-only workload (YCSB-P) and scaling dataset sizes.}}
+\caption{{\sys\/ versus RocksDB write amplification under the write-only workload (YCSB-P) and scaling dataset sizes.}}
 \label{fig:writeamp}
 \end{table}
 
@@ -297,7 +300,7 @@ database, due to tension between its read-path and write-path RAM resources~\cit
 
 \begin{table}[htb]
 {\small{
-\begin{tabular}{|l|c|c|c|c|c|}
+\begin{tabular}{lccccc}
 \hline 
 & 4GB & 8GB & 16GB & 32GB & 64GB \\
 \hline 
@@ -329,68 +332,72 @@ under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 \label{ssec:drill} 
 
 \paragraph{Vertical scalabiliy.} 
-Figure~\ref{fig:scalability} illustrates the \sys's throughput scaling for the 64 GB dataset, under the Zipf and Zipf-range 
+Figure~\ref{fig:scalability} illustrates the \sys's throughput scaling for the 64GB dataset, under both Zipf  
 distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 12 worker threads.  
-As expected, YCSB-C (read-only scenario) scales near perfectly (9.4x for Zipf-range, 7.7x for Zipf). 
+As expected, YCSB-C (read-only scenario) scales nearly perfectly (9.4x for composite keys, 7.7x for simple ones). 
 The other workloads scale slower, due to read-write and write-write contention as well as background munk and funk rebalances. 
-Here, YCSB-P scales 3.8x for both distributions at 8 threads. YCSB-A scales 6.4x for Zipf-range and 4.6x for Zipf
-at 12 threads. 
+%YCSB-P scales 3.8x for both distributions at 8 threads. YCSB-A scales 6.4x for Zipf-composite and 4.6x for Zipf-simple at 12 threads. 
 
 \begin{figure}[th]
 \centering
 \includegraphics[width=0.3\textwidth]{figs/scalability_line.pdf}
 \caption{{\sys\/ scalability with the number of threads for 
-the 64 GB dataset, under the YCSB-A, YCSB-C and YCSB-P workloads
-and varying degrees of parallelism. }}
+the 64GB dataset and different workloads. }}
 \label{fig:scalability}
 \end{figure}
 
 \begin{table*}
 \centering
-\begin{subfigure}{0.55\linewidth}
+%\begin{subfigure}{0.55\linewidth}
 {\small{
-\begin{tabular}{|l|c|c|c|c|c|c|}
-\hline 
-& 128KB & 256KB & 512KB & 1MB & 2MB & 4MB\\
-\hline 
-Zipf-range & 50.2	& 55.5 & 80.7	& 134.1 & {\bf {157.5}} & 149.5 \\
-Zipf & 27.8	& 30.9 & 36.1	& 58.3	& {\bf {68.3}}	& 68.1 \\
+\begin{tabular}{l|cccccc|c|ccccc|}
+\cline{2-7} \cline{9-13} 
+  & \multicolumn{6}{c|}{Maximum log size} & & \multicolumn{5}{c|}{Bloom filter split factor}\\
+%\cline{2-7} \cline{9-13} 
+& 128KB & 256KB & 512KB & 1MB & 2MB & 4MB & &1 & 2 & 4 & 8 & 16 \\
+\cline{2-7} \cline{9-13} 
+Zipf-composite: & 50.2	& 55.5 & 80.7	& 134.1 & {\bf {157.5}} & 149.5 & & 134.7 & 133.5 & 140.1 & 152.5 & {\bf {157.4}}   \\
+Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3 & 39.2   & 46.3  & 56.0  & {\bf {59.9}}\\
 %\hline 
 %YCSB-E, Zipf-range & 29.1	& 36.4 & 36.9	& 37.3	& {\inred{30.4}} & 	37.1 \\
 %YCSB-E, Zipf & 16.1 & 16.3 &	15.8	& 15.8 &	16.4 &	15.8 \\
-\hline
+\cline{2-7} \cline{9-13} 
 \end{tabular}
 }}
-\caption{Throughput (Kops) vs log size}
-\label{fig:wal:sz}
-\end{subfigure}
+%\caption{Throughput (Kops) vs log size}
+%\label{fig:wal:sz}
+%\end{subfigure}
 %\hspace{0.09\linewidth}
-\begin{subfigure}{0.35\linewidth}
-{\small{
-\begin{tabular}{|l|c|c|c|c|c|}
-\hline 
-& 1 & 2 & 4 & 8 & 16\\
-\hline 
-Zipf-range & 134.7 & 133.5 & 140.1 & 152.5 & {\bf {157.4}} \\
-Zipf & 36.3 & 39.2 & 46.3 & 56.0 & {\bf {59.9}} \\
-\hline 
-\end{tabular}
-}}
-\caption{Throughput (Kops) vs Bloom filter split factor}
-\label{fig:wal:bf}
-\end{subfigure}
-\caption{{\sys\/ throughput, under the mixed read-write workload (YCSB-A), 64GB dataset, and varying funk log configuration parameters.}}
+%\begin{subfigure}{0.35\linewidth}
+%{\small{
+%\begin{tabular}{|l|c|c|c|c|}
+%\hline 
+%1 & 2 & 4 & 8 & 16\\
+%\hline 
+%134.7 & 133.5 & 140.1 & 152.5 & {\bf {157.4}} \\
+% 36.3 & 39.2 & 46.3 & 56.0 & {\bf {59.9}} \\
+%\hline 
+%\end{tabular}
+%}}
+%\caption{Throughput (Kops) vs Bloom filter split factor}
+%\label{fig:wal:bf}
+%\end{subfigure}
+\caption{{\sys\/ throughput under a mixed workload (YCSB-A), 64GB dataset, and different configuration parameters.}}
 \label{fig:wal}
 \end{table*}
-\paragraph{Funk-log configuration.} 
-We explore the system throughput sensitivity to funk-log configuration parameters, for the 64 GB dataset, 
-under the YCSB-A scenario. 
 
-Table~\ref{fig:wal:sz} depicts the throughput dependency on the log size limit. Here, too low a threshold (e.g., 128 KB) 
-causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4 MB) 
-lets the logs grow bigger, and slows down all types of reads. Our experiments are therefore tuned to 2 MB logs under write-intensive 
-workloads. In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512 KB threshold to avoid high tail
+\paragraph{Configuration parameters.} 
+We explore the system's  sensitivity to funk-log configuration parameters, for the most challenging 64GB dataset,
+\inred{under the YCSB-A and YCSB-E scenarios}. 
+
+Table~\ref{fig:wal:sz} depicts the throughput dependency on the log size limit. A low threshold (e.g., 128KB) 
+causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4MB) 
+lets the logs grow bigger, and slows down gets and scans Our experiments are therefore tuned to use 2MB logs under write-intensive 
+workloads.
+\inred{
+ In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512KB threshold to avoid high tail
 latencies. 
+}
 
 Table~\ref{fig:wal:bf} depicts the throughput dependency on the Bloom filter split factor. 
 Partitioning to 16 mini-filters gives the best result, which explains the default parameter choice. 
