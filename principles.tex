@@ -1,58 +1,38 @@
-
-
-\sys\ is a persistent key-value store supporting atomic \emph{put, get}, and  \emph{range scan} (or scan) operations. 
-Scans are atomic in the sense that all values returned by a single scan belong to a consistent snapshot reflecting
-the state of the data store at a unique point in time.
-
-\remove{
-\sys\ is geared for high-throughput analytics applications, which (1) perform many range scans; 
-(2) strive to accommodate the entire working set in RAM (for performance), and yet require  (3)
-persistence with fast recovery. 
-
-We now detail the key requirements from \sys\ and the design choices we made in order to meet them.
-
-\subsection{Requirements}
-
-The key requirements from \sys\ are  the following:
-}
-
-Our Key design goals are the following:
+\sys\ is a persistent key-value store that provides, similarly to other KV-stores~\cite{hbase,leveldb,RocksDB}:
 \begin{enumerate}\itemsep0pt
-\item \emph{Optimizing for spatial locality and atomic scans.}
- Many applications support multi-dimensional exploration of data, 
- which they realize in a KV-store using composite keys. This induce spatial locality.  
- \remove{For example, a typical  KV-map used by an application like Flurry Analytics~\cite{flurry} 
- summarizes mobile traffic statistics grouped by a combination of dimensions like  date,  user-id, and application-id.}
-In addition, a query that retrieves data pertaining to a particular dimension thus needs to atomically 
-retrieve the values pertaining to a range of keys. 
+
+\item \emph{Atomic API} -- \emph{put, get}, and \emph{range scan} (or scan) operations. 
+Scans are atomic in the sense that all key-value pairs returned by a single scan belong to a consistent 
+snapshot reflecting the state of the data store at a unique point in time.
+
+\item \emph{Consistent recovery.} Following a crash, the system recovers to a well defined execution 
+point some time before the crash. The exact recovery point depends on the put persistence model.
+\emph{Asynchronous} persistence (puts are buffered and persisted to disk in the background) allows 
+applications to trade durability for speed. Data consistency is preserved following recovery, 
+in the sense that if some put is lost, then all ensuing (and thus possibly dependent) puts are lost as well.
+\end{enumerate}
+
+Our key design goals are the following:
+\begin{enumerate}\itemsep0pt
+\item \emph{Focus on spatial locality and range scans.}
+ Multiple NoSQL applications embed multidimensional data in a single-dimension composite key. 
+ This design provides high spatial locality on the primary dimension (key prefix). \sys\/ strives
+ to express this locality in physical data organization, in order to exploit it efficiently for scans
+ by the primary dimension. 
+%In addition, a query that retrieves data pertaining to a particular dimension thus needs to atomically 
+%retrieve the values pertaining to a range of keys. 
 %To favor analytics queries, it is important to optimize such scans. 
  
+\item \emph{High performance  with memory-resident working sets.}
+To sustain high speed, key-value stores nowadays leverage increasing DRAM sizes 
+where they can hold most of the active data set. We strive for maximum performance 
+in this ``hyperlocal'' case.
 
-\item \emph{High performance and low write amplification with memory-resident working sets.}
-To sustain high throughput, key-value stores nowadays leverage increasing DRAM sizes where they can hold most of the 
-active data set. We strive for maximum performance in this ``high performance'' case.  
-In addition to performance, we seek to minimize disk writes in order to reduce disk wear.
+\item \emph{Low write amplification.} We seek to minimize disk writes in order to boost performance 
+and reduce disk wear, especially for SSD devices. 
 
-\item \emph{Fast recovery.}
-Because crashes are inevitable, the mean-time-to-recover from crashes should be kept short.
-Like other popular KV-stores~\cite{RocksDB,leveldb,hbase}, \sys\ supports \emph{asynchronous} persistence, 
-where put requests are buffered in memory and periodically persisted to disk in bulk. 
-This approach significantly reduces the latency of put operations, which do not wait for their data to be persisted.
-The downside of this approach is potential loss of recently written data upon crash. 
-\remove{For example, 
-if data is flushed to disk every $10$ seconds, then put operations executed in the last $10$ seconds before the crash 
-may be undone. 
-
-Nevertheless, \sys\ ensures 
-}
-It is required that \emph{data consistency} is preserved following recovery, in the sense that 
-if some put is lost, all ensuing (and thus possibly dependent) puts are lost as well, and the recovery is to a well 
-defined execution point some time before the crash.
- 
-\remove{
- \paragraph{Low write amplification.} 
- Minimizing disk writes is important not only for performance, but also for disk wear reduction.
-}
+\item \emph{Fast recovery.}  Because crashes are inevitable, 
+the mean-time-to-recover should be kept very short. 
 \end{enumerate}
 
 %\subsection{Design choices}

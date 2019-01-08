@@ -94,10 +94,10 @@ We have implemented \sys\ in C++. We compare it to the recent release of RocksDB
 an industry-leading KV-store  based on LSM design. Our experiments, based on the popular 
 YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  RocksDB, 
 especially when spatial  locality is high. 
-For example, with composite keys and a memory-resident working set, \sys\  speeds up scans 
+For example, with composite keys and a memory-resident working set, \sys\  accelerates scans 
 by up to 3x, puts by up to $1.6$x, and gets by up to $2.2$x. With larger working sets than the 
-available RAM, \sys\ still outperforms RocksDB by $50\% - 100\%$ on gets  and scans, 
-and $30\%$ on writes. 
+available RAM, \sys\ still exceeds the RocksDB throughput by $50\% - 100\%$ on gets  and scans, 
+and $30\%$ on puts. 
 
 We do not claim, however, that \sys\/ is better than a mature LSM-tree implementation
 under all circumstances -- there are scenarios in which RocksDB performs better (e.g., under low locality). 

@@ -64,7 +64,7 @@ Munks are volatile and can be removed and recreated from funks at any time.
 
 At run-time, \sys\ holds in memory a list of chunk metadata objects as well as 
 a \emph{chunk index} -- a sorted map from keys to chunks.
-Note that since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks
+Since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks
 (typically, less than 1 KB instead of tens of MBs).
 
 A munk holds key-value pairs in an array-based linked list.  
