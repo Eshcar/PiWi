@@ -72,5 +72,5 @@ Thus, version management incurs a low overhead (as it occurs only on scans).
 %It also defines a simple rule for garbage collecting old versions.
 
 \item \emph{In-funk WALs.}
-\sys\ logs writes within funks and refrains from duplicating the updates  in a separate WAL. This reduces write amplification and expedites recovery times. 
+\sys\ logs writes within funks and avoids duplicating the updates  in a separate WAL. This reduces write amplification and expedites recovery. 
 \end{enumerate}
