@@ -29,8 +29,7 @@ exercises 12 workers in all experiments. In order to guarantee a fair memory all
 experiment within a Linux container with 16GB RAM. 
 
 \paragraph{Metrics.} Our primary performance metric is \emph{throughput} 
-\inred{ and \emph{tail latency}}, 
-as produced by YCSB. 
+and \emph{latency percentiles}, as produced by YCSB. 
 In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
 In order to explain the results, we also explore \emph{read amplification} (in terms of bytes as well as number of system calls per application read).  
 %as well as the number of read \inred{ and write} system calls. 
@@ -229,8 +228,9 @@ RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 Here, the bottleneck is  disk search in gets, primarily the linear search in funk logs 
 that keep filling up due to concurrent puts. (In-memory searches are three orders of magnitude faster.)
 In this scenario, \sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB with composite keys, 
-thanks to better exploitation of spatial locality. But with simple keys, it is faster than RocksDB only for small
-working sets that fit in memory, and slower for big datasets.  
+thanks to better exploitation of spatial locality. {\inred{Figure~\ref{fig:tail_latency:lat} shows that \sys\/
+is also faster wrt the 95\% put and get latency metrics in this scenario.}} With simple keys,
+ it is faster than RocksDB only for small datasets that fit in memory, and slower for big datasets.  
 
 Figure~\ref{fig:tail_latency:dist} depicts the distribution of gets by the storage  component 
 that fulfils the request, and Figure~\ref{fig:tail_latency:disk} presents the disk search latencies by component. 
@@ -288,12 +288,12 @@ $90.5\%$ with composite keys versus $79\%$ without them. The row cache becomes i
 {\bf Scan-dominated.} In YCSB-E (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}).
 the number of items to iterate through is  
 sampled uniformly in the range [1,S], where S is either 10, 100, or 1000. 
-This workload (except with very short scans on very large data sets) is the best for \sys, since it exhibits the spatial locality the system has been designed for. 
+This workload (except with very short scans on very large datasets) is the best for \sys, since it exhibits the spatial locality the system has been designed for. 
 \sys\/ achieves $1.5$x to $3$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
  
 %$1.5$x to 2x under 
 Note that the scan speed is  higher for the 8GB dataset versus the 4GB dataset. 
-Both are quite fast as they are served from memory, but in the smaller data set there is more contention 
+Both are quite fast as they are served from memory, but in the smaller dataset there is more contention 
 between scans and puts, which slows down   progress. 
 %This phenomenon becomes insignificant with longer scans. 
 
@@ -310,7 +310,7 @@ Since YCSB-C only exercises the read path, performance hinges on
 caching efficiency. Both \sys\ and RocksDB benefit from  OS (filesystem) caching in addition to application-level caches. 
 Table~\ref{fig:readamp} compares the two systems' read amplification (as a proxy for cache hit ratio) with composite keys, 
 in terms of (1) actual disk bytes read and (2) read system calls.  Under the former metric, 
-RocksDB is slightly better in large data  sets. However, it relies extensively on the filesystem cache -- in the 64GB data set, 
+RocksDB is slightly better in large datasets. However, it relies extensively on the OS cache -- in the 64GB dataset, 
 %, at the expense of the user-level block cache. In the same setting, 
 it performs almost 12 times as many system calls as \sys,  wasting the CPU resources on  
 kernel-to-user data copy. RocksDB developers explain that the block cache scaling potential is limited in their
@@ -345,7 +345,6 @@ under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 \caption{{\sys\/ versus RocksDB throughput, under the YCSB-D workload and scaling dataset sizes.}}
 \label{fig:throughput:d}
 \end{figure}
-
 
 \subsection{\sys\ Insights}
 \label{ssec:drill} 
@@ -420,7 +419,3 @@ The right hand side of
 Table~\ref{fig:wal} depicts the throughput dependency on the Bloom filter split factor. 
 Partitioning to 16 mini-filters gives the best result, which explains the default parameter choice. 
 
-
-
-\subsection{Recovery results}
-\label{ssec:recover} 

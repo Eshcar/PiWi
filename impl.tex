@@ -1,7 +1,7 @@
 We implement \sys\ in C++. We borrow the \code{SSTable} implementation from the RocksDB open source~\cite{RocksDB}.
 Similarly to RocksDB, we use \code{jemalloc} for memory allocation.  
 
-This section provides details about some of our implementation choices. 
+We now describe some of our implementation choices. 
 
 %PO array is split into PSA and per-chunk PPAs, as kiwi; DO NOT MENTION employs  helping as in KiWi. 
 \paragraph{Chunk index.}  Implemented as a sorted array holding the minimal keys of all chunks.  
