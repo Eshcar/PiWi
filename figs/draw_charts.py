@@ -524,7 +524,7 @@ def draw_95(data):
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail'].items()]
 
-    draw_line_chart(file_name='tail', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.4, x=[4,8,16,32,64], x_bottom=0)    
+    draw_line_chart(file_name='tail', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.4, x_bottom=0)    
     
 def main():
     data = read_csv()
