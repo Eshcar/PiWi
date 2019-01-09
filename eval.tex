@@ -5,8 +5,8 @@ optimized LSM compaction algorithms~\cite{CallaghanCompaction}.
 The experiment setup is described in \cref{ssec:setup}. 
 Performance results for \sys\ and RocksDB in 
 different workloads are presented in \cref{ssec:results}. 
-\cref{ssec:drill} analyzes \sys\ under different parameter settings and with a varying parallelism.
-\cref{ssec:recover} evaluates its recovery mechanism. 
+\cref{ssec:drill} analyzes \sys's sensitivity to different configuration settings and application parallelism.
+%\cref{ssec:recover} evaluates its recovery mechanism. 
  
 
 \subsection{Setup}
@@ -38,11 +38,11 @@ The OS performance counters are retrieved from the Linux proc filesystem.
 
 \paragraph{Workloads.} 
 We scale the dataset size from 4GB to 64GB, in order to exercise multiple locality 
-scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{rocsdb-benchmarks}, we use 
+scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, we use 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 The data is stored uncompressed. 
 
-We study three different access patterns (key-access distributions):  
+We study three different key-access distributions:  
 
 \begin{enumerate}
 \item {\em Zipf-simple} -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
@@ -85,35 +85,36 @@ on the scan size. We run 5 experiments for each data point, and present the medi
 We only present the performance metrics in asynchronous logging mode, since synchronous logging 
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-In \sys, we allocate 8GB to munks and 4GB to the row cache \inred{unless explicitly indicated otherwise}, 
+All experiments use the following \sys\/ configuration, unless explicitly indicated otherwise. 
+We allocate 8GB to munks and 4GB to the row cache. 
 so together they consume 12GB out of the 16GB container. 
 The row cache uses three hash tables.  
 The Bloom filters for munk-less funks are partitioned 16-way.  
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
 chunks can grow up to 7MB  (approximately 7000 KV-pairs) before being compacted. 
 The funk log size limit is 2MB. 
+
 % \inred{for write intensive workloads, and 512KB for other workloads.}
+{\inred{We use RocksDB with the fixed default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.}}
 
-We tune all of RocksDB's runtime parameters in accordance with its system performance guide~\cite{RocksDBPerf}.   
-
-\subsection{\sys\ vs.\ RocksDB in different workloads}
+\subsection{\sys\ versus \ RocksDB}
 \label{ssec:results} 
 
 \begin{figure*}[tb]
 \centering
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_P_line.pdf}
 \caption{YCSB-P -- put-only}
 \label{fig:throughput:p}
 \end{subfigure}
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
-\caption{YCSB-A -- mixed read/write}
+\caption{YCSB-A -- mixed get-put}
 \label{fig:throughput:a}
 \end{subfigure}
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_C_line.pdf}
-\caption{YCSB-C -- read-only}
+\caption{YCSB-C -- get-only}
 \label{fig:throughput:c}
 \end{subfigure}
 %\begin{subfigure}{0.3\linewidth}
@@ -126,17 +127,17 @@ We tune all of RocksDB's runtime parameters in accordance with its system perfor
 %\caption{YCSB-D}
 %\label{fig:throughput:d}
 %å\end{subfigure}
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E-_line.pdf}
 \caption{YCSB-E10 -- short scans}
 \label{fig:throughput:e10}
 \end{subfigure}
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E_line.pdf}
 \caption{YCSB-E100 -- medium scans}
 \label{fig:throughput:e100}
 \end{subfigure}
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E+_line.pdf}
 \caption{YCSB-E1000 -- long scans}
 \label{fig:throughput:e1000}
@@ -219,11 +220,11 @@ RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 %\caption{YCSB-A}
 %\label{fig:writeamp:a}
 %\end{subfigure}
-\caption{{\sys\/ versus RocksDB write amplification under the write-only workload (YCSB-P) and scaling dataset sizes.}}
+\caption{{\sys\/ versus RocksDB write amplification under the put-only workload (YCSB-P) and scaling dataset sizes.}}
 \label{fig:writeamp}
 \end{table}
 
-{\bf Mixed.} YCSB-A (50\% put, 50\% get, Figure~\ref{fig:throughput:a})
+{\bf Mixed put-get.} YCSB-A (50\% put, 50\% get, Figure~\ref{fig:throughput:a})
  is particularly challenging for \sys\/ because it exercises a high contention between gets and puts. 
 Here, the bottleneck is  disk search in gets, primarily the linear search in funk logs 
 that keep filling up due to concurrent puts. (In-memory searches are three orders of magnitude faster.)
@@ -231,15 +232,35 @@ In this scenario, \sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB wit
 thanks to better exploitation of spatial locality. But with simple keys, it is faster than RocksDB only for small
 working sets that fit in memory, and slower for big datasets.  
 
-
-Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
-that fulfils the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
+Figure~\ref{fig:tail_latency:dist} depicts the distribution of gets by the storage  component 
+that fulfils the request, and Figure~\ref{fig:tail_latency:disk} presents the disk search latencies by component. 
 For example, for the 64GB dataset, $1.9\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
 and the respective log search latencies are $1.7$ ms vs $4.4$ ms. This happens because in the latter, puts are more dispersed, 
 hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently so their logs grow longer.
 %and searching them becomes slower. 
 
+\begin{figure*}[tb]
+\centering
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
+\caption{95\% latency, put and get}
+\label{fig:tail_latency:lat}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
+\caption{Fraction of get accesses, by component}
+\label{fig:tail_latency:dist}
+\end{subfigure}
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Latency_A.pdf}
+\caption{On-disk get latency, by component}
+\label{fig:tail_latency:disk}
+\end{subfigure}
+\label{fig:tail_latency}
+\caption{{\sys\/ tail latency analysis, under a mixed get-put workload (YCSB-A).}}
+\end{figure*}
 
+\remove{
 \begin{figure}[htb]
 \centering
 %\hspace{0.05\linewidth}
@@ -254,18 +275,18 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 \caption{On-disk search latency}
 \label{fig:readstat:lat}
 \end{subfigure}
-\caption{{\sys\/ get operation statistics by serving component, under a mixed read-write workload (YCSB-A).}}
+\caption{{\sys\/ tail latency analysis, under a mixed get-put workload (YCSB-A).}}
 \label{fig:readstat}
 \end{figure}
+}
 
 Naturally, the efficiency of in-memory caching is paramount. In the same example, the RAM hit rate 
 (munk and row cache combined) is 
 $90.5\%$ with composite keys versus $79\%$ without them. The row cache becomes instrumental as spatial locality drops --
  it serves $32.8\%$ of gets for Zipf-simple versus $12.4\%$ for Zipf-composite. 
 
-
-{\bf Scans.} In YCSB-E (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}).
-the number of KV-pairs to iterate through is  
+{\bf Scan-dominated.} In YCSB-E (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}).
+the number of items to iterate through is  
 sampled uniformly in the range [1,S], where S is either 10, 100, or 1000. 
 This workload (except with very short scans on very large data sets) is the best for \sys, since it exhibits the spatial locality the system has been designed for. 
 \sys\/ achieves $1.5$x to $3$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
@@ -276,8 +297,8 @@ Both are quite fast as they are served from memory, but in the smaller data set 
 between scans and puts, which slows down   progress. 
 %This phenomenon becomes insignificant with longer scans. 
 
-{\bf Read-dominated.} 
-YCSB-B, YCSB-C, and YCSB-D  are all read-dominated.  
+{\bf Get-dominated.} 
+YCSB-B, YCSB-C, and YCSB-D  are all get-dominated.  
 We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}), 
 \sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB with composite keys,
 and up to $1.6$x   with simple ones.   
@@ -380,7 +401,7 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 %\caption{Throughput (Kops) vs Bloom filter split factor}
 %\label{fig:wal:bf}
 %\end{subfigure}
-\caption{{\sys\/ throughput under a mixed workload (YCSB-A), 64GB dataset, and different configuration parameters.}}
+\caption{{\sys\/ throughput under a mixed get-put workload (YCSB-A), 64GB dataset, and different configuration parameters.}}
 \label{fig:wal}
 \end{table*}
 
