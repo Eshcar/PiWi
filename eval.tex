@@ -41,7 +41,7 @@ scenarios with respect to the available 16GB of RAM. Similarly to the published 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 The data is stored uncompressed. 
 
-We study three different key-access distributions:  
+We study two different key-access distributions:  
 
 \begin{enumerate}
 \item {\em Zipf-simple} -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
@@ -61,11 +61,12 @@ Zipf-composite exhibits high spatial locality, representing workloads
 with composite keys, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
 social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics engines~\cite{flurry}. 
 
+\remove{
 \item {\em Latest-simple} -- frequent access to recently added simple keys. 
 Keys are inserted in sequential  order; the read keys' distribution is skewed towards recently added ones. 
 Specifically, the sampled key's position wrt the most recent key is distributed Zipf. This is a 
 standard YCSB workload with medium spatial and temporal locality that represents, e.g., status updates and reads. 
-
+}
 \end{enumerate}
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
@@ -154,23 +155,26 @@ simple (non-composite) keys and scaling dataset sizes.}
 \label{fig:throughput}
 \end{figure*}
 
-Figure~\ref{fig:throughput} presents throughput results for the Zipf-simple and 
-and Zipf-composite workloads -- the put-only workload YCSB-P, the mixed
-workloads YCSB-A, YCSB-C, and the scan-heavy YCSB-E with three different scan sizes; 
-workload YCSB-B is omitted because the results are nearly identical to those 
-for YCSB-C. YCSB-D exercises the Latest-simple  access pattern and 
-its throughput is presented in Figure~\ref{fig:throughput:d}. 
-%
-We now discuss the results for the different workloads.  
+{\inred{
+Figure~\ref{fig:throughput} presents throughput evaluation for the Zipf-simple and 
+Zipf-composite key distributions -- the put-only workload YCSB-P, the mixed YCSB-A, 
+the get-only YCSB-C, and the scan-heavy YCSB-E with three different scan 
+sizes. YCSB-B is omitted because the results are very close to those for YCSB-C. 
+For completeness, we also experiment with YCSB-D that exercises the 
+Latest workload -- frequent reads of the recently added simple keys. The results are
+close to YCSB-B, and omitted too. 
+
+We now discuss the results for the different scenarios.
+}}
+%YCSB-D exercises the Latest-simple  access pattern and its throughput is presented in Figure~\ref{fig:throughput:d}. 
+  
 
 {\bf Put-only.} 
-In
-%\paragraph
-{YCSB-P} (100\% put, Figure~\ref{fig:throughput:p}), 
-\sys's throughput is $30\%$ to $60\%$ above RocksDB's with composite keys, 
-and $10\%$ to $50\%$ higher with simple keys. 
+In {YCSB-P} (100\% put, Figure~\ref{fig:throughput:p}), 
+\sys's throughput is 1.3x to 1.6x versus RocksDB's with composite keys, 
+and 1.1x to 1.5x with simple keys. 
 \sys\ benefits from spatial locality whereas RocksDB's write performance 
-is relatively insensitive to it, as is typical for LSM data stores.
+is relatively insensitive to it, as is typical for LSM stores.
 
 This workload's bottleneck is the reorganization of persistent data  
 (funk rebalances in \sys, compactions in RocksDB), which causes 
@@ -229,9 +233,10 @@ Here, the bottleneck is  disk search in gets, primarily the linear search in fun
 that keep filling up due to concurrent puts. (In-memory searches are three orders of magnitude faster.)
 In this scenario, \sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB with composite keys, 
 thanks to better exploitation of spatial locality. {\inred{Figure~\ref{fig:tail_latency:lat} shows that \sys\/
-is also faster wrt the 95\% put and get latency metrics in this scenario.}} With simple keys,
- it is faster than RocksDB only for small datasets that fit in memory, and slower for big datasets.  
+is also faster wrt the tail (95\%-percentile) put and get latency metrics in this scenario.}} With simple keys,
+ it is faster than RocksDB  for small datasets that fit in memory, and slower for big datasets.  
 
+{\inred{For big datasets, disk access dominates the tail latencies beyond 95\%.}}
 Figure~\ref{fig:tail_latency:dist} depicts the distribution of gets by the storage  component 
 that fulfils the request, and Figure~\ref{fig:tail_latency:disk} presents the disk search latencies by component. 
 For example, for the 64GB dataset, $1.9\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
@@ -241,17 +246,19 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 
 \begin{figure*}[tb]
 \centering
-\begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
-\caption{95\% latency, put and get}
+\begin{subfigure}{0.36\linewidth}
+\vskip .15in
+\includegraphics[width=\textwidth]{figs/tail_line.pdf}
+\vskip .55in
+\caption{95-percentile latency, put and get}
 \label{fig:tail_latency:lat}
 \end{subfigure}
-\begin{subfigure}{0.33\linewidth}
+\begin{subfigure}{0.32\linewidth}
 \includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
 \caption{Fraction of get accesses, by component}
 \label{fig:tail_latency:dist}
 \end{subfigure}
-\begin{subfigure}{0.32\linewidth}
+\begin{subfigure}{0.31\linewidth}
 \includegraphics[width=\textwidth]{figs/Latency_A.pdf}
 \caption{On-disk get latency, by component}
 \label{fig:tail_latency:disk}
@@ -289,22 +296,23 @@ $90.5\%$ with composite keys versus $79\%$ without them. The row cache becomes i
 the number of items to iterate through is  
 sampled uniformly in the range [1,S], where S is either 10, 100, or 1000. 
 This workload (except with very short scans on very large datasets) is the best for \sys, since it exhibits the spatial locality the system has been designed for. 
-\sys\/ achieves $1.5$x to $3$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
+\sys\/ achieves $1.25$x to $3$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
  
 %$1.5$x to 2x under 
+\remove{
 Note that the scan speed is  higher for the 8GB dataset versus the 4GB dataset. 
 Both are quite fast as they are served from memory, but in the smaller dataset there is more contention 
-between scans and puts, which slows down   progress. 
+between scans and puts, which slows down   progress. }
 %This phenomenon becomes insignificant with longer scans. 
 
 {\bf Get-dominated.} 
-YCSB-B, YCSB-C, and YCSB-D  are all get-dominated.  
+YCSB-B, YCSB-C and YCSB-D are all get-dominated.  
 We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}), 
 \sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB with composite keys,
 and up to $1.6$x   with simple ones.   
-YCSB-D (5\% put, 95\% get, Latest-simple distribution, Figure~\ref{fig:throughput:d})
-and 
-YCSB-B (5\% put, 95\% get) achieve similar results (the latter is  omitted). 
+{\inred{YCSB-B (5\% put, 95\% get) and YCSB-D (5\% put, 95\% get, Latest-simple distribution,  
+which achieve similar results, %Figure~\ref{fig:throughput:d})
+are omitted. }}
 
 Since YCSB-C only exercises the read path, performance hinges on 
 caching efficiency. Both \sys\ and RocksDB benefit from  OS (filesystem) caching in addition to application-level caches. 
@@ -338,13 +346,14 @@ under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 
 
 
-
+\remove{
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.3\textwidth]{figs/Workload_D_line.pdf}
 \caption{{\sys\/ versus RocksDB throughput, under the YCSB-D workload and scaling dataset sizes.}}
 \label{fig:throughput:d}
 \end{figure}
+}
 
 \subsection{\sys\ Insights}
 \label{ssec:drill} 
@@ -358,7 +367,7 @@ The other workloads scale slower, due to read-write and write-write contention a
 
 \begin{figure}[th]
 \centering
-\includegraphics[width=0.3\textwidth]{figs/scalability_line.pdf}
+\includegraphics[width=0.35\textwidth]{figs/scalability_line.pdf}
 \caption{{\sys\/ scalability with the number of threads for 
 the 64GB dataset and different workloads. }}
 \label{fig:scalability}
