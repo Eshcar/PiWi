@@ -85,14 +85,15 @@ on the scan size. We run 5 experiments for each data point, and present the medi
 We only present the performance metrics in asynchronous logging mode, since synchronous logging 
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-All experiments use the following \sys\/ configuration, unless explicitly indicated otherwise. 
+{\inred{All experiments in~\cref{ssec:results} use the same \sys\/ configuration, to avoid 
+over-tuning (\cref{ssec:drill} provides insights on parameter choices).}}
 We allocate 8GB to munks and 4GB to the row cache. 
 so together they consume 12GB out of the 16GB container. 
 The row cache uses three hash tables.  
 The Bloom filters for munk-less funks are partitioned 16-way.  
 We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
-chunks can grow up to 7MB  (approximately 7000 KV-pairs) before being compacted. 
-The funk log size limit is 2MB. 
+chunks can grow up to 7MB  %(approximately 7000 KV-pairs) 
+before being compacted. The funk log size limit is 2MB. 
 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
 {\inred{We use RocksDB with the fixed default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.}}
