@@ -46,7 +46,7 @@ def renamings(label):
 
     # order is important
     rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
-              'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple'}
+              'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple', 'flurry': 'Zipf-composite'}
     for key in rename.keys():
         if key in label:
             return label.replace(key, rename[key]).replace('Piwi', 'YoDB').replace('Rocks', 'RocksDB')
@@ -323,6 +323,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
     scalability = {}
 
+    caching = {}
+    
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -371,13 +373,21 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             bloom_filter_partitioning[workload][distribution].append(row)
 
         for row in csv_reader:
+            if row[0] == 'caching':
+                break
             if (row[0] != ''):
                 scalability[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
-            
+
+        for row in csv_reader:
+            if (row[0] == 'Munks RAM'):
+                continue
+            caching[row[0]] = [v/1000 for v in list(map(float, [i for i in row[1:] if i is not '']))]
+
     return {'experiments': experiments, 'latency': latency_breakdown,
             'bloom_filter_partitioning': bloom_filter_partitioning,
             'amplifications': amplifications,
-            'scalability': scalability}
+            'scalability': scalability,
+            'caching': caching}
 
 
 def draw_bloom_filter_partitions(chart_name, data):
@@ -474,16 +484,28 @@ def draw_scalability_charts(data):
     
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
     draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=450, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
+
+def draw_caching_effect(data):
+    line_color = {'P flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'P zipf': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'A flurry': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'A zipf': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'C flurry': {'color': tableau20[4], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'C zipf': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['caching'].items() if 'flurry' in k]
+    draw_line_chart(file_name='cache', lines=lines, chart_name='', yaxis='Kops', legend=3, y_upper=None, x=[0,2,4,6,8,10], x_label='Munk cache GB', x_bottom=0)
+
     
 def main():
     data = read_csv()
 
     # draw_line_charts(data)
     # draw_speedup_charts(data)
-    draw_latency_charts(data)
+    # draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
     # draw_scalability_charts(data)
+    draw_caching_effect(data)
     plt.tight_layout()
     plt.show()
 
