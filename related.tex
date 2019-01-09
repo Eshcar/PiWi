@@ -24,7 +24,7 @@ but the latter rebalances data at the chunk level and so benefits from spatial l
 
 \sys's design resembles classic B-trees~\cite{Knuth:1998:ACP:280635} by supporting direct random updates to leaf blocks (chunks). 
 It resolves the B-tree write throughput issue through munks and in-memory compaction. B-trees, which were 
-designed for read-intensive environments, did not focus on strong guarantees in concurrent  read-write settings. 
+designed for read-intensive environments, did not focus on strong guarantees in concurrent  scan-write settings. 
 %Kiwi~\cite{kiwi} is a modern theoretically sound B-tree designed for in-memory systems; \sys\/ extends its principles to persistent storage. 
 
 In  recent years, $B^{\epsilon}$-trees~\cite{Brodal:2003:LBE:644108.644201} have emerged 
