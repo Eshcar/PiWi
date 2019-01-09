@@ -46,17 +46,18 @@ def renamings(label):
 
     # order is important
     rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
-              'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple', 'flurry': 'Zipf-composite'}
+              'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple', 'flurry': 'Zipf-composite', '95% ':''}
+    new_label = label.replace('Piwi', 'YoDB').replace('Rocks', 'RocksDB')
     for key in rename.keys():
         if key in label:
-            return label.replace(key, rename[key]).replace('Piwi', 'YoDB').replace('Rocks', 'RocksDB')
+            return new_label.replace(key, rename[key])
 
-    return label
-
+    return new_label
 
 
 def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
-                    y_upper=None, x=x_axis, x_label='Dataset size', x_bottom=None, legend_image=False):
+                    y_upper=None, x=x_axis, x_label='Dataset size',
+                    x_bottom=None, legend_image=False, fontsize=myfontsize):
     fig, ax = plt.subplots()
     for line in lines:
         ax.plot(x, line['data'], label=line['label'],
@@ -66,8 +67,8 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
                 marker=line['style']['marker'],
                 markersize=marksize)
 
-    ax.set_xlabel(x_label, fontsize=myfontsize)
-    ax.set_ylabel(yaxis, fontsize=myfontsize)
+    ax.set_xlabel(x_label, fontsize=fontsize)
+    ax.set_ylabel(yaxis, fontsize=fontsize)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
 
@@ -78,7 +79,7 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
     ax.set_ylim(y_bottom, y_top)
 
     for label in ax.get_yticklabels() + ax.get_xticklabels():
-        label.set_fontsize(myfontsize)
+        label.set_fontsize(fontsize)
 
     if x_bottom is not None:
         ax.set_xlim(x_bottom, ax.get_xlim()[1])
@@ -94,7 +95,7 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
         fig_leg.savefig('legend.pdf', bbox_inches='tight')
     else:
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc=legend, fontsize=myfontsize)
+        ax.legend(handles, labels, loc=legend, fontsize=fontsize)
 
     fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -445,7 +446,7 @@ def draw_line_charts(data):
             legend_image=False
         draw_line_chart('Workload ' + workload,
                         lines,
-                        yaxis='Kops', legend_image=legend_image)
+                        yaxis='Throughput, Kops', legend_image=legend_image)
 
 
 def draw_speedup_charts(data):
@@ -501,7 +502,7 @@ def draw_scalability_charts(data):
                   'C Zipfian': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
-    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=450, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
+    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, y_upper=450, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
 
 
 def draw_caching_effect(data):
@@ -512,7 +513,7 @@ def draw_caching_effect(data):
                   'C flurry': {'color': tableau20[4], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
                   'C zipf': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['caching'].items() if 'flurry' in k]
-    draw_line_chart(file_name='cache', lines=lines, chart_name='', yaxis='Kops', legend=3, y_upper=None, x=[0,2,4,6,8,10], x_label='Munk cache GB', x_bottom=0)
+    draw_line_chart(file_name='cache', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=3, y_upper=None, x=[0,2,4,6,8,10], x_label='Munk cache GB', x_bottom=0)
 
 
 def draw_95(data):
@@ -523,8 +524,8 @@ def draw_95(data):
                   'Piwi 95% Put': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker}}
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail'].items()]
-
-    draw_line_chart(file_name='tail', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.4, x_bottom=0)    
+    
+    draw_line_chart(file_name='tail', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.35, x_bottom=0,fontsize=myfontsize+5)    
     
 def main():
     data = read_csv()
