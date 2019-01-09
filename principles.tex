@@ -44,7 +44,7 @@ Given the aforementioned requirements, we make the following design choices in \
 We organize data, both on-disk and in-memory,  in large chunks pertaining to  key ranges.  
 %This enables efficient support of range scans, with  high cache locality and minimal loading of new memory pages. 
 %Both the read and the write path go through chunks. 
-Each chunk has a file representation called  \emph{funk} (file chunk), and may be cached in a  memory data structure called \emph{munk} (memory chunck).
+Each chunk has a file representation called  \emph{funk} (file chunk), and may be cached in a  memory data structure called \emph{munk} (memory chunk).
 This organization exploits spatial locality and is friendly to range scans.
 
 We use a number of techniques to optimize in-memory  access, including partially sorting keys in each chunk and 
