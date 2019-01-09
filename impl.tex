@@ -31,7 +31,7 @@ Therefore, the linearization counter is composed of three parts: (a) the GV valu
 A scan operation first publishes its intent to obtain a version in the \code{PSA}. It determines its scan time $t$ by increasing GV and writing it to its entry in the \code{PSA}. The scan operation then starts traversing the chunks in its range. For each chunk, it first waits for all put operations that are either with smaller version than $t$ or still have not acquired a version to clear their entry in the \code{PPA} or acquire a larger version. After waiting for all concurrent puts to complete, the scan  can read the range from the chunk. If a munk exists, it simply reads the range from the linked list, skipping versions that are not last before $t$. Otherwise, the scan merges the \code{SSTable} and \code{log} data and reads the range from the result, again skipping the penultimate versions. When the scan completes, it clears the entry in the \code{PSA}, and increases the entry's ABA number. Get operations access neither the \code{PSA} nor the \code{PPA}.% data structures.
 
 A munk rebalance iterates through the \code{PSA} to collect the maximum version number among the active scans that cannot be reclaimed yet. If a scan published its intent in the \code{PSA} but published no version number yet, the rebalance waits until either the version is published or the ABA number in the entry is increased. 
-\remove{It then acquires the chunk's lock to block additional put operation. If executing a funk rebalance it also acquires the funk rebalance lock for the chunk. After completeing the rebalance operation and placing the new content of the chunk in place including the updated metadata, all locks are promoted.
+\remove{It then acquires the chunk's lock to block additional put operation. If executing a funk rebalance it also acquires the funk rebalance lock for the chunk. After completing the rebalance operation and placing the new content of the chunk in place including the updated metadata, all locks are promoted.
 }
 }
 
@@ -46,7 +46,7 @@ sliced by a factor of two.
 %where the frequency is actually a score that gives a different weights to each operation type.
 %We employ a sliding window scoring mechanism, that scores each chunks only based on recent accesses. The sliding window is implemented by occasionally slicing %the counters of all chunks by a factor of two, as was done in~\cite{tinyLFU}.
 
-%Funk rebalance frequency is also crucial for the performance of the system. Excessive rebalances may reduce ingestion throughput, while immensely reducing funk rebalance frequency can degrade the performance of scans that are required to sequencially traverse a very long log. To this end, \sys\ exploits the per-operation type counters also to determine the frequency in which each funk is rebalanced.
+%Funk rebalance frequency is also crucial for the performance of the system. Excessive rebalances may reduce ingestion throughput, while immensely reducing funk rebalance frequency can degrade the performance of scans that are required to sequentially traverse a very long log. To this end, \sys\ exploits the per-operation type counters also to determine the frequency in which each funk is rebalanced.
 
 \paragraph{Row cache.} 
 We implement a coarse-grained LRU policy by maintaining a fixed-size queue of hash tables. 

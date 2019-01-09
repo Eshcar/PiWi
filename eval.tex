@@ -233,7 +233,7 @@ working sets that fit in memory, and slower for big datasets.
 
 
 Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
-that fulfills the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
+that fulfils the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
 For example, for the 64GB dataset, $1.9\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
 and the respective log search latencies are $1.7$ ms vs $4.4$ ms. This happens because in the latter, puts are more dispersed, 
 hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently so their logs grow longer.
@@ -286,7 +286,7 @@ and
 YCSB-B (5\% put, 95\% get) achieve similar results (the latter is  omitted). 
 
 Since YCSB-C only exercises the read path, performance hinges on 
-caching efficiency. Both \sys\ and RocksDB benefit from  OS (filesystem) caching in addition to application-lelvel caches. 
+caching efficiency. Both \sys\ and RocksDB benefit from  OS (filesystem) caching in addition to application-level caches. 
 Table~\ref{fig:readamp} compares the two systems' read amplification (as a proxy for cache hit ratio) with composite keys, 
 in terms of (1) actual disk bytes read and (2) read system calls.  Under the former metric, 
 RocksDB is slightly better in large data  sets. However, it relies extensively on the filesystem cache -- in the 64GB data set, 

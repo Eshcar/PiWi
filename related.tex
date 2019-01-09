@@ -15,7 +15,7 @@ For example, PebblesDB~\cite{PebblesDB} introduces fragmented LSM trees, in whic
 sliced into {\em guards\/} of increasing granularity and organized in a skiplist-like layout. This structure 
 reduces write amplification. In contrast, \sys\/ eliminates the concept of levels altogether, 
 and employs a flat storage layout instead. WiscKey~\cite{WiscKey} separates key and value storage 
-in SStables, also in order to reduce amplification. This optimization is orthogonal to \sys's concepts,
+in SSTables, also in order to reduce amplification. This optimization is orthogonal to \sys's concepts,
 and could benefit our work as well. Accordion~\cite{accordion} splits the LSM in-memory buffer into mutable 
 and immutable levels, which are periodically merged in the background similarly to traditional compaction, 
 in order to reduce disk flushes. This mechanism is similar to munk rebalance in \sys, 

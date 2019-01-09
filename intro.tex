@@ -16,7 +16,7 @@ given user~\cite{Borthakur:2011:AHG:1989323.1989438}. %, or the hourly impressio
 In social networks such as Facebook, associations representing graph edges are indexed by a key consisting of a 
 pair of object ids and an association type~\cite{Armstrong:2013:LDB:2463676.2465296}.
 An example queries retrieves all friendship relations for a given user id.  
-Mobile analytics services such as Flurry Analtyics~\cite{flurry} aggregate statistics 
+Mobile analytics services such as Flurry Analytics~\cite{flurry} aggregate statistics 
 on data identified by composite keys consisting of attributes such as app id, device, time, location, 
 event id, etc. The query API~\cite{flurry-api} is app id-centric, hence this dimension comes first 
 in the key.
@@ -33,7 +33,7 @@ This, in turn, leads to storage systems being optimized for a skewed distributio
 In this paper, we make spatial locality a first class  consideration, which 
 leads us to rethink the design principles underlying today's popular KV-stores.
 
-% LSM is the standard but not ideal for this  because of  write path  temporal grouping leading to fragmentation and write amplificaiton
+% LSM is the standard but not ideal for this  because of  write path  temporal grouping leading to fragmentation and write amplification
 The de facto standard approach to building KV-stores today is \emph{LSM} -- log-structured merge trees~\cite{O'Neil1996}. 
 The LSM approach optimizes write performance by absorbing random writes in memory and periodically flushing 
 them as sequential files to disk. While  sequential disk access dramatically improves I/O throughput, it 

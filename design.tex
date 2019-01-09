@@ -162,8 +162,7 @@ Finally, the chunk includes locks to synchronize concurrent access by multiple t
 The replacement of a chunk (due to a split) or rebalance of a funk or munk %(see Section~\ref{ssec:rebalance}) %associated with a given chunk 
 must be executed atomically, and moreover, must be synchronized with concurrent puts. 
 This is controlled by the chunk's \emph{rebalanceLock}, which is held for short time periods
-during chunk, funk, and munk replacements.  It is a shared/exclusive lock, acquired in shared mode 
-by puts and in exclusive mode by rebalance. Gets and scans do not acquire the lock.
+during chunk, funk, and munk replacements.  It is a shared/exclusive lock, acquired in shared mode by puts and in exclusive mode by rebalance. Gets and scans do not acquire the lock.
 
 To minimize I/O, we allow at most one thread to rebalance a funk at a given time; this is controlled by 
 the  \code{funkChangeLock}. 
@@ -353,7 +352,7 @@ checks the \code{PO}  for new potentially relevant puts and waits for them to co
 
 %Once all relevant \code{put}s that were pending when a \code{get}  began complete, the 
 A 
-\code{get} proceeds without synchronization. If the chunk has a munk,  \code{get}   locates the key in it by first using binary search in its sorted prefix, and then traversing edges of the linked list. 
+\code{get} proceeds without synchronization. If the chunk has a munk,  \code{get}   locates the key in it by first using binary search in its sorted prefix, and then traversing the linked list edges. 
 Otherwise, the \code{get} searches the key in the \code{row cache}. If it is not found, it queries 
 the \code{Bloom filter} to learn whether the key might be present in the target chunk's  
  \code{log}, and if so, searches for it there.  Finally, if the key is not in any of these places, it searches
@@ -498,8 +497,7 @@ Merges can be handled the same way by making the two merged munks immutable for 
 Like most popular KV-stores, \sys\ supports two modes of operation -- \emph{synchronous} and \emph{asynchronous}. 
 With the former,  updates are persisted to disk before returning to the user, and so a user is ensured when its operation
 completes that the written data will survive failures. The drawback of this approach is that it is 
-roughly an order-of-magnitude slower
-than the asynchronous mode in  existing KV-stores like RocksDB~\cite{RocksDB} as well as in \sys. 
+roughly an order-of-magnitude slower than the asynchronous mode in  existing KV-stores like RocksDB~\cite{RocksDB} as well as in \sys. 
 
 The asynchronous mode expedites updates by performing them in
 RAM only and periodically \emph{flushing} them to disk. This reduces write latency and increases throughput, but 
