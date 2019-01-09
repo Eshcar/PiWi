@@ -85,18 +85,18 @@ on the scan size. We run 5 experiments for each data point, and present the medi
 We only present the performance metrics in asynchronous logging mode, since synchronous logging 
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-{\inred{All experiments in~\cref{ssec:results} use the same \sys\/ configuration, to avoid 
-over-tuning (\cref{ssec:drill} provides insights on parameter choices).}}
-We allocate 8GB to munks and 4GB to the row cache. 
+All experiments in~\cref{ssec:results} use the same \sys\/ configuration, to avoid 
+over-tuning; \cref{ssec:drill} provides insights on parameter choices.
+We allocate 8GB to munks and 4GB to the row cache,
 so together they consume 12GB out of the 16GB container. 
 The row cache uses three hash tables.  
 The Bloom filters for munk-less funks are partitioned 16-way.  
-We set the \sys\/ chunk size limit to 10 MB, and the rebalance threshold factor to $0.7$ -- i.e., 
+We set the \sys\/ chunk size limit to 10MB, and the rebalance threshold factor to $0.7$ -- i.e., 
 chunks can grow up to 7MB  %(approximately 7000 KV-pairs) 
 before being compacted. The funk log size limit is 2MB. 
 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
-{\inred{We use RocksDB with the fixed default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.}}
+We use RocksDB with the default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.
 
 \subsection{\sys\ versus \ RocksDB}
 \label{ssec:results} 
@@ -156,17 +156,16 @@ simple (non-composite) keys and scaling dataset sizes.}
 \label{fig:throughput}
 \end{figure*}
 
-{\inred{
-Figure~\ref{fig:throughput} presents throughput evaluation for the Zipf-simple and 
-Zipf-composite key distributions -- the put-only workload YCSB-P, the mixed YCSB-A, 
+Figure~\ref{fig:throughput} presents throughput measurements under the Zipf-simple and 
+Zipf-composite key distributions in the put-only workload YCSB-P, the mixed YCSB-A, 
 the get-only YCSB-C, and the scan-heavy YCSB-E with three different scan 
 sizes. YCSB-B is omitted because the results are very close to those for YCSB-C. 
 For completeness, we also experiment with YCSB-D that exercises the 
 Latest workload -- frequent reads of the recently added simple keys. The results are
-close to YCSB-B, and omitted too. 
+also close to YCSB-B, and omitted as well. 
 
 We now discuss the results for the different scenarios.
-}}
+
 %YCSB-D exercises the Latest-simple  access pattern and its throughput is presented in Figure~\ref{fig:throughput:d}. 
   
 
@@ -233,11 +232,11 @@ RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 Here, the bottleneck is  disk search in gets, primarily the linear search in funk logs 
 that keep filling up due to concurrent puts. (In-memory searches are three orders of magnitude faster.)
 In this scenario, \sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB with composite keys, 
-thanks to better exploitation of spatial locality. {\inred{Figure~\ref{fig:tail_latency:lat} shows that \sys\/
-is also faster wrt the tail (95\%-percentile) put and get latency metrics in this scenario.}} With simple keys,
+thanks to better exploitation of spatial locality. Figure~\ref{fig:tail_latency:lat} shows that \sys\/
+is also faster wrt the tail (95\%) put and get latency in this scenario. With simple keys,
  it is faster than RocksDB  for small datasets that fit in memory, and slower for big datasets.  
 
-{\inred{For big datasets, disk access dominates the tail latencies beyond 95\%.}}
+When the working set does not fit in RAM, disk access dominates the tail latencies.
 Figure~\ref{fig:tail_latency:dist} depicts the distribution of gets by the storage  component 
 that fulfils the request, and Figure~\ref{fig:tail_latency:disk} presents the disk search latencies by component. 
 For example, for the 64GB dataset, $1.9\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
@@ -306,19 +305,19 @@ Both are quite fast as they are served from memory, but in the smaller dataset t
 between scans and puts, which slows down   progress. }
 %This phenomenon becomes insignificant with longer scans. 
 
-{\bf Get-dominated.} 
-YCSB-B, YCSB-C and YCSB-D are all get-dominated.  
+{\bf Get-only.} 
+%YCSB-B, YCSB-C and YCSB-D are all get-dominated.  
 We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}), 
 \sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB with composite keys,
 and up to $1.6$x   with simple ones.   
-{\inred{YCSB-B (5\% put, 95\% get) and YCSB-D (5\% put, 95\% get, Latest-simple distribution,  
-which achieve similar results, %Figure~\ref{fig:throughput:d})
-are omitted. }}
+%{\inred{YCSB-B (5\% put, 95\% get) and YCSB-D (5\% put, 95\% get, Latest-simple distribution,  
+%which achieve similar results, %Figure~\ref{fig:throughput:d})
+%are omitted. }}
 
 Since YCSB-C only exercises the read path, performance hinges on 
 caching efficiency. Both \sys\ and RocksDB benefit from  OS (filesystem) caching in addition to application-level caches. 
 Table~\ref{fig:readamp} compares the two systems' read amplification (as a proxy for cache hit ratio) with composite keys, 
-in terms of (1) actual disk bytes read and (2) read system calls.  Under the former metric, 
+in terms of (1) actual disk bytes read and (2) read system calls.  Under the first, 
 RocksDB is slightly better in large datasets. However, it relies extensively on the OS cache -- in the 64GB dataset, 
 %, at the expense of the user-level block cache. In the same setting, 
 it performs almost 12 times as many system calls as \sys,  wasting the CPU resources on  
@@ -360,7 +359,7 @@ under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 \label{ssec:drill} 
 
 \paragraph{Vertical scalabiliy.} 
-Figure~\ref{fig:scalability} illustrates the \sys's throughput scaling for the 64GB dataset, under both Zipf  
+Figure~\ref{fig:scalability} illustrates \sys's throughput scaling for the 64GB dataset under both Zipf  
 distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 12 worker threads.  
 As expected, YCSB-C (read-only scenario) scales nearly perfectly (9.4x for composite keys, 7.7x for simple ones). 
 The other workloads scale slower, due to read-write and write-write contention as well as background munk and funk rebalances. 
@@ -419,13 +418,10 @@ We explore the system's  sensitivity to funk-log configuration parameters, for t
 under the challenging YCSB-A scenario. We note  that other workloads are less affected by these parameters.
 
 The left hand side of 
-Table~\ref{fig:wal} depicts the throughput dependency on the log size limit. A low threshold (e.g., 128KB) 
-causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4MB) 
-lets the logs grow bigger, and slows down gets and scans Our experiments are therefore tuned to use 2MB logs under write-intensive 
-workloads.
-%\inred{ In other scenarios, funk rebalances are infrequent, hence we set a relatively aggressive 512KB threshold to avoid high tail latencies. }
+Table~\ref{fig:wal} depicts the throughput's dependency on the log size limit. A low threshold (e.g., 128KB) 
+causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4MB) lets the logs grow bigger, and slows down gets and scans. Our experiments are tuned to use 2MB logs, which favors write-intensive workloads. {\inred{TBC for scans ...}}
 
 The right hand side of 
 Table~\ref{fig:wal} depicts the throughput dependency on the Bloom filter split factor. 
-Partitioning to 16 mini-filters gives the best result, which explains the default parameter choice. 
+Partitioning to 16 mini-filters gives the best result.
 
