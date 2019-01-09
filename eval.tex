@@ -38,7 +38,7 @@ The OS performance counters are retrieved from the Linux proc filesystem.
 
 \paragraph{Workloads.} 
 We scale the dataset size from 4GB to 64GB, in order to exercise multiple locality 
-scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks, we use 
+scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{rocsdb-benchmarks}, we use 
 10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
 The data is stored uncompressed. 
 
@@ -76,7 +76,7 @@ YCSB-P, comprised of $100\%$ puts. It captures a heavy-duty data load scenario (
 external data pipeline). 
 
 \paragraph{Evaluation methodology and configuration.} Each experiment consists of two stages. The first stage builds 
-the dataset, by filling an initially empty store with an sequence of KV-pairs, ordered by key. The second 
+the dataset, by filling an initially empty store with a sequence of KV-pairs, ordered by key. The second 
 phase exercises the specific scenario; all worker threads follow the same access pattern. Most experiments 
 perform 80 million data accesses. The experiments that run scans perform 4 to 16 million accesses, depending 
 on the scan size. We run 5 experiments for each data point, and present the median metric measurement. 
@@ -265,7 +265,7 @@ $90.5\%$ with composite keys versus $79\%$ without them. The row cache becomes i
 
 
 {\bf Scans.} In YCSB-E (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}).
-the number of KV-pairs to iterate each scan through is  
+the number of KV-pairs to iterate through is  
 sampled uniformly in the range [1,S], where S is either 10, 100, or 1000. 
 This workload (except with very short scans on very large data sets) is the best for \sys, since it exhibits the spatial locality the system has been designed for. 
 \sys\/ achieves $1.5$x to $3$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 

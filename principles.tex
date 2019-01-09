@@ -1,23 +1,25 @@
-\sys\ is a persistent key-value store that provides, similarly to other KV-stores~\cite{hbase,leveldb,RocksDB}:
-\begin{enumerate}\itemsep0pt
+\sys\ is a persistent key-value store that provides, similarly to other KV-stores~\cite{hbase,leveldb,RocksDB}, atomic API and consistent recovery.
+%\begin{enumerate}\itemsep0pt
 
-\item \emph{Atomic API} -- \emph{put, get}, and \emph{range scan} (or scan) operations. 
+%\item 
+\emph{Atomic API} -- \emph{put, get}, and \emph{range scan} (or scan) operations. 
 Scans are atomic in the sense that all key-value pairs returned by a single scan belong to a consistent 
 snapshot reflecting the state of the data store at a unique point in time.
 
-\item \emph{Consistent recovery.} Following a crash, the system recovers to a well defined execution 
-point some time before the crash. The exact recovery point depends on the put persistence model.
-\emph{Asynchronous} persistence (puts are buffered and persisted to disk in the background) allows 
+%\item 
+\emph{Consistent recovery.} Following a crash, the system recovers to a well defined execution 
+point some time before the crash. The exact recovery point depends on the put persistency model.
+\emph{Asynchronous} persistence, where puts are buffered and persisted to disk in the background, allows 
 applications to trade durability for speed. Data consistency is preserved following recovery, 
 in the sense that if some put is lost, then all ensuing (and thus possibly dependent) puts are lost as well.
-\end{enumerate}
+%\end{enumerate}
 
 Our key design goals are the following:
 \begin{enumerate}\itemsep0pt
 \item \emph{Focus on spatial locality and range scans.}
- Multiple NoSQL applications embed multidimensional data in a single-dimension composite key. 
- This design provides high spatial locality on the primary dimension (key prefix). \sys\/ strives
- to express this locality in physical data organization, in order to exploit it efficiently for scans
+ Multiple NoSQL applications embed multi-dimensional data in a single-dimension composite key. 
+ This design provides high spatial locality on the primary dimension (key prefix). We strive
+ to express this locality in physical data organization in order to exploit it efficiently for scans
  by the primary dimension. 
 %In addition, a query that retrieves data pertaining to a particular dimension thus needs to atomically 
 %retrieve the values pertaining to a range of keys. 
@@ -26,7 +28,7 @@ Our key design goals are the following:
 \item \emph{High performance  with memory-resident working sets.}
 To sustain high speed, key-value stores nowadays leverage increasing DRAM sizes 
 where they can hold most of the active data set. We strive for maximum performance 
-in this ``hyperlocal'' case.
+in this ``hyper-local'' case.
 
 \item \emph{Low write amplification.} We seek to minimize disk writes in order to boost performance 
 and reduce disk wear, especially for SSD devices. 
