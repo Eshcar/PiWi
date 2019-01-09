@@ -77,6 +77,9 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
         y_top = y_upper
     ax.set_ylim(y_bottom, y_top)
 
+    for label in ax.get_yticklabels() + ax.get_xticklabels():
+        label.set_fontsize(myfontsize)
+
     if x_bottom is not None:
         ax.set_xlim(x_bottom, ax.get_xlim()[1])
 
@@ -211,6 +214,8 @@ def draw_percentage_breakdown(chart_name, latency):
     ax.set_xlabel('Distribution', fontsize=myfontsize+5)
     ax.set_ylabel('% Searches', fontsize=myfontsize+5)
 
+    for label in ax.get_yticklabels() + ax.get_xticklabels():
+        label.set_fontsize(myfontsize+5)
     
     ax2 = ax.twiny()
     ax2.set_xlabel('Dataset Size', fontsize=myfontsize+5)
@@ -292,6 +297,9 @@ def draw_latency_breakdown(chart_name, latency):
     ax.set_xticklabels([renamings('Flurry') for i in range(3)]
                        + [renamings('Zipf') for i in range(3)], rotation=80, fontsize=myfontsize+5)
 
+    for label in ax.get_yticklabels():
+        label.set_fontsize(myfontsize+5)
+    
     ax.set_xlabel('Distribution', fontsize=myfontsize+5)
 
     ax.set_ylabel('[msec]', fontsize=myfontsize+5)
@@ -301,7 +309,7 @@ def draw_latency_breakdown(chart_name, latency):
     ax2.bar(zipf_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
 
     ax2.set_xticks([4.75, 7.25, 10.5], False)
-    ax2.set_xticklabels(x_axis, fontsize=myfontsize+5)
+    ax2.set_xticklabels(x_axis[2:], fontsize=myfontsize+5)
     plt.savefig(chart_name.replace(' ', '_')+'.pdf', bbox_inches='tight')
 
 
@@ -472,7 +480,7 @@ def draw_ampl_charts(data):
                     [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
                      for (k, v) in amplifications['C'].items() if 'kernel' in k],
                     yaxis='Amplification', legend=3)
-
+ 
 
 def draw_scalability_charts(data):
     line_color = {'P Flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
@@ -485,6 +493,7 @@ def draw_scalability_charts(data):
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
     draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Kops', legend=2, y_upper=450, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
 
+
 def draw_caching_effect(data):
     line_color = {'P flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
                   'P zipf': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
@@ -495,17 +504,17 @@ def draw_caching_effect(data):
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['caching'].items() if 'flurry' in k]
     draw_line_chart(file_name='cache', lines=lines, chart_name='', yaxis='Kops', legend=3, y_upper=None, x=[0,2,4,6,8,10], x_label='Munk cache GB', x_bottom=0)
 
-    
+
 def main():
     data = read_csv()
 
     # draw_line_charts(data)
     # draw_speedup_charts(data)
-    # draw_latency_charts(data)
+    draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
-    # draw_scalability_charts(data)
-    draw_caching_effect(data)
+    draw_scalability_charts(data)
+    # draw_caching_effect(data)
     plt.tight_layout()
     plt.show()
 
