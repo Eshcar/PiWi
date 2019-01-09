@@ -25,14 +25,14 @@ rocks_marker = 'v'
 piwi_linestyle = '-'
 piwi_marker = 'o'
 flurry_linecolor = tableau20[0]
-zip_linecolor = tableau20[6]
+zip_linecolor = tableau20[2]
 latest_linecolor = tableau20[0]
 myfontsize = 15
 
 munks_label = 'Munk Cache'
 rc_label = 'Row Cache'
 wb_label = 'Log'
-ks_label = 'SStable'
+ks_label = 'SSTable'
 
 line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
               'Rocks Zipf': {'color': zip_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
@@ -212,7 +212,7 @@ def draw_percentage_breakdown(chart_name, latency):
                        + [renamings('Zipf') for i in range(5)], rotation=80, fontsize=myfontsize+5)
 
     ax.set_xlabel('Distribution', fontsize=myfontsize+5)
-    ax.set_ylabel('% Searches', fontsize=myfontsize+5)
+    ax.set_ylabel('% Accesses', fontsize=myfontsize+5)
 
     for label in ax.get_yticklabels() + ax.get_xticklabels():
         label.set_fontsize(myfontsize+5)
@@ -332,6 +332,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     scalability = {}
 
     caching = {}
+
+    tail = {}
     
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -387,15 +389,23 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                 scalability[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
 
         for row in csv_reader:
+            if row[0] == 'tail latency':
+                break
             if (row[0] == 'Munks RAM'):
                 continue
             caching[row[0]] = [v/1000 for v in list(map(float, [i for i in row[1:] if i is not '']))]
+
+        for row in csv_reader:
+            if (row[0] == ''):
+                continue
+            tail[row[0]] =  list(map(float, [i for i in row[1:] if i is not '']))
 
     return {'experiments': experiments, 'latency': latency_breakdown,
             'bloom_filter_partitioning': bloom_filter_partitioning,
             'amplifications': amplifications,
             'scalability': scalability,
-            'caching': caching}
+            'caching': caching,
+            'tail':tail}
 
 
 def draw_bloom_filter_partitions(chart_name, data):
@@ -505,16 +515,28 @@ def draw_caching_effect(data):
     draw_line_chart(file_name='cache', lines=lines, chart_name='', yaxis='Kops', legend=3, y_upper=None, x=[0,2,4,6,8,10], x_label='Munk cache GB', x_bottom=0)
 
 
+def draw_95(data):
+
+    line_color = {'Rocks 95% Get': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'Rocks 95% Put': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'Piwi 95% Get': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'Piwi 95% Put': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker}}
+
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail'].items()]
+
+    draw_line_chart(file_name='tail', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.4, x=[4,8,16,32,64], x_bottom=0)    
+    
 def main():
     data = read_csv()
 
     # draw_line_charts(data)
     # draw_speedup_charts(data)
-    draw_latency_charts(data)
+    # draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
-    draw_scalability_charts(data)
+    # draw_scalability_charts(data)
     # draw_caching_effect(data)
+    draw_95(data)
     plt.tight_layout()
     plt.show()
 
