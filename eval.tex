@@ -449,7 +449,7 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 \end{subfigure}
 %\hspace{0.05\linewidth}
 \begin{subfigure}{0.49\linewidth}
-\includegraphics[width=\textwidth]{figs/Bloom_filter.pdf}
+\includegraphics[width=\textwidth]{figs/Bloom_filter_line.pdf}
 \caption{Bloom filter split factor}
 \label{fig:params:bf}
 \end{subfigure}
@@ -468,10 +468,9 @@ The fraction of puts in YCSB-A is 50\% (versus 5\% in YCSB-E), which makes it mo
 A low threshold (e.g., 128KB) causes frequent funk rebalances, which degrades the performance more than 3-fold. 
 On the other hand, too high a threshold (4MB) lets the logs grow bigger, and slows down gets. Our experiments are 
 tuned to use 2MB logs, which favors write-intensive workloads. {\inred{YCSB-E favors smaller logs, since the write 
-rate is low, and more funk rebalances can be accommodated. Its throughput could grow by up to ??\% by tuning to
+rate is low, and more funk rebalances can be accommodated. Its throughput could grow by up to 20\% by tuning to
 use 512KB logs.}}
 
-The right hand side of 
-Table~\ref{fig:wal} depicts the throughput dependency on the Bloom filter split factor. 
+Figure~\ref{fig:params:bf} depicts the throughput dependency on the Bloom filter split factor. 
 Partitioning to 16 mini-filters gives the best result.
 
