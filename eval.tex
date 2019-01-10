@@ -186,8 +186,8 @@ chunks, which are accessed less frequently than popular ones.
 Hence, in both cases, funk rebalances incur less I/O than RocksDB's compactions, which do not 
 distinguish between hot and cold data. 
 
-{\inred{\sys\/'s also high log size limit for chunks with munks 
-also reduces I/O by decelerating munk flushes . This does not impact recovery time since \sys\/ 
+{\inred{\sys\/'s high log size limit for chunks with munks 
+also reduces I/O by decelerating munk flushes. This does not impact recovery time since \sys\/ 
 does not replay its logs.}}
 
 The write amplification in this workload is summarized in 
@@ -472,5 +472,5 @@ rate is low, and more funk rebalances can be accommodated. Its throughput could 
 use 512KB logs.}}
 
 Figure~\ref{fig:params:bf} depicts the throughput dependency on the Bloom filter split factor. 
-Partitioning to 16 mini-filters gives the best result.
-
+Partitioning to 16 mini-filters gives the best result{\inred{; beyond this point the benefit levels off. 
+The impact of Bloom filter partitioning on the end-to-end get latency as well as the memory footprint is negligible.}}  
