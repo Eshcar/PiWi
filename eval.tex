@@ -442,19 +442,18 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 
 \begin{figure}[htb]
 \centering
-%\hspace{0.05\linewidth}
 \begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
-\caption{Throughput vs log size limit}
+\caption{Maximum log size}
 \label{fig:params:log}
 \end{subfigure}
 %\hspace{0.05\linewidth}
 \begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Latency_A.pdf}
-\caption{Throughput vs Bloom filter partitions}
+\caption{Bloom filter split factor}
 \label{fig:params:bf}
 \end{subfigure}
-\caption{{\sys\/ 95\% tail latency analysis by the serving component, under a mixed get-put workload (YCSB-A).}}
+\caption{{\sys\/ throughput sensitivity to configuration parameters, under a mixed get-put workload (YCSB-A) and 64GB dataset.}}
 \label{fig:params}
 \end{figure}
 
