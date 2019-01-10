@@ -168,7 +168,6 @@ We now discuss the results for the different scenarios.
 
 %YCSB-D exercises the Latest-simple  access pattern and its throughput is presented in Figure~\ref{fig:throughput:d}. 
   
-
 {\bf Put-only.} 
 In {YCSB-P} (100\% put, Figure~\ref{fig:throughput:p}), 
 \sys's throughput is 1.3x to 1.6x versus RocksDB's with composite keys, 
@@ -232,18 +231,18 @@ RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
 Here, the bottleneck is  disk search in gets, primarily the linear search in funk logs 
 that keep filling up due to concurrent puts. (In-memory searches are three orders of magnitude faster.)
 In this scenario, \sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB with composite keys, 
-thanks to better exploitation of spatial locality. Figure~\ref{fig:tail_latency:lat} shows that \sys\/
+thanks to better exploitation of spatial locality. Figure~\ref{fig:tail_latency:co} shows that \sys\/
 is also faster wrt the tail (95\%) put and get latency in this scenario. With simple keys,
  it is faster than RocksDB  for small datasets that fit in memory, and slower for big datasets.  
 
 When the working set does not fit in RAM, disk access dominates the tail latencies.
-Figure~\ref{fig:tail_latency:dist} depicts the distribution of gets by the storage  component 
-that fulfils the request, and Figure~\ref{fig:tail_latency:disk} presents the disk search latencies by component. 
+Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
+that fulfils the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
 For example, for the 64GB dataset, $1.9\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
 and the respective log search latencies are $1.7$ ms vs $4.4$ ms. This happens because in the latter, puts are more dispersed, 
 hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently so their logs grow longer.
-%and searching them becomes slower. 
 
+\remove{
 \begin{figure*}[tb]
 \centering
 \begin{subfigure}{0.36\linewidth}
@@ -266,12 +265,28 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 \label{fig:tail_latency}
 \caption{{\sys\/ tail latency analysis, under a mixed get-put workload (YCSB-A).}}
 \end{figure*}
+}
 
-\remove{
+\begin{figure}[htb]
+\centering
+\begin{subfigure}{0.49\linewidth}
+\includegraphics[width=\textwidth]{figs/tail_flurry_line.pdf}
+\caption{Zipf-composite}
+\label{fig:tail_latency:co}
+\end{subfigure}
+\begin{subfigure}{0.49\linewidth}
+\includegraphics[width=\textwidth]{figs/tail_zipf_line.pdf}
+\caption{Zipf-simple}
+\label{fig:tail_latency:si}
+\end{subfigure}
+\caption{{\sys\/ versus RocksDB 95\% latency (ms), under a mixed get-put workload (YCSB-A).}}
+\label{fig:tail_latency}
+\end{figure}
+
 \begin{figure}[htb]
 \centering
 %\hspace{0.05\linewidth}
-\begin{subfigure}{0.49\linewidth}
+\begin{subfigure}{0.5\linewidth}
 \includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
 \caption{Fraction of searches}
 \label{fig:readstat:dist}
@@ -282,10 +297,9 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 \caption{On-disk search latency}
 \label{fig:readstat:lat}
 \end{subfigure}
-\caption{{\sys\/ tail latency analysis, under a mixed get-put workload (YCSB-A).}}
+\caption{{\sys\/ 95\% tail latency analysis, under a mixed get-put workload (YCSB-A).}}
 \label{fig:readstat}
 \end{figure}
-}
 
 Naturally, the efficiency of in-memory caching is paramount. In the same example, the RAM hit rate 
 (munk and row cache combined) is 
