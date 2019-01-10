@@ -444,13 +444,13 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 \centering
 \begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/max_log_size_line.pdf}
-\caption{Maximum log size}
+\caption{Maximum log size,\\  YCSB-A and YCSB-E100}
 \label{fig:params:log}
 \end{subfigure}
 %\hspace{0.05\linewidth}
 \begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Bloom_filter_line.pdf}
-\caption{Bloom filter split factor}
+\caption{Bloom filter split factor,\\ YCSB-A}
 \label{fig:params:bf}
 \end{subfigure}
 \caption{{\sys\/ throughput sensitivity to configuration parameters, on the 64GB dataset under the YCSB-A (mixed put-get) and 
@@ -471,6 +471,6 @@ tuned to use 2MB logs, which favors write-intensive workloads. {\inred{YCSB-E fa
 rate is low, and more funk rebalances can be accommodated. Its throughput could grow by up to 20\% by tuning to
 use 512KB logs.}}
 
-Figure~\ref{fig:params:bf} depicts the throughput dependency on the Bloom filter split factor. 
+Figure~\ref{fig:params:bf} depicts the throughput dependency on the Bloom filter split factor, under YCSB-A. 
 Partitioning to 16 mini-filters gives the best result{\inred{; beyond this point the benefit levels off. 
 The impact of Bloom filter partitioning on the end-to-end get latency as well as the memory footprint is negligible.}}  
