@@ -575,7 +575,7 @@ def draw_log_size_charts(data):
                   'A Zipfian': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
     lines = [{'label': renamings(k), 'data': [i/1000 for i in v], 'style': line_color[k]} for (k, v) in data['max_log'].items()]
-    draw_line_chart(file_name='max_log_size', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, x=['128K','256K','512K','1M','2M','4M'], x_label='Maximum log size', x_bottom=0, y_upper=200)
+    draw_line_chart(file_name='max_log_size', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, x=['128K','256K','512K','1M','2M','4M'], x_label='Maximum log size', x_bottom=0, y_upper=225)
     
 def main():
     data = read_csv()
@@ -583,12 +583,12 @@ def main():
     # draw_line_charts(data)
     # draw_speedup_charts(data)
     # draw_latency_charts(data)
-    draw_bloom_filter_charts(data)
+    # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
     # draw_scalability_charts(data)
     # draw_caching_effect(data)
     # draw_95(data)
-    # draw_log_size_charts(data)
+    draw_log_size_charts(data)
     plt.tight_layout()
     plt.show()
 
