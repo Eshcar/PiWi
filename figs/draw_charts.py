@@ -500,8 +500,15 @@ def draw_latency_charts(data):
 
 
 def draw_bloom_filter_charts(data):
-    draw_bloom_filter_partitions('Bloom filter', data['bloom_filter_partitioning']['A_32'])
 
+    line_color = {'Flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'Zipfian': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker}}
+    
+    flurry_line = {'label':renamings('flurry') , 'data': [int(val[2])/1000 for val in data['bloom_filter_partitioning']['A_32']['flurry']],'style': line_color['Flurry']}
+    zipf_line = {'label':renamings('Zipfian') , 'data': [int(val[2])/1000 for val in data['bloom_filter_partitioning']['A_32']['zipfian']],'style': line_color['Zipfian']}
+
+
+    draw_line_chart(file_name='Bloom filter', lines=[flurry_line, zipf_line], yaxis='Throughput, Kops', legend=2, y_upper=190, x=['1','2','4','8','16'], x_label='Split factor', x_bottom=0)
 
 def draw_ampl_charts(data):
     amplifications = data['amplifications']
@@ -562,13 +569,13 @@ def draw_95(data):
     draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)    
 
 def draw_log_size_charts(data):
-    line_color = {'E Flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
-                  'E Zipfian': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
+    line_color = {'E100 Flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'E100 Zipfian': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
                   'A Flurry': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
                   'A Zipfian': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
     lines = [{'label': renamings(k), 'data': [i/1000 for i in v], 'style': line_color[k]} for (k, v) in data['max_log'].items()]
-    draw_line_chart(file_name='max_log_size', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, x=['128K','256K','512K','1M','2M','4M'], x_label='Maximum log size', x_bottom=0)
+    draw_line_chart(file_name='max_log_size', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, x=['128K','256K','512K','1M','2M','4M'], x_label='Maximum log size', x_bottom=0, y_upper=200)
     
 def main():
     data = read_csv()
@@ -576,12 +583,12 @@ def main():
     # draw_line_charts(data)
     # draw_speedup_charts(data)
     # draw_latency_charts(data)
-    # draw_bloom_filter_charts(data)
+    draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
     # draw_scalability_charts(data)
     # draw_caching_effect(data)
     # draw_95(data)
-    draw_log_size_charts(data)
+    # draw_log_size_charts(data)
     plt.tight_layout()
     plt.show()
 
