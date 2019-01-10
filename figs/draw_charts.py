@@ -303,7 +303,7 @@ def draw_latency_breakdown(chart_name, latency):
     
     ax.set_xlabel('Distribution', fontsize=myfontsize+5)
 
-    ax.set_ylabel('[msec]', fontsize=myfontsize+5)
+    ax.set_ylabel('Latency, [ms]', fontsize=myfontsize+5)
     ax2 = ax.twiny()
     ax2.set_xlabel('Dataset Size', fontsize=myfontsize+5)
     ax2.bar(flurry_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
@@ -529,17 +529,17 @@ def draw_95(data):
                   'Piwi 95% Put': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker}}
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['flurry'].items()]
-    draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.35, x_bottom=0,fontsize=myfontsize+5)
+    draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, y_upper=0.35, x_bottom=0,fontsize=myfontsize+5)
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['zipfian'].items()]
-    draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, x_bottom=0,fontsize=myfontsize+5)    
+    draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)    
     
 def main():
     data = read_csv()
 
     # draw_line_charts(data)
     # draw_speedup_charts(data)
-    # draw_latency_charts(data)
+    draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
     # draw_scalability_charts(data)
