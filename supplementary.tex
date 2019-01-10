@@ -105,9 +105,9 @@ A scan operation first publishes its intent to obtain a version in the \code{PSA
 
 A munk rebalance iterates through the \code{PSA} to collect the maximum version number among the active scans that cannot be reclaimed yet. If a scan published its intent in the \code{PSA} but published no version number yet, the rebalance waits until either the version is published or the ABA number in the entry is increased. 
 
-\section{Supplmental Evaluation Results}
+%\section{Supplmental Evaluation Results}
 
-\subsection{Get-Dominated Workloads}
+\section{Get-Dominated Throughput Results}
 
 Figure~\ref{fig:gets} presents the throughput result for get-dominated workloads.   
 We see that YCSB-B (5\% put, 95\% get, Figure~\ref{fig:throughput:b}) achieve results similar  to YCSB-C (100\% get) that was presented in the main paper.
@@ -122,20 +122,25 @@ workload with medium spatial and temporal locality that represents, e.g., status
 \centering
 \begin{subfigure}{0.45\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
-\caption{YCSB-B}
+\caption{YCSB-B \\ \includegraphics[width=\textwidth]{figs/legend.pdf}}
 \label{fig:throughput:b}
 \end{subfigure}
 \begin{subfigure}{0.45\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
-\caption{YCSB-D}
+\caption{YCSB-D \\\vspace{7mm}}
 \label{fig:throughput:d}
 \end{subfigure}
+\begin{subfigure}{0.45\linewidth}
+\end{subfigure}
+
 \caption{
 {\sys\/ versus RocksDB throughput (Kops), under get-dominated workloads with Zipf distributions over composite (two-component) and
 simple (non-composite) keys and scaling dataset sizes.}
 }
 \label{fig:gets}
 \end{figure*}
+
+\remove{
 
 \subsection{Scan-Dominated Workloads}
 In addition to experimenting with the default maximum \code{log} size (2MB), we also experimented with smaller \code{log}s (256KB maximum size).
@@ -171,7 +176,7 @@ simple (non-composite) keys and scaling dataset sizes.}
 }
 \label{fig:scans}
 \end{figure*}
-
+}
 
 
 \end{document}
