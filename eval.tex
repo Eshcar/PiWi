@@ -93,7 +93,8 @@ The row cache uses three hash tables.
 The Bloom filters for munk-less funks are partitioned 16-way.  
 We set the \sys\/ chunk size limit to 10MB, and the rebalance threshold factor to $0.7$ -- i.e., 
 chunks can grow up to 7MB  %(approximately 7000 KV-pairs) 
-before being compacted. The funk log size limit is 2MB. 
+before being compacted. The funk log size limit is 2MB {\inred{for munk-less chunks, 
+and 20MB for chunks with munks}}. 
 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
 We use RocksDB with the default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.
@@ -185,6 +186,10 @@ chunks, which are accessed less frequently than popular ones.
 Hence, in both cases, funk rebalances incur less I/O than RocksDB's compactions, which do not 
 distinguish between hot and cold data. 
 
+{\inred{\sys\/'s also high log size limit for chunks with munks 
+also reduces I/O by decelerating munk flushes . This does not impact recovery time since \sys\/ 
+does not replay its logs.}}
+
 The write amplification in this workload is summarized in 
 Table~\ref{fig:writeamp}. We see that \sys\/ reduces the disk write rate dramatically, 
 with the largest gain observed for big datasets (e.g., $1.29$ versus $2.92$ for the 64GB 
@@ -230,11 +235,15 @@ RocksDB & 1.94 & 2.20	& 2.69 & 3.03 &	2.77 \\
  is particularly challenging for \sys\/ because it exercises a high contention between gets and puts. 
 Here, the bottleneck is  disk search in gets, primarily the linear search in funk logs 
 that keep filling up due to concurrent puts. (In-memory searches are three orders of magnitude faster.)
-In this scenario, \sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB with composite keys, 
+
+\sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB with composite keys, 
 thanks to better exploitation of spatial locality. Figure~\ref{fig:tail_latency:co} shows that \sys\/
 is also faster wrt the tail (95\%) put and get latency in this scenario. With simple keys,
- it is faster than RocksDB  for small datasets that fit in memory, and slower for big datasets.  
+\sys\/ is faster than RocksDB  for small datasets that fit in memory, and slower for big datasets.  
+{\inred{Figure~\ref{fig:tail_latency:si} zooms in on this setting: while \sys\/ is on par with 
+RocksDB wrt the put latency in this setting, it falls short wrt the get latency.}} 
 
+%{\inred{Figure{fig:readstat} further explains this phenomenon. }} 
 When the working set does not fit in RAM, disk access dominates the tail latencies.
 Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
 that fulfils the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
@@ -288,16 +297,17 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 %\hspace{0.05\linewidth}
 \begin{subfigure}{0.5\linewidth}
 \includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
-\caption{Fraction of searches}
+\vskip .1in
+\caption{Fraction of get accesses}
 \label{fig:readstat:dist}
 \end{subfigure}
 %\hspace{0.05\linewidth}
 \begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Latency_A.pdf}
-\caption{On-disk search latency}
+\caption{On-disk get access latency}
 \label{fig:readstat:lat}
 \end{subfigure}
-\caption{{\sys\/ 95\% tail latency analysis, under a mixed get-put workload (YCSB-A).}}
+\caption{{\sys\/ 95\% tail latency analysis by the serving component, under a mixed get-put workload (YCSB-A).}}
 \label{fig:readstat}
 \end{figure}
 
@@ -311,6 +321,8 @@ the number of items to iterate through is
 sampled uniformly in the range [1,S], where S is either 10, 100, or 1000. 
 This workload (except with very short scans on very large datasets) is the best for \sys, since it exhibits the spatial locality the system has been designed for. 
 \sys\/ achieves $1.25$x to $3$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
+{\inred{\cref{ssec:drill} discusses how the scan performance on big datasets could be improved through dynamic adaptation of the 
+funk log size limit. }}
  
 %$1.5$x to 2x under 
 \remove{
