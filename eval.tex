@@ -443,27 +443,33 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 \begin{figure}[htb]
 \centering
 \begin{subfigure}{0.49\linewidth}
-\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
+\includegraphics[width=\textwidth]{figs/max_log_size_line.pdf}
 \caption{Maximum log size}
 \label{fig:params:log}
 \end{subfigure}
 %\hspace{0.05\linewidth}
 \begin{subfigure}{0.49\linewidth}
-\includegraphics[width=\textwidth]{figs/Latency_A.pdf}
+\includegraphics[width=\textwidth]{figs/Bloom_filter.pdf}
 \caption{Bloom filter split factor}
 \label{fig:params:bf}
 \end{subfigure}
-\caption{{\sys\/ throughput sensitivity to configuration parameters, under a mixed get-put workload (YCSB-A) and 64GB dataset.}}
+\caption{{\sys\/ throughput sensitivity to configuration parameters, on the 64GB dataset under the YCSB-A (mixed put-get) and 
+YCSB-E100 (scan-dominant, 1 to 100 items).}}
 \label{fig:params}
 \end{figure}
 
 \paragraph{Configuration parameters.} 
-We explore the system's  sensitivity to funk-log configuration parameters, for the most challenging 64GB dataset,
-under the challenging YCSB-A scenario. We note  that other workloads are less affected by these parameters.
+We explore the system's  sensitivity to funk-log configuration parameters, for the most challenging 64GB dataset, 
+{\inred{and explain the choice of the default values.}}
 
-The left hand side of 
-Table~\ref{fig:wal} depicts the throughput's dependency on the log size limit. A low threshold (e.g., 128KB) 
-causes frequent funk rebalances, which degrades the performance more than 3-fold. On the other hand, too high a threshold (4MB) lets the logs grow bigger, and slows down gets and scans. Our experiments are tuned to use 2MB logs, which favors write-intensive workloads. {\inred{TBC for scans ...}}
+Figure~\ref{fig:params:log} depicts the throughput's dependency on the log size limit {\inred{for munk-less funks, 
+under the YCSB-A and YCSB-E100 workloads with Zipf-composite key distribution. 
+The fraction of puts in YCSB-A is 50\% (versus 5\% in YCSB-E), which makes it more sensitive to the log size. }}
+A low threshold (e.g., 128KB) causes frequent funk rebalances, which degrades the performance more than 3-fold. 
+On the other hand, too high a threshold (4MB) lets the logs grow bigger, and slows down gets. Our experiments are 
+tuned to use 2MB logs, which favors write-intensive workloads. {\inred{YCSB-E favors smaller logs, since the write 
+rate is low, and more funk rebalances can be accommodated. Its throughput could grow by up to ??\% by tuning to
+use 512KB logs.}}
 
 The right hand side of 
 Table~\ref{fig:wal} depicts the throughput dependency on the Bloom filter split factor. 
