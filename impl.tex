@@ -3,8 +3,7 @@ Similarly to RocksDB, we use \code{jemalloc} for memory allocation.
 
 We now describe some of our implementation choices. 
 
-%PO array is split into PSA and per-chunk PPAs, as kiwi; DO NOT MENTION employs  helping as in KiWi. 
-\paragraph{Chunk index.}  Implemented as a sorted array holding the minimal keys of all chunks.  
+Chunk index is implemented as a sorted array holding the minimal keys of all chunks.  
 Whenever a new chunk is created (upon split), the index is rebuilt and the reference to it is atomically flipped. 
 We found this simple implementation to be fastest since splits are infrequent. 
 
@@ -36,9 +35,7 @@ A munk rebalance iterates through the \code{PSA} to collect the maximum version 
 }
 
 %\paragraph{Adaptive mechanisms.} \sys\ applies two dynamic mechanisms that adapt to the workload. 
-\paragraph{Munk caching policy.}
-%The first is the \emph{munk caching policy}, which is crucial for locality of access. 
-We apply simple LFU caching,
+Munk's cache applies simple LFU eviction policy,
 in which the score is a weighted average of the number of accesses per operation type. We 
 use exponential decay to maintain the recent access counts, similar to~\cite{tinyLFU}: periodically, all counters are 
 sliced by a factor of two. 
@@ -48,8 +45,7 @@ sliced by a factor of two.
 
 %Funk rebalance frequency is also crucial for the performance of the system. Excessive rebalances may reduce ingestion throughput, while immensely reducing funk rebalance frequency can degrade the performance of scans that are required to sequentially traverse a very long log. To this end, \sys\ exploits the per-operation type counters also to determine the frequency in which each funk is rebalanced.
 
-\paragraph{Row cache.} 
-We implement a coarse-grained LRU policy by maintaining a fixed-size queue of hash tables. 
+The row cache, on the other hand, implements a coarse-grained LRU policy by maintaining a fixed-size queue of hash tables. 
 New entries are inserted into the head table. Once it overflows, a new empty table is added to the head,
 and the tail is discarded. Consequently, lookups for recently cached keys are usually served by the head 
 table, and unpopular keys are removed from the cache in a bulk, once the tail table is dropped.
