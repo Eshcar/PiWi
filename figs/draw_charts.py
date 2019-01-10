@@ -334,8 +334,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
     caching = {}
 
-    tail = {}
-    
+    tail = {'flurry': {}, 'zipfian': {}}
+
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -396,10 +396,15 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                 continue
             caching[row[0]] = [v/1000 for v in list(map(float, [i for i in row[1:] if i is not '']))]
 
+        dist = ''
         for row in csv_reader:
+
             if (row[0] == ''):
                 continue
-            tail[row[0]] =  list(map(float, [i for i in row[1:] if i is not '']))
+            if (row[0] == 'zipfian' or row[0] == 'flurry'):
+                dist = row[0]
+                continue
+            tail[dist][row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
 
     return {'experiments': experiments, 'latency': latency_breakdown,
             'bloom_filter_partitioning': bloom_filter_partitioning,
@@ -523,9 +528,11 @@ def draw_95(data):
                   'Piwi 95% Get': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
                   'Piwi 95% Put': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker}}
 
-    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail'].items()]
-    
-    draw_line_chart(file_name='tail', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.35, x_bottom=0,fontsize=myfontsize+5)    
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['flurry'].items()]
+    draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, y_upper=0.35, x_bottom=0,fontsize=myfontsize+5)
+
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['zipfian'].items()]
+    draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='[msec]', legend=2, x_bottom=0,fontsize=myfontsize+5)    
     
 def main():
     data = read_csv()
