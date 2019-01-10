@@ -65,7 +65,9 @@ Munks are volatile and can be removed and recreated from funks at any time.
 At run-time, \sys\ holds in memory a list of chunk metadata objects as well as 
 a \emph{chunk index} -- a sorted map from keys to chunks.
 Since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks
-(typically, less than 1 KB instead of tens of MBs).
+(typically, less than 1 KB instead of tens of MBs). The detailes of the chunk's metadata structure are deferred to the the supplemental material.
+
+
 
 A munk holds key-value pairs in an array-based linked list.  
 \remove{
@@ -120,8 +122,6 @@ we further  partition the Bloom filter into a  handful of filters, each summariz
 content of part of the \code{log}; this allows us to know not only whether or not to search the 
 \code{log}, but also which part of it to search.  
  
-
-
 \remove{
 \paragraph{Chunk metadata structure.}
 
@@ -175,8 +175,8 @@ In addition to the chunk list and chunk index, \sys\ keeps a \emph{global versio
 The PO is used to synchronize puts with scans, as well as for  garbage collection purposes (old 
 versions not needed by any active scan can be reclaimed).
 We note that using a single pending array to synchronize all operations can cause contention, which we
-mitigate in our implementation by tracking the pending puts in per-chunk arrays as done in~\cite{kiwi}. 
-%(see the supplemented material for details).%~\cref{sec:impl}). 
+mitigate in our implementation by tracking the pending puts in per-chunk arrays as done in~\cite{kiwi}
+(see the supplemental material for details).%~\cref{sec:impl}). 
 
 \subsection{Multi-versioning for atomic scans}
 \label{ssec:scans}
@@ -410,8 +410,9 @@ the \code{SSTable}   and the \code{log} and merges the results.
 Rebalance is used to improve data organization in a chunk's funk or munk by removing old versions that are no longer needed for scans, 
 removing deleted items, and sorting all the keys in the chunk. 
 It can be invoked by a thread attempting to access the chunk or a dedicated background thread.
+\inred{Funk rebalance is important for two main reasons: (1) to reduce the time spent searching for a key in the \code{log}, and (2) to reduce disk space occupancy.}
 In case a chunk has a munk, rebalance usually reorganizes only  the munk, since all searches are served by it. 
-The respective funk is reorganized much less frequently, only in order to bound the \code{log} size. 
+The respective funk is reorganized much less frequently, only in order to bound \inred{disk space occupancy}. 
 
 %\paragraph{Synchronizing puts and rebalances.}
 Reorganization involves creating a new funk or munk  to replace the  current one.  In some cases, the chunk itself is split, creating new funks (and munks if applicable). 
