@@ -119,6 +119,26 @@ def draw_speedup_chart(chart_name, distributions):
     plt.savefig(chart_name.replace(' ', '_') + '_speedup.pdf', bbox_inches='tight')
 
 
+def draw_munk_size_chart(file_name, bars):
+    print(bars)
+    # fig, ax = plt.subplots()
+    # i = 0
+    # bar_width = 0.35/len(distributions)
+    # index = np.arange(len(x_axis))
+    # for dist in distributions:
+    #     ax.bar(index + i, dist['data'], bar_width, label=dist['label'])
+    #     i = i + bar_width
+
+    # ax.set(xlabel='', ylabel='Speedup %',
+    #        title=chart_name)
+    # ax.grid()
+    # plt.ylim(-100, 200)
+    # ax.set_xticks(index + bar_width*(len(distributions)-1)/2)
+    # ax.set_xticklabels(x_axis)
+    # ax.legend(loc=1)
+    # plt.savefig(chart_name.replace(' ', '_') + '_speedup.pdf', bbox_inches='tight')
+    
+
 def calculate_speedups(workload, distributions):
     result = []
     for dist in distributions:
@@ -329,13 +349,11 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     amplifications = {'P': dict(),
                       'A': dict(),
                       'C': dict()}
-
     scalability = {}
-
     caching = {}
-
     tail = {'flurry': {}, 'zipfian': {}}
-
+    max_log = {}
+    
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -398,34 +416,41 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
         dist = ''
         for row in csv_reader:
-
+            if (row[0] == 'max_log'):
+                break
             if (row[0] == ''):
                 continue
             if (row[0] == 'zipfian' or row[0] == 'flurry'):
                 dist = row[0]
                 continue
             tail[dist][row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
-
+            
+        for row in csv_reader:
+            if (row[0] == 'Throughput'):
+                continue
+            max_log[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+            
     return {'experiments': experiments, 'latency': latency_breakdown,
             'bloom_filter_partitioning': bloom_filter_partitioning,
             'amplifications': amplifications,
             'scalability': scalability,
             'caching': caching,
-            'tail':tail}
+            'tail':tail,
+            'max_log':max_log}
 
 
 def draw_bloom_filter_partitions(chart_name, data):
 
-    partitions = [int(val[0]) for val in data['flurry']]
-    flurry_throughput = [int(val[2]) for val in data['flurry']]
-    zipf_throughput = [int(val[2]) for val in data['zipfian']]
+    partitions = [(val[0]) for val in data['flurry']]
+    flurry_throughput = [int(val[2])/1000 for val in data['flurry']]
+    zipf_throughput = [int(val[2])/1000 for val in data['zipfian']]
 
     fig, ax = plt.subplots()
 
     ax.plot(partitions, flurry_throughput, label='Flurry', color=flurry_linecolor, linestyle='-', linewidth=linewidth, marker='o', markersize=marksize)
     ax.plot(partitions, zipf_throughput, label='Zipfian', color=zip_linecolor, linestyle='-', linewidth=linewidth, marker='o', markersize=marksize)
 
-    ax.set(xlabel='Partitions', ylabel='Throughput',
+    ax.set(xlabel='Partitions', ylabel='Throughput, Kops',
            title=chart_name)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
@@ -517,8 +542,10 @@ def draw_caching_effect(data):
                   'A zipf': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker},
                   'C flurry': {'color': tableau20[4], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
                   'C zipf': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
-    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['caching'].items() if 'flurry' in k]
-    draw_line_chart(file_name='cache', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=3, y_upper=None, x=[0,2,4,6,8,10], x_label='Munk cache GB', x_bottom=0)
+
+    lines = [{'label': renamings(k), 'data': [int((-i/v[4]+1)*100) if i < v[4] else  5-int((v[4]/i-1)*100) for i in v], 'style': line_color[k]} for (k, v) in data['caching'].items() if 'flurry' in k]
+    draw_munk_size_chart(file_name='cache', bars=lines)
+    # draw_line_chart(file_name='cache', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=3, y_upper=None, x=[0,2,4,6,8,10], x_label='Munk cache GB', x_bottom=0)
 
 
 def draw_95(data):
@@ -533,18 +560,28 @@ def draw_95(data):
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['zipfian'].items()]
     draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)    
+
+def draw_log_size_charts(data):
+    line_color = {'E Flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'E Zipfian': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
+                  'A Flurry': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
+                  'A Zipfian': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
+    
+    lines = [{'label': renamings(k), 'data': [i/1000 for i in v], 'style': line_color[k]} for (k, v) in data['max_log'].items()]
+    draw_line_chart(file_name='max_log_size', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, x=['128K','256K','512K','1M','2M'], x_label='Maximum log size', x_bottom=0)
     
 def main():
     data = read_csv()
 
-    # draw_line_charts(data)
+    draw_line_charts(data)
     # draw_speedup_charts(data)
-    draw_latency_charts(data)
+    # draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
     # draw_ampl_charts(data)
-    # draw_scalability_charts(data)
+    draw_scalability_charts(data)
     # draw_caching_effect(data)
-    draw_95(data)
+    # draw_95(data)
+    draw_log_size_charts(data)
     plt.tight_layout()
     plt.show()
 
