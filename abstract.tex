@@ -1,9 +1,9 @@
-Many applications of key-value (KV-)store technologies are characterized by high \emph{spatial locality}
+Many applications of key-value (KV-)storage  are characterized by high \emph{spatial locality}
 of access, e.g., data items with identical composite-key prefixes are created or scanned together.  
 This prevalent access pattern is underused by the ubiquitous LSM-tree design employed by KV-stores today.
 
 We present \sys, a persistent KV-store designed for spatially-local workloads, in particular through better use of RAM
 that reduces disk I/O.  It outperforms RocksDB -- an industry-leading LSM database -- in the majority 
 of standard YCSB benchmarks, and more notably on workloads with spatial locality. For example, \sys\/ 
-exceeds RocksDB by 1.25x to 3x in range scan throughput in these scenarios. It further reduces write amplification 
+improves over RocksDB by 1.25x to 3x in range scan throughput in these scenarios. It further reduces write amplification 
 by up to 2.6x, thereby contributing to slower device wear. \sys\/ provides strong (atomic) guarantees for random updates, random lookups, and scans. Finally, it provides consistent crash recovery semantics, with near-instant recovery time. 
