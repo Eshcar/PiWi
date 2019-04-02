@@ -21,7 +21,8 @@
 
 \newcommand{\code}[1]{\textsf{\fontsize{9}{11}\selectfont #1}}
 
-\newcommand{\inred}[1]{{\color{red}{#1}}}
+%\newcommand{\inred}[1]{{\color{red}{#1}}}
+\newcommand{\inred}[1]{ {#1} } % reddening macro commented out
 \newcommand{\remove}[1]{}
 \newcommand{\Idit}[1]{\inred{[Idit: #1]}}
 
@@ -44,7 +45,7 @@
 % Actual document begins below.
 \begin{document}
 
-\title{\Large \bf \sys: Rethinking Design Principles for Key-Value Storage} 
+\title{\Large \bf \sys: Key-Value Storage for Data with Spatial Locality} 
 \author{}
 \maketitle
 
