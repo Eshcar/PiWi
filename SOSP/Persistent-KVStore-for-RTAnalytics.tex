@@ -1,9 +1,13 @@
 % 
 %% Replace 'XX' with your paper number (assigned when you register abstract)
 %% Replace 'NN' with actual number of pages. 
+\documentclass[sigplan,10pt]{acmart}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
 
-\documentclass[letterpaper,twocolumn,10pt]{article}
-\usepackage{usenix2019,epsfig,subcaption}
+%\documentclass[letterpaper,twocolumn,10pt]{article}
+%\usepackage{usenix2019,epsfig,subcaption}
+\usepackage{epsfig,subcaption}
 %========================
 %  Packages
 %========================
@@ -47,6 +51,8 @@
 
 \title{\Large \bf \sys: Key-Value Storage for Data with Spatial Locality} 
 \author{}
+
+\settopmatter{printfolios=true}
 \maketitle
 
 \subsection*{Abstract}
