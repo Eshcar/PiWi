@@ -23,15 +23,15 @@ in the key.
 
 % Composite keys imply spatial data locality (in ranges) 
 Composite keys induce \emph{spatial locality} in workloads with high {temporal locality}, as 
-popular entities (for example, users) result in popular \emph{key ranges}. 
+popular entities (for example, users in a social graph) result in popular \emph{key ranges}. 
 Spatial locality may also arise with simple (non-composite) keys, for example in 
- reverse  URLs, which  are often used as keys for web search indexing~\cite{Cho:1998:ECT:297805.297835}. 
+reverse  URLs, which  are often used as keys for web search indexing~\cite{Cho:1998:ECT:297805.297835}. 
 While the prevalence of temporal locality (i.e., frequent access to popular entities) in real-world workloads is widely-recognized, 
 and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions such as Zipf, 
 these benchmarks fail to capture the spatial aspect of locality.
 This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys with no spatial locality,
-e.g., in partitioning data temporally (by recent access) as opposed to by key.
-In this paper, we make spatial locality a first class  consideration.
+e.g., by partitioning data temporally (by recent access) as opposed to by key.
+In this paper, we make spatial locality a first class consideration in KV-stores design.
 % which leads us to rethink the design principles underlying today's popular KV-stores.
 
 % LSM is the standard but not ideal for this  because of  write path  temporal grouping leading to fragmentation and write amplificaiton
@@ -67,7 +67,7 @@ which are common with composite keys.
 
 % LSM is not the best when the entire working set fits in memory
 Finally, we note that LSM's temporal file organization optimizes disk I/O but induces a penalty on in-memory operation. 
-For example, all keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured 
+All keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured 
 via a separate \emph{write-ahead-log (WAL)}. 
 This increases write amplification and also makes the flushed keys unavailable for fast read from memory. 
 This is particularly wasteful if the system incorporates sufficient DRAM to hold most of the active working set. 
@@ -77,11 +77,11 @@ significant performance benefit DRAM offers make this scenario increasingly comm
 % Drum roll 
 We present \sys, a persistent KV-store whose design diverges from the ubiquitous LSM approach.  
 Like  LSMs,  we optimize I/O by absorbing updates in memory and performing bulk writes to disk. 
-But unlike LSM's temporal data organization, we partition data according to key ranges, similarly to B-trees and B$^\epsilon$-trees. 
+But unlike LSM's temporal data organization, we partition databy key, as done also in B-trees~\cite{Comer79} and B$^\epsilon$-trees~\cite{Bender15}. 
 Data is  organized (both on disk and in memory) as a list (rather than a tree) 
 of large \emph{chunks} holding contiguous key ranges.
 To allow direct access (one I/O operation) to the on-disk chunk holding a given key, we use an auxiliary volatile index.  
-Popular chunks are cached in RAM for the benefit of  both the write-path and the read-path.
+In addition, popular chunks are cached in RAM for the benefit of  both the write-path and the read-path.
 
 % Benefits
 Spatially-organized chunks reduce the fragmentation of key ranges, resulting in 
@@ -91,13 +91,13 @@ Moreover, since chunks  are compacted in memory, writes are
 flushed to disk less frequently than LSM writes (relying on a per-chunk WAL for persistence)
 yielding 
 (3) reduced write amplification, and 
-(4) better performance with memory-resident working sets.
+(4) better performance with mostly memory-resident working sets.
 
 % Downsides
 The downside of this approach is that if the data lacks spatial locality and the active working set is big, 
-caching an entire chunk for a single popular key is wasteful. We mitigate this drawback by adding a  
+caching an entire chunk for a single popular key is wasteful. We mitigate this drawback by adding 
 a dedicated \emph{row cache} for hot keys. But since the row cache only serves the read-path, 
-this design is less optimal for mixed read/write workloads without spatial locality, for which LSMs are more suitable.  
+this design is less optimal for mixed read/write workloads lacking spatial locality, for which LSMs are more suitable.  
 
 \sys's performance scales with the number of threads on multicore hardware, 
 and all its APIs (put, get, and scan) provide strong (atomic) consistency guarantees 
