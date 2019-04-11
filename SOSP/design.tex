@@ -11,13 +11,27 @@ Finally, \cref{ssec:flush-recovery} discusses flushing data to disk and failure 
 \subsection{Data organization}
 \label{ssec:layout}
 
-\begin{figure}[tb]
+\begin{figure*}[tb]
 \centerline{
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{Bepsilon.pdf}
+\caption{B-epsilon tree}
+\label{fig:bepsilon}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{LSM.pdf}
+\caption{LSM}
+\label{fig:lsm}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\columnwidth]{PiWi.png}
+\caption{\sys\ data layout.}
+\label{fig:piwi}
+\end{subfigure}
 }
 \caption{\sys\ data layout.}
 \label{fig:layout}
-\end{figure}
+\end{figure*}
 
 \paragraph{Chunks, funks, and munks.}
 
