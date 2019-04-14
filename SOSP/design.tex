@@ -14,30 +14,42 @@ Finally, \cref{ssec:flush-recovery} discusses flushing data to disk and failure 
 \begin{figure*}[tb]
 \centerline{
 \begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{Bepsilon.pdf}
-\caption{B-epsilon tree}
-\label{fig:bepsilon}
-\end{subfigure}
-\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{LSM.pdf}
-\caption{LSM}
+\caption{LSM: temporal partitioning}
 \label{fig:lsm}
 \end{subfigure}
 \begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{Bepsilon.pdf}
+\caption{B-epsilon tree: data partitioned by key}
+\label{fig:bepsilon}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\columnwidth]{PiWi.png}
-\caption{\sys\ data layout.}
+\caption{\sys: data partitioned by key}
 \label{fig:piwi}
 \end{subfigure}
 }
-\caption{\sys\ data layout.}
+\caption{Data layout.}
 \label{fig:layout}
 \end{figure*}
 
+First we emphasize the key design differences between LSM (Figure~\ref{fig:lsm}), B$^\epsilon$-trees  (Figure~\ref{fig:bepsilon}), and \sys\ (Figure~\ref{fig:piwi}).
+
+LSM organizes data by temporal partitions, where most recent data is stored in-memory and the rest resides on disk. Data that appears in-memory and have not yet flushed to disk is persisted in a global WAL. This allows for a simple (yet not fast) recovery proceedure, which essentially replays the log to reconstruct the memory component. To allow for atomic scans production LSM stores manage standrd MVCC policy on top of the LSM-tree.  Each write operation is assigned an auto-incremented sequence number. Since each write adds an additional version to the key it writes to, the memory component often overflows--even if the working set is small enough to fit in memory--and the data is flushed to disk. This causes frequent data compactions on disk, which increses write amplification. To facilitate reads a block cache data structure stores the hot data blocks from files and bloom filters are used to avoid accessing most files that do not store the searched key.
+ 
+B$^\epsilon$-tree is a tree with asymptotic worst-case performance guarantees in a model with no memory hierarchy or concurrency. Data is partitioned by key. Writes are buffered through internal nodes and in leaves to be applied in batches, and update leaves in-place. Therefore supporting atomic scans in an efficient way is not trivial. Since updates are buffered in-memory in different paths of the tree before they are persisted in the leaves supporting consitent recovery in multithreaded workloads is also not trivial.
+
+\sys\ partitions data by key, as done in B$^\epsilon$-trees. However, data is organized as a list of large \emph{chunks}, not a tree, and nodes can be accessed directly (without a tree/list traversal) thanks to an auxiliary volatile index.
+\sys\ focuses on leveraging the memory hierarchy effectively for spatially-local workloads. 
+We support atomic range scans under concurrency. The burden of increasing the version number is carried by the scans, hence, in the absence of scans write operations effectively update the values in-place. Data that appears in-memory is persisted in per-chunck WALs. The same mechanism that allows supporting atomic scans is utilized for guaranteeing consistent recovery even across these multiple logs. Since the content of chunck is often compacted in-memory disk compactions are infrequent  and write amplification is significantely reduced. To facilitate reads hot chuncks are cached in-memort, in addition hot keys that are not part of a hot range are cached in a row cache. Bloom filters are used to avoid accessing parts of the logs that do not store the searched key.
+
+We proceed with a deep dive into the design details of \sys.
+
 \paragraph{Chunks, funks, and munks.}
 
-\sys's data layout is depicted in Figure~\ref{fig:layout}.
+\sys's data layout is depicted in Figure~\ref{fig:piwi}.
 %Similarly to BTrees and other disk-friendly and cache-friendly data structures~\cite{kiwi}, 
-Data resides in fixed-size chunks, each holding a contiguous key range.
+Data resides in chunks, each holding a contiguous key range.
 This improves the efficiency of both disk access and memory access, in particular, for  range scans. 
 At run-time, a list of all chunks' metadata is kept in RAM, where each chunk's data 
 (consisting of keys in the corresponding range and values associated with them) 
@@ -70,31 +82,32 @@ In our experiments, we keep the \code{log} \inred{an order of magnitude smaller 
 around the same size as?} the \code{SSTable}  .
 }
 
-A subset of the chunks is also cached in memory to allow fast access, where each cached chunk is associated with a
+A subset of the chunks is also cached in memory to allow fast access, the content of where each cached chunk is stored in a
 munk data structure. 
-Munks are volatile and can be removed and recreated from funks at any time.
+Munks are volatile and can be removed and recreated from funks at any time based on an arbitrary replacement policy.
 % Thus, multiple \emph{generations} of munks may exist for a chunk throughout its life time.
 %Chunks that are not cached are denoted \emph{munk-less}.
 
-At run-time, \sys\ holds in memory a list of chunk metadata objects as well as 
-a \emph{chunk index} -- a sorted map from keys to chunks.
+At run-time, \sys\ holds in memory a list of chunk metadata objects.
 Since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks
-(typically, less than 1 KB instead of tens of MBs). The detailes of the chunk's metadata structure are deferred to the the supplemental material.
-
-
+(typically, less than 1 KB instead of tens of MBs). 
+In addition, we keep a volatile \emph{chunk index} -- a sorted map from keys to chunks. 
+Index updates are lazy, so it only offers best-effort expedited search.
+%The detailes of the chunk's metadata structure are deferred to the the supplemental material.
 
 A munk holds key-value pairs in an array-based linked list.  
 \remove{
 A munk consists of two arrays -- \emph{karray} for keys and \emph{varray} for values. The  \code{karray}  holds a sorted linked list of the chunk's keys
 with pointers to values in the \code{varray}. 
 }
-When a munk is created, 
-it is sorted by key, so each cell's successor in the linked list is the ensuing cell in the array.
-As new keys are added, they create bypasses in the linked list, and consecutive keys in the
+When a munk is created, some prefix of this array is populated,
+sorted by key, so each cell's successor in the linked list is the ensuing cell in the array.
+New key-value entries are appended after this prefix.
+As new entries are added, they create bypasses in the linked list, and consecutive keys in the
 list are no longer necessarily adjacent in the array. Nevertheless, as long as 
 a sizeable prefix of the  array  is sorted, bypasses are short in expectation.
 \remove{Key removals, in turn, leave obsolete values in the munk, so it is no longer compacted.}
-Keys can thus be searched efficiently via binary search on the sorted prefix and a short traversal of one ``bypass''. 
+Keys can thus be searched efficiently via binary search on the sorted prefix followed by a short traversal of a bypass path at the suffix of the array. 
 
 
 As key-value pairs are added, overwritten, and removed munks and funks need to undergo reorganization. This includes  
@@ -104,21 +117,21 @@ As key-value pairs are added, overwritten, and removed munks and funks need to u
 All reorganizations are performed by \sys's \emph{rebalance} operation.
 If the chunk has a munk, then rebalance compacts and sorts the munk in-memory by creating a new 
 (compacted and sorted) munk instead of the existing one. 
-Funks of munk-less chunks are also compacted by replacing them with new funks, albeit less frequently.
+Funks are also compacted and replaced by new funks, albeit less frequently.
 Splits  create new chunks as well as new  funks (and possibly munks) associated with them.
 
 \paragraph{Expediting reads.}
 As long as a chunk  is memory-resident, the munk data structure serves both the read-path and the write-path for keys in this chunk's range. 
 In this case, the chunk metadata is quickly located using the index, and its munk's sorted prefix allows for fast binary search.
 Thus, \sys\ is particularly fast when almost the entire working set is memory-resident. 
-We take two measures to mitigate the performance penalty of accessing keys in munk-less chunks.
+We take two measures to mitigate the performance penalty of accessing keys in non cached chunks.
 
 First, we keep a \emph{row cache} holding popular key-value pairs from munk-less chunks. Note that unlike munks, which cache key ranges, the row
 cache holds individual keys, and is thus more effective in dealing with point queries (gets as opposed to scans) with no
 spatial locality.
-Thus, popular key ranges %are associated with munks (and 
+Whereas, popular key ranges %are associated with munks (and 
 can be scanned quickly from munks, 
-while  isolated popular keys %are included in the row cache for efficient gets.
+isolated hot keys %are included in the row cache for efficient gets.
 can be quickly found using the row cache.
 
 For working sets that are  larger than the available DRAM, these two caches might not suffice, and so a certain portion of reads are served from disk. Here, the slowest step is the sequential search of the \code{log}. 
@@ -171,12 +184,15 @@ Finally, the chunk includes locks to synchronize concurrent access by multiple t
 \end{algorithm}
 }
 
-\paragraph{Thread synchronization.}
+\paragraph{Thread synchronization variables.}
 
+\sys\ supports concurrent execution of all operations.
 The replacement of a chunk (due to a split) or rebalance of a funk or munk %(see Section~\ref{ssec:rebalance}) %associated with a given chunk 
 must be executed atomically, and moreover, must be synchronized with concurrent puts. 
 This is controlled by the chunk's \emph{rebalanceLock}, which is held for short time periods
 during chunk, funk, and munk replacements.  It is a shared/exclusive lock, acquired in shared mode by puts and in exclusive mode by rebalance. Gets and scans do not acquire the lock.
+
+Rebalance makes the new chunk accessible after it is populated. Because a chunk is immutable during rebalance (thanks to rebalance lock), reading either the old or the new version is acceptable.
 
 To minimize I/O, we allow at most one thread to rebalance a funk at a given time; this is controlled by 
 the  \code{funkChangeLock}. 
@@ -189,8 +205,8 @@ In addition to the chunk list and chunk index, \sys\ keeps a \emph{global versio
 The PO is used to synchronize puts with scans, as well as for  garbage collection purposes (old 
 versions not needed by any active scan can be reclaimed).
 We note that using a single pending array to synchronize all operations can cause contention, which we
-mitigate in our implementation by tracking the pending puts in per-chunk arrays as done in~\cite{kiwi}
-(see the supplemental material for details).%~\cref{sec:impl}). 
+mitigate in our implementation by tracking the pending puts in per-chunk arrays with per-thread entries as done in~\cite{kiwi}.
+%(see the supplemental material for details).%~\cref{sec:impl}). 
 
 \subsection{Multi-versioning for atomic scans}
 \label{ssec:scans}
@@ -240,10 +256,10 @@ indicates that the put is complete).
 A scan, in turn, 
 %begins by increasing GV and publishing itself. 
 %It then 
-waits for the completion of all pending puts  that might affect it  -- these are puts whose updates 
-are in the scanned key range, and either do not have a version yet or have versions lower than the scan time.
+waits for the completion of all pending puts  that might affect it  -- these are puts of keys in the scanned key range, which either do not have a version yet or have versions lower than the scan time.
 This is done by busy waiting on the PO entry until it changes; monotonically increasing counters are used 
 in order to avoid ABA races. 
+This mechanism is a simplification of the nonblocking put-scan synchronization described by the KiWi data structure~\cite{kiwi}.
 %For symmetry, get operations synchronize with puts the same way that scans do. 
 
 \remove{
@@ -277,7 +293,7 @@ it reads the value from the appropriate munk or funk.
 \paragraph{Get and put.}
 
 Algorithm~\ref{alg:ops}  presents pseudocode for the normal operation flow, without rebalance.
-Both operations begin by locating the target chunk using the \code{lookup} function. In principle, this can be done by traversing the linked list, but that would result in a linear search time. To expedite the search,   \code{lookup} searches the index first. However, index updates are lazy -- they occur after the new chunk is already
+Both operations begin by locating the target chunk using the \code{lookup} function. In principle, this can be done by traversing the chunk list, but that would result in linear search time. To expedite the search,   \code{lookup} searches the index first. However, index updates are lazy -- they occur after the new chunk is already
 in the linked list -- and therefore the index may return a stale chunk that has already been replaced by rebalance or miss newly added chunks. To this end, the index search is repeated with a smaller key in case the index returns a stale chunk, and the index search is supplemented by a linked-list traversal. A similar approach was used in earlier works~\cite{kiwi,tdls}. 
 
 % \code{get}'s optional \code{ver} parameters is used by scans to indicate the snapshot time; when not provided \code{get} simply returns the latest version it finds. A scan is executed by 
@@ -365,12 +381,11 @@ checks the \code{PO}  for new potentially relevant puts and waits for them to co
 
 
 %Once all relevant \code{put}s that were pending when a \code{get}  began complete, the 
-A 
-\code{get} proceeds without synchronization. If the chunk has a munk,  \code{get}   locates the key in it by first using binary search in its sorted prefix, and then traversing the linked list edges. 
+A \code{get} proceeds without synchronization. If the chunk has a munk,  \code{get}   locates the key in it by first using binary search in its sorted prefix, and then traversing linked list edges. 
 Otherwise, the \code{get} searches the key in the \code{row cache}. If it is not found, it queries 
 the \code{Bloom filter} to learn whether the key might be present in the target chunk's  
  \code{log}, and if so, searches for it there.  Finally, if the key is not in any of these places, it searches
- the  \code{SSTable}   on disk.
+ the  \code{SSTable}.
 
 \remove{
 A \code{put} proceeds by allocating the next free entry in 
@@ -390,12 +405,12 @@ whereas the row cache is not used by scans and holds only the latest version of 
 In case the put's version is the same as the current latest one, it over-writes the current one in the munk
 but appends a new one in the funk's log. 
 
-We note that in case multiple puts update the same key concurrently, subtle races may arise. 
-For example, two concurrent puts may update the funk and munk (or the funk and row cache) in  different orders,
+We note that in case multiple puts update the same key concurrently, a race may arise: 
+two concurrent puts may update the funk and munk (or the funk and row cache) in  different orders,
 and so the latest update to one will not coincide with the latest update to the other. 
 This can be addressed, for example, by locking
 keys. In our implementation we address this issue using monotonically increasing counters that determine 
-the order of puts within a version (a similar approach was taken in~\cite{kiwi});  we  enforce 
+the order of puts within a version (following the approach in~\cite{kiwi});  we  enforce 
 updates to occur in order of version-counter pairs  everywhere (including the row cache).  
 
 Finally, a put releases the chunk's lock and unregisters itself from \code{PO}.
@@ -426,7 +441,7 @@ removing deleted items, and sorting all the keys in the chunk.
 It can be invoked by a thread attempting to access the chunk or a dedicated background thread.
 \inred{Funk rebalance is important for two main reasons: (1) to reduce the time spent searching for a key in the \code{log}, and (2) to reduce disk space occupancy.}
 In case a chunk has a munk, rebalance usually reorganizes only  the munk, since all searches are served by it. 
-The respective funk is reorganized much less frequently, only in order to bound \inred{disk space occupancy}. 
+The respective funk is reorganized much less frequently, only in order to bound disk space occupancy. 
 
 %\paragraph{Synchronizing puts and rebalances.}
 Reorganization involves creating a new funk or munk  to replace the  current one.  In some cases, the chunk itself is split, creating new funks (and munks if applicable). 

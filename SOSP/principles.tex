@@ -1,14 +1,14 @@
-\sys\ is a persistent key-value store that provides, similarly to other KV-stores~\cite{hbase,leveldb,RocksDB}, 
-strong consistency guarantees:
+%\subsection{Goals}
+\subsection{Goals}
+\sys\ is a persistent key-value store that provides, similarly to popular industrial KV-stores~\cite{hbase,leveldb,RocksDB}, 
+strong consistency guarantees, namely,
 %\begin{enumerate}\itemsep0pt
-
 %\item 
-\emph{Atomic API} -- \emph{put, get}, and \emph{range scan} (or scan) operations. 
+(1) \emph{Atomic API} -- \emph{put, get}, and \emph{range scan} (or scan) operations. 
 Scans are atomic in the sense that all key-value pairs returned by a single scan belong to a consistent 
 snapshot reflecting the state of the data store at a unique point in time.
-
 %\item 
-\emph{Consistent recovery.} Following a crash, the system recovers to a well defined execution 
+(2) \emph{Consistent recovery}: following a crash, the system recovers to a well defined execution 
 point some time before the crash. The exact recovery point depends on the put persistency model.
 \emph{Asynchronous} persistence, where puts are buffered and persisted to disk in the background, allows 
 applications to trade durability for speed. Data consistency is preserved following recovery, 
@@ -35,12 +35,12 @@ in this ``hyper-local'' case.
 and reduce disk wear, especially for SSD devices. 
 
 \item \emph{Fast recovery.}  Because crashes are inevitable, 
-the mean-time-to-recover should be kept very short. 
+the downtime they entail should be kept very short. 
 \end{enumerate}
 
-%\subsection{Design choices}
+\subsection{Design choices}
 
-Given the aforementioned requirements, we make the following design choices in \sys:
+Given the aforementioned requirements, we make the following design choices:
 
 \begin{enumerate}\itemsep0pt
 \item \emph{Chunk-based organization.}
@@ -50,26 +50,27 @@ We organize data, both on-disk and in-memory,  in large chunks pertaining to  ke
 Each chunk has a file representation called  \emph{funk} (file chunk), and may be cached in a  memory data structure called \emph{munk} (memory chunk).
 This organization exploits spatial locality and is friendly to range scans.
 
-We use a number of techniques to optimize in-memory  access, including partially sorting keys in each chunk and 
-indexing munks. 
+We use a number of techniques to optimize chunk  access, including partially sorting keys in each chunk and 
+indexing chunks. 
 To expedite access to  keys whose chunks are only on-disk  (i.e., have no munks), 
 individual popular keys are cached in a \emph{row cache}, 
 and \emph{Bloom filters} are used to limit excessive access to disk. 
 
 \item \emph{Infrequent disk compactions.}
-As long as a chunk is cached (has a munk), its funk's organization does not have to be optimized since 
+As long as a chunk is cached (has a munk), there is no urgency to improve its funk's organization since 
 queries do not access it. Therefore, \sys\ infrequently performs reorganization (compaction) on such funks.
 Conversely, when a funk holds cold data, its organization hardly deteriorates, and therefore compaction is not necessary.
 Note that this is unlike LSM-trees, where all disk components are compacted, regardless of which keys reside in memory and whether 
 keys are hot or cold. 
 
-\item \emph{Multi-versioning for atomic scans.}
+\item \emph{Multi-versioning for atomic scans and consistent recovery.}
 \sys\ employs multi-versioning along with
 copy-on-write to keep data versions required by atomic scans. 
-In other words, if a put attempts to overwrite a key  required by an active scan, then a new version is created alongside the 
+In other words, if a put attempts to overwrite a key required by an active scan, then a new version is created alongside the 
 existing one, whereas versions that are not needed by any scan are not retained. 
 Thus, version management incurs a low overhead (as it occurs only on scans). 
 %It also defines a simple rule for garbage collecting old versions.
+In addition, tagging each value with a version allows \sys\ to easily recover to a consistent point in time, namely a version below which all puts have been persisted to disk.
 
 \item \emph{In-funk WALs.}
 \sys\ logs writes within funks and avoids duplicating the updates  in a separate WAL. This reduces write amplification and expedites recovery. 
