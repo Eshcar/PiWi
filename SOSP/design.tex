@@ -11,34 +11,12 @@ Finally, \cref{ssec:flush-recovery} discusses flushing data to disk and failure 
 \subsection{Data organization}
 \label{ssec:layout}
 
-\begin{figure*}[tb]
-\centerline{
-\begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{LSM.png}
-\caption{LSM: temporal partitioning}
-\label{fig:lsm}
-\end{subfigure}
-\hspace{0.5mm}
-\begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{Bepsilon.png}
-\caption{B-epsilon tree: data partitioned by key}
-\label{fig:bepsilon}
-\end{subfigure}
-\hspace{0.5mm}
-\begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\columnwidth]{PiWi.png}
-\caption{\sys: data partitioned by key}
-\label{fig:piwi}
-\end{subfigure}
-}
-\caption{Data layout.}
-\label{fig:layout}
-\end{figure*}
-
+ \remove{
 First we emphasize the key design differences between LSM (Figure~\ref{fig:lsm}), B$^\epsilon$-trees  (Figure~\ref{fig:bepsilon}), and \sys\ (Figure~\ref{fig:piwi}).
 
 LSM organizes data by temporal partitions, where most recent data is stored in-memory and the rest resides on disk. Data that appears in-memory and have not yet flushed to disk is persisted in a global WAL. This allows for a simple (yet not fast) recovery proceedure, which essentially replays the log to reconstruct the memory component. To allow for atomic scans production LSM stores manage standrd MVCC policy on top of the LSM-tree.  Each write operation is assigned an auto-incremented sequence number. Since each write adds an additional version to the key it writes to, the memory component often overflows--even if the working set is small enough to fit in memory--and the data is flushed to disk. This causes frequent data compactions on disk, which increses write amplification. To facilitate reads a block cache data structure stores the hot data blocks from files and bloom filters are used to avoid accessing most files that do not store the searched key.
  
+
 B$^\epsilon$-tree is a tree with asymptotic worst-case performance guarantees in a model with no memory hierarchy or concurrency. Data is partitioned by key. Writes are buffered through internal nodes and in leaves to be applied in batches, and update leaves in-place. 
 Like in B-trees supporting efficient atomic scans in B$^\epsilon$-trees is not trivial. Since updates are buffered in-memory in different paths of the tree before they are persisted in the leaves, supporting consitent recovery in multithreaded workloads is also not trivial.
 
@@ -47,6 +25,7 @@ Like in B-trees supporting efficient atomic scans in B$^\epsilon$-trees is not t
 We support atomic range scans under concurrency. The burden of increasing the version number is carried by the scans, hence, in the absence of scans write operations effectively update the values in-place. Data that appears in-memory is persisted in per-chunck WALs. The same mechanism that allows supporting atomic scans is utilized for guaranteeing consistent recovery even across these multiple logs. Since the content of chunck is often compacted in-memory disk compactions are infrequent  and write amplification is significantely reduced. To facilitate reads hot chuncks are cached in-memort, in addition hot keys that are not part of a hot range are cached in a row cache. Bloom filters are used to avoid accessing parts of the logs that do not store the searched key.
 
 We proceed with a deep dive into the design details of \sys.
+}
 
 \paragraph{Chunks, funks, and munks.}
 
