@@ -1,3 +1,4 @@
+\subsection{Motivation: spatial locality} 
 % KV-stores are everywhere
 Key-value stores (KV-stores) are widely used nowadays by a broad range of applications, and are projected
 to continue to increase in popularity in years to come; market research  identifies them as the 
@@ -5,49 +6,56 @@ to continue to increase in popularity in years to come; market research  identif
 
 % In many applications, keys are composite
 KV-stores provide a simple programming model. 
-The data is an ordered collection of key-values pairs. The application can perform random writes, 
-random reads, and range queries. A common design pattern is the use of \emph{composite} 
-keys that represent an agglomerate of attributes, where the attribute that is most important for range query
-performance is the key prefix. 
-%Range scans are then used to collect all the rows associated with a particular attribute. 
-For instance,  in messaging and email applications, keys are typically a concatenation of user id with additional fields 
+Data is an ordered collection of key-values pairs, and  the API supports random writes, 
+random reads, and range queries. 
+
+A common design pattern is the use of \emph{composite} 
+keys that represent an agglomerate of attributes.
+%, where the attribute that is most important for range query performance is the key prefix. 
+This approach is used in many domains, for example, 
+(1) In messaging and email applications, keys are typically a concatenation of user id with additional fields 
 such as thread id, time, and post id. A query in Facebook Messenger may retrieve, e.g., the last 100 messages for a 
 given user~\cite{Borthakur:2011:AHG:1989323.1989438}. %, or the hourly impression counts %over the last 24 hours for a given advertiser. 
-In social networks such as Facebook, associations representing graph edges are indexed by a key consisting of a 
-pair of object ids and an association type~\cite{Armstrong:2013:LDB:2463676.2465296}.
-An example query retrieves all friendship relations for a given user id.  
-Mobile analytics services such as Flurry Analtyics~\cite{flurry} aggregate statistics 
+(2) In Facebook's social network, a graph edge is indexed by a key consisting of two 
+object ids and an association type~\cite{Armstrong:2013:LDB:2463676.2465296}.
+An example  query retrieves all friendship relations for a given user id.  
+(3) Mobile analytics services such as Flurry Analtyics~\cite{flurry} aggregate statistics 
 on data identified by composite keys consisting of attributes such as app id, device, time, location, 
-event id, etc. The query API~\cite{flurry-api} is app id-centric, hence this dimension comes first 
-in the key.
+event id, etc. The query API~\cite{flurry-api} is app id-centric, hence this dimension is the key prefix.
 
 % Composite keys imply spatial data locality (in ranges) 
 Composite keys induce \emph{spatial locality} in workloads with high {temporal locality}, as 
-popular entities (for example, users in a social graph) result in popular \emph{key ranges}. 
-Spatial locality may also arise with simple (non-composite) keys, for example in 
-reverse  URLs, which  are often used as keys for web search indexing~\cite{Cho:1998:ECT:297805.297835}. 
-While the prevalence of temporal locality (i.e., frequent access to popular entities) in real-world workloads is widely-recognized, 
-and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions such as Zipf, 
+popular entities (email or social network users, apps tracked by an analytics engine, etc.) result in popular \emph{key ranges}. 
+Spatial locality may also arise with simple (non-composite) keys, for example, when 
+reverse  URL domains are used as keys for web  indexing~\cite{Cho:1998:ECT:297805.297835}. 
+
+% Overfitting for Zipf 
+The prevalence of temporal locality (i.e., frequent access to popular entities) in real-world workloads is widely-recognized, 
+and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions such as Zipf.
+Nevertheless, 
 these benchmarks fail to capture the spatial aspect of locality.
 This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys with no spatial locality,
-e.g., by partitioning data temporally (by recent access) as opposed to by key.
-In this paper, we make spatial locality a first class consideration in KV-stores design.
+e.g., by partitioning data temporally (by recent access) as opposed to by key range.
+In this work, we make spatial locality a first class consideration in KV-stores design.
 % which leads us to rethink the design principles underlying today's popular KV-stores.
 
 % LSM is the standard but not ideal for this  because of  write path  temporal grouping leading to fragmentation and write amplificaiton
-The de facto standard approach to building KV-stores today is \emph{LSM} -- log-structured merge trees~\cite{O'Neil1996}. 
+The de facto standard approach to building KV-stores today is \emph{LSM} -- log-structured merge trees~\cite{DBLP:journals/acta/ONeilCGO96}. 
 The LSM approach optimizes write performance by absorbing random writes in memory and periodically flushing 
-them as sequential files to disk. While  sequential disk access dramatically improves I/O throughput, it 
-is important to notice that the LSM design initially groups writes  into files \emph{temporally}, and not by key-range. 
+them as sequential files to disk. %While  sequential disk access dramatically improves I/O throughput, it 
+% is important to n
+Notice that the LSM design initially groups writes  into files \emph{temporally}, and not by key-range. 
 A background \emph{compaction} process later merge-sorts any number of files, grouping data by keys. 
 This approach is not ideal for workloads with high spatial locality for two reasons. 
 First, a popular key range will be fragmented across many files during long periods (between compactions). 
-Second, the compaction process is costly both in terms of performance 
-(as it consumes high disk bandwidth) and in terms of \emph{write amplification}, namely the number of physical writes 
-associated with a single application write. The latter is significant particularly in SSD as it increases disk wear. 
-The temporal grouping of data means that compaction is indiscriminate with respect to key popularity:  
+Second,  compaction  is costly in terms of  both performance 
+(disk bandwidth) and \emph{write amplification}, namely the number of physical writes 
+associated with a single application write. The latter is  particularly important in SSDs as it increases disk wear. 
+The temporal grouping means that compaction is indiscriminate with respect to key popularity:  
 Since new (lower level) files are always merged with old (higher level) ones, 
-a ``cold'' key range that has not been accessed since the  beginning of time continues to be repeatedly re-located
+ ``cold'' key ranges
+ % that has not been accessed since the  beginning of time 
+ continue to be repeatedly re-located
 by  compactions.  
 
 \remove{
@@ -66,22 +74,25 @@ which are common with composite keys.
 }
 
 % LSM is not the best when the entire working set fits in memory
-Finally, we note that LSM's temporal file organization optimizes disk I/O but induces a penalty on in-memory operation. 
+Finally, we note that LSM's temporal  organization optimizes disk I/O but induces a penalty on in-memory operation. 
 All keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured 
-via a separate \emph{write-ahead-log (WAL)}. 
-This increases write amplification and also makes the flushed keys unavailable for fast read from memory. 
-This is particularly wasteful if the system incorporates sufficient DRAM to hold most of the active working set. 
-The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices})  and 
-significant performance benefit DRAM offers make this scenario increasingly common.  
+via a separate \emph{write-ahead-log (WAL)}.
+This increases write amplification and also makes the flushed keys unavailable for fast read from memory,
+which is particularly wasteful if the system incorporates sufficient DRAM to hold most of the active working set. 
+The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices})  
+%and significant performance benefit DRAM offers 
+makes this scenario increasingly common.  
 
+\subsection{\sys} 
 % Drum roll 
 We present \sys, a persistent KV-store whose design diverges from the ubiquitous LSM approach.  
-Like  LSMs,  we optimize I/O by absorbing updates in memory and performing bulk writes to disk. 
-But unlike LSM's temporal data organization, we partition databy key, as done also in B-trees~\cite{Comer79} and B$^\epsilon$-trees~\cite{Bender15}. 
+Like  LSMs,  we optimize I/O by absorbing updates in memory before writing to disk. 
+But unlike LSM's temporal data organization, we partition data by key, as in B-trees~\cite{Comer79} and B$^\epsilon$-trees~\cite{Bender15}. 
 Data is  organized (both on disk and in memory) as a list (rather than a tree) 
 of large \emph{chunks} holding contiguous key ranges.
 To allow direct access (one I/O operation) to the on-disk chunk holding a given key, we use an auxiliary volatile index.  
 In addition, popular chunks are cached in RAM for the benefit of  both the write-path and the read-path.
+% and as in LSM, popular keys are cached for read access.
 
 % Benefits
 Spatially-organized chunks reduce the fragmentation of key ranges, resulting in 
@@ -91,13 +102,14 @@ Moreover, since chunks  are compacted in memory, writes are
 flushed to disk less frequently than LSM writes (relying on a per-chunk WAL for persistence)
 yielding 
 (3) reduced write amplification, and 
-(4) better performance with mostly memory-resident working sets.
+(4) better performance when most of the working set fits in memory.
 
 % Downsides
 The downside of this approach is that if the data lacks spatial locality and the active working set is big, 
 caching an entire chunk for a single popular key is wasteful. We mitigate this drawback by adding 
 a dedicated \emph{row cache} for hot keys. But since the row cache only serves the read-path, 
-this design is less optimal for mixed read/write workloads lacking spatial locality, for which LSMs are more suitable.  
+this design is less optimal for mixed read/write workloads lacking spatial locality. 
+For such cases, the LSM approach may well be more suitable than our range-based design.  
 
 \sys's performance scales with the number of threads on multicore hardware, 
 and all its APIs (put, get, and scan) provide strong (atomic) consistency guarantees 
@@ -109,10 +121,11 @@ We have implemented \sys\ in C++. We compare it to the recent release of RocksDB
 an industry-leading KV-store  based on LSM design. Our experiments, based on the popular 
 YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  RocksDB 
  when spatial  locality is high. 
-For example, with composite keys and a memory-resident working set, \sys\  accelerates scans 
+For example, with composite keys and a memory-resident working set, \sys\  accelerates 
+\inred{scans 
 by up to 3x, puts by up to $1.6$x, and gets by up to $2.2$x. With larger working sets, 
 \sys\ still improves over RocksDB's throughput by $25\% - 100\%$ on gets  and scans, 
-and $30\%$ on puts. 
+and $30\%$ on puts. }
 
 We do not claim, however, that \sys\/ is better than a mature LSM-tree implementation
 under all circumstances. As expected, 
