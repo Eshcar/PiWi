@@ -72,7 +72,7 @@ standard YCSB workload with medium spatial and temporal locality that represents
 \end{enumerate}
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
-(A to E) that range from write-heavy ($50\%$ puts) to read-heavy ($95\%-100\%$ gets or scans) settings. 
+(A to F) that range from write-heavy ($50\%$ puts) to read-heavy ($95\%-100\%$ gets or scans) settings. 
 In order to stress the system even more on the write side, we introduce a new workload, named 
 YCSB-P, comprised of $100\%$ puts. It captures a data load scenario (e.g., from an 
 external data pipeline). 
@@ -81,7 +81,8 @@ external data pipeline).
 the dataset, by filling an initially empty store with a sequence of KV-pairs, ordered by key. The second phase is a warm-up phase running read-only operations to fill the caches. The third
 phase exercises the specific scenario; all worker threads follow the same access pattern. Most experiments 
 perform 80 million data accesses. The experiments that run scans perform 4 to 16 million accesses, depending 
-on the scan size. We run 5 experiments for each data point, measure performance only during steady state (skipping load and warming phases), and present the median metric measurement with confidence interval. 
+on the scan size. We run 5 experiments for each data point, measure performance only during steady state (skipping load and warming phases), and present the median metric measurement %with confidence interval. 
+\inred{(TODO: mention std. dev. - we won't show confidence intervals)}.
 
 %\paragraph{Configuration.} 
 We only present the performance metrics in asynchronous logging mode, since synchronous logging 
@@ -132,6 +133,11 @@ We use RocksDB with the default configuration, which is also used by its public 
 \caption{YCSB-D}
 \label{fig:throughput:d}
 \end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_F_line.pdf}
+\caption{YCSB-F}
+\label{fig:throughput:f}
+\end{subfigure}
 \hspace{70pt}
 \begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_E-_line.pdf}
@@ -163,8 +169,8 @@ simple (non-composite) keys and scaling dataset sizes.}
 
 Figure~\ref{fig:throughput} presents throughput measurements under the Zipf-simple and 
 Zipf-composite key distributions in the put-only workload YCSB-P, the mixed YCSB-A and YCSB-B, 
-the get-only YCSB-C, and the scan-heavy YCSB-E with three different scan 
-sizes. 
+the get-only YCSB-C, the scan-heavy YCSB-E with three different scan sizes
+and the read-modify-write workload YCSB-F.
 %YCSB-B is omitted because the results are very close to those for YCSB-C. 
 For completeness, we also experiment with YCSB-D that exercises the 
 Latest workload -- frequent reads of the recently added simple keys. 
@@ -350,6 +356,7 @@ Namely, \sys\/ achieves up to $1.6$x throughput versus RocksDB both with composi
 In workload YCSB-D (5\% put, 95\% get, Latest-simple distribution, Figure~\ref{fig:throughput:d}), the sampled key's position wrt the most recent key is distributed Zipf. This
 workload has medium spatial locality and thus exhibits similar trend to workload YCSB-B however, the gap is smaller, \sys\/ achieves up to $1.3$x throughput versus RocksDB.
 
+{\bf Read-modify-write.} \inred{TODO (when the data's available)}
 
 \remove{
 Since YCSB-C only exercises the read path, performance hinges on 
