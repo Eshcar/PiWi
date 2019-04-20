@@ -256,7 +256,7 @@ RocksDB wrt the put latency in this setting, it falls short wrt the get latency.
 
 When the working set does not fit in RAM, disk access dominates the tail latencies.
 Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
-that fulfils the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
+that fulfills the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
 For example, for the 64GB dataset, $1.9\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
 and the respective log search latencies are $1.7$ ms vs $4.4$ ms. This happens because in the latter, puts are more dispersed, 
 hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently so their logs grow longer.
@@ -404,7 +404,7 @@ under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 \subsection{\sys\ Insights}
 \label{ssec:drill} 
 
-\paragraph{Vertical scalabiliy.} 
+\paragraph{Vertical scalability.} 
 Figure~\ref{fig:scalability} illustrates \sys's throughput scaling for the 64GB dataset under both Zipf  
 distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 12 worker threads.  
 As expected, YCSB-C (read-only scenario) scales nearly perfectly (9.4x for composite keys, 7.7x for simple ones). 
@@ -504,8 +504,8 @@ Table~\ref{fig:pebbels-throughput} presents the range of throughput lift of \sys
 %We compare both the Zipf-simple and Zipf-composite 
 We compare workloads YCSB-P, and YCSB-A through YCSB-E. Experiments run Zipf-simple key distribution on 32GB data set, which is not our optimal execution point, and with 1 to 8 threads.
  \inred{TODO: time permitting, run pebblesDB with 12 threads, and also some mixed workload YCSB-A or YCSB-B or both}.
-We note that accros workloads the more threads being used the greater the lift is. We see similar trends also running with smaller data sets.
-In general, RocksDB outperforms Pebblesdb. This can be attributed to running on different hardware, using container and running with more threads than in the experiments presented in~\cite{PebblesDB}.
+We note that across workloads the more threads being used the greater the lift is. We see similar trends also running with smaller data sets.
+In general, RocksDB outperforms PebblesDB. This can be attributed to running on different hardware, using container and running with more threads than in the experiments presented in~\cite{PebblesDB}.
 
 
 \begin{table}

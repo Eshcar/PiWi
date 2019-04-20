@@ -60,7 +60,7 @@ Since metadata objects do not hold actual keys and values, they are significantl
 (typically, less than 1 KB instead of tens of MBs). 
 In addition, we keep a volatile \emph{chunk index} -- a sorted map from keys to chunks. 
 Index updates are lazy, so it only offers best-effort expedited search.
-%The detailes of the chunk's metadata structure are deferred to the the supplemental material.
+%The details of the chunk's metadata structure are deferred to the the supplemental material.
 
 A munk holds key-value pairs in an array-based linked list.  
 \remove{
@@ -72,13 +72,13 @@ sorted by key, so each cell's successor in the linked list is the ensuing cell i
 New key-value entries are appended after this prefix.
 As new entries are added, they create bypasses in the linked list, and consecutive keys in the
 list are no longer necessarily adjacent in the array. Nevertheless, as long as 
-a sizeable prefix of the  array  is sorted, bypasses are short in expectation.
+a sizable prefix of the  array  is sorted, bypasses are short in expectation.
 \remove{Key removals, in turn, leave obsolete values in the munk, so it is no longer compacted.}
 Keys can thus be searched efficiently via binary search on the sorted prefix followed by a short traversal of a bypass path at the suffix of the array. 
 
 
 As key-value pairs are added, overwritten, and removed munks and funks need to undergo reorganization. This includes  
-(1) \emph{compaction} to deallocate removed and overwritten data, 
+(1) \emph{compaction} to garbage-collect removed and overwritten data, 
 (2) \emph{sorting} keys to make searches more efficient,  and
 (3) \emph{splitting} overflowing chunks.
 All reorganizations are performed by \sys's \emph{rebalance} operation.
@@ -216,7 +216,7 @@ to read the appropriate chunk and does not find the new value although it should
 
 To remedy this, we have puts announce (in PO) the key they intend to change when beginning their operations, and have scans wait for relevant pending puts to complete. That is,
 a put operation first registers itself in PO with the key it intends to put.
-It thens reads GV and sets the version field in its PO entry to the read version. 
+It then reads GV and sets the version field in its PO entry to the read version. 
 After completing the actual put (in the appropriate funk and munk), it unregisters itself in PO (i.e., 
 indicates that the put is complete).
 
@@ -226,7 +226,7 @@ A scan, in turn,
 waits for the completion of all pending puts  that might affect it  -- these are puts of keys in the scanned key range, which either do not have a version yet or have versions lower than the scan time.
 This is done by busy waiting on the PO entry until it changes; monotonically increasing counters are used 
 in order to avoid ABA races. 
-This mechanism is a simplification of the nonblocking put-scan synchronization described by the KiWi data structure~\cite{kiwi}.
+This mechanism is a simplification of the non-blocking put-scan synchronization described by the KiWi data structure~\cite{kiwi}.
 %For symmetry, get operations synchronize with puts the same way that scans do. 
 
 \remove{
@@ -237,13 +237,13 @@ and releases the chunk lock.
 
 
 \remove{
-% SImplified PPA
+% Simplified PPA
   The per-chunk PPA is used to synchronize pending puts  with ongoing scans. It holds an entry for every active inserting thread, consisting of a \code{key},  a \code{version}, 
  a \code{done} bit indicating whether the update has been completed, and a monotonically increasing 
  \code{counter} to avoid ABA scenarios.
  
 A put operation first registers itself in the appropriate chunk's PPA entry with the key it intends to put.
-It thens reads GV and sets the version field in its PPA entry to the read version. 
+It then reads GV and sets the version field in its PPA entry to the read version. 
 After completing the actual put (in the appropriate munk and/or funk), it sets the \code{done} bit.
 A scan, in turn, scans the PPA in addition to the chunk's data 
 (\code{karray},  \code{log} or \code{SSTable}  ). If it finds a pending put

@@ -1,6 +1,6 @@
 
 
-%common lsm stores RocksDB, scylladb, HyperLevelDB, LevelDB, hbase, cassandra
+%common LSM stores RocksDB, scylladb, HyperLevelDB, LevelDB, hbase, cassandra
 The vast majority of industrial mainstream NoSQL KV-stores are  implemented as LSM trees~\cite{hbase, 
 RocksDB, scylladb, Bigtable2008, cassandra2010}, building on the foundations set by O'Neil 
 et al.~\cite{DBLP:journals/acta/ONeilCGO96, Muth1998}. 
@@ -57,4 +57,4 @@ These systems resemble \sys\/ in their memory-centric approach.
 However, we are unaware of their consistency guarantees or performance optimizations with respect  to disk-resident data in such systems. 
 
 %Their persistent storage support is based on either B-tree~\cite{ignite} or LSM-tree design~\cite{redis}. 
-%used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, , and in-place updates~\cite{ignite}  more than a kv lsm store.
+%used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, , and in-place updates~\cite{ignite}  more than a KV LSM store.
