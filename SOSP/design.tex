@@ -11,42 +11,6 @@ Finally, \cref{ssec:flush-recovery} discusses flushing data to disk and failure 
 \subsection{Data organization}
 \label{ssec:layout}
 
-\begin{figure*}[tb]
-\centerline{
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{LSM.png}
-\caption{LSM: temporal partitioning}
-\label{fig:lsm}
-\end{subfigure}
-\hspace{3mm}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{Bepsilon.png}
-\caption{B-epsilon tree: data partitioned by key}
-\label{fig:bepsilon}
-\end{subfigure}
-\hspace{3mm}
-\begin{subfigure}{0.35\linewidth}
-\includegraphics[width=\columnwidth]{PiWi.png}
-\caption{\sys: data partitioned by key}
-\label{fig:piwi}
-\end{subfigure}
-}
-\caption{Data layout.}
-\label{fig:layout}
-\end{figure*}
-
-First we emphasize the key design differences between LSM (Figure~\ref{fig:lsm}), B$^\epsilon$-trees  (Figure~\ref{fig:bepsilon}), and \sys\ (Figure~\ref{fig:piwi}).
-
-LSM organizes data by temporal partitions, where most recent data is stored in-memory and the rest resides on disk. Data that appears in-memory and have not yet flushed to disk is persisted in a global WAL. This allows for a simple (yet not fast) recovery proceedure, which essentially replays the log to reconstruct the memory component. To allow for atomic scans production LSM stores manage standrd MVCC policy on top of the LSM-tree.  Each write operation is assigned an auto-incremented sequence number. Since each write adds an additional version to the key it writes to, the memory component often overflows--even if the working set is small enough to fit in memory--and the data is flushed to disk. This causes frequent data compactions on disk, which increses write amplification. To facilitate reads a block cache data structure stores the hot data blocks from files and bloom filters are used to avoid accessing most files that do not store the searched key.
- 
-B$^\epsilon$-tree is a tree with asymptotic worst-case performance guarantees in a model with no memory hierarchy or concurrency. Data is partitioned by key. Writes are buffered through internal nodes and in leaves to be applied in batches, and update leaves in-place. 
-Like in B-trees supporting efficient atomic scans in B$^\epsilon$-trees is not trivial. Since updates are buffered in-memory in different paths of the tree before they are persisted in the leaves, supporting consitent recovery in multithreaded workloads is also not trivial.
-
-\sys\ partitions data by key, as done in B$^\epsilon$-trees. However, data is organized as a list of large \emph{chunks}, not a tree, and nodes can be accessed directly (without a tree/list traversal) thanks to an auxiliary volatile index.
-\sys\ focuses on leveraging the memory hierarchy effectively for spatially-local workloads. 
-We support atomic range scans under concurrency. The burden of increasing the version number is carried by the scans, hence, in the absence of scans write operations effectively update the values in-place. Data that appears in-memory is persisted in per-chunck WALs. The same mechanism that allows supporting atomic scans is utilized for guaranteeing consistent recovery even across these multiple logs. Since the content of chunck is often compacted in-memory disk compactions are infrequent  and write amplification is significantely reduced. To facilitate reads hot chuncks are cached in-memort, in addition hot keys that are not part of a hot range are cached in a row cache. Bloom filters are used to avoid accessing parts of the logs that do not store the searched key.
-
-We proceed with a deep dive into the design details of \sys.
 
 \paragraph{Chunks, funks, and munks.}
 
@@ -54,9 +18,13 @@ We proceed with a deep dive into the design details of \sys.
 %Similarly to BTrees and other disk-friendly and cache-friendly data structures~\cite{kiwi}, 
 Data resides in chunks, each holding a contiguous key range.
 This improves the efficiency of both disk access and memory access, in particular, for  range scans. 
-At run-time, a list of all chunks' metadata is kept in RAM, where each chunk's data 
+Each chunk's data 
 (consisting of keys in the corresponding range and values associated with them) 
-is kept on disk (for persistence), and possibly in memory (for fast access). 
+is kept on disk (funks, for persistence), and possibly in memory (munks, for fast access). 
+Chunk's metadata objects are significantly smaller than munks and funks
+(typically, less than 1 KB instead of tens of MBs). Hence, at run-time, \sys\ holds in memory a list of all metadata objects.
+In addition, it keeps a volatile \emph{chunk index} -- a sorted map from keys to chunks. 
+Index updates are lazy, so it only offers best-effort expedited search.
 
 On disk, each chunk is associated with a funk, % as illustrated in Figure~\ref{fig:funk}. 
 consisting of two files:  a compacted and sorted  key-value map \emph{SSTable} (Sorted String Table~\cite{Bigtable2008}) 
@@ -91,12 +59,7 @@ Munks are volatile and can be removed and recreated from funks at any time based
 % Thus, multiple \emph{generations} of munks may exist for a chunk throughout its life time.
 %Chunks that are not cached are denoted \emph{munk-less}.
 
-At run-time, \sys\ holds in memory a list of chunk metadata objects.
-Since metadata objects do not hold actual keys and values, they are significantly smaller than munks and funks
-(typically, less than 1 KB instead of tens of MBs). 
-In addition, we keep a volatile \emph{chunk index} -- a sorted map from keys to chunks. 
-Index updates are lazy, so it only offers best-effort expedited search.
-%The detailes of the chunk's metadata structure are deferred to the the supplemental material.
+%The details of the chunk's metadata structure are deferred to the the supplemental material.
 
 A munk holds key-value pairs in an array-based linked list.  
 \remove{
@@ -108,13 +71,13 @@ sorted by key, so each cell's successor in the linked list is the ensuing cell i
 New key-value entries are appended after this prefix.
 As new entries are added, they create bypasses in the linked list, and consecutive keys in the
 list are no longer necessarily adjacent in the array. Nevertheless, as long as 
-a sizeable prefix of the  array  is sorted, bypasses are short in expectation.
+a sizable prefix of the  array  is sorted, bypasses are short in expectation.
 \remove{Key removals, in turn, leave obsolete values in the munk, so it is no longer compacted.}
 Keys can thus be searched efficiently via binary search on the sorted prefix followed by a short traversal of a bypass path at the suffix of the array. 
 
 
 As key-value pairs are added, overwritten, and removed munks and funks need to undergo reorganization. This includes  
-(1) \emph{compaction} to deallocate removed and overwritten data, 
+(1) \emph{compaction} to garbage-collect removed and overwritten data, 
 (2) \emph{sorting} keys to make searches more efficient,  and
 (3) \emph{splitting} overflowing chunks.
 All reorganizations are performed by \sys's \emph{rebalance} operation.
@@ -250,19 +213,9 @@ a subtle race may arise. Consider a put operation that obtains version $7$ from 
 inserting the value to the chunk, while a scan obtains version $7$ and increments GV to $8$. The scan then proceeds 
 to read the appropriate chunk and does not find the new value although it should be included in its snapshot.
 
-To remedy this, we have puts announce (in PO) the key they intend to change when beginning their operations, and have scans wait for relevant pending puts to complete. That is,
-a put operation first registers itself in PO with the key it intends to put.
-It thens reads GV and sets the version field in its PO entry to the read version. 
-After completing the actual put (in the appropriate funk and munk), it unregisters itself in PO (i.e., 
-indicates that the put is complete).
+To remedy this, we have puts announce (in PO) the key they intend to change when beginning their operations, and have scans wait for relevant pending puts to complete as explained below.
+This mechanism is a simplification of the non-blocking put-scan synchronization described by the KiWi data structure~\cite{kiwi}.
 
-A scan, in turn, 
-%begins by increasing GV and publishing itself. 
-%It then 
-waits for the completion of all pending puts  that might affect it  -- these are puts of keys in the scanned key range, which either do not have a version yet or have versions lower than the scan time.
-This is done by busy waiting on the PO entry until it changes; monotonically increasing counters are used 
-in order to avoid ABA races. 
-This mechanism is a simplification of the nonblocking put-scan synchronization described by the KiWi data structure~\cite{kiwi}.
 %For symmetry, get operations synchronize with puts the same way that scans do. 
 
 \remove{
@@ -273,13 +226,13 @@ and releases the chunk lock.
 
 
 \remove{
-% SImplified PPA
+% Simplified PPA
   The per-chunk PPA is used to synchronize pending puts  with ongoing scans. It holds an entry for every active inserting thread, consisting of a \code{key},  a \code{version}, 
  a \code{done} bit indicating whether the update has been completed, and a monotonically increasing 
  \code{counter} to avoid ABA scenarios.
  
 A put operation first registers itself in the appropriate chunk's PPA entry with the key it intends to put.
-It thens reads GV and sets the version field in its PPA entry to the read version. 
+It then reads GV and sets the version field in its PPA entry to the read version. 
 After completing the actual put (in the appropriate munk and/or funk), it sets the \code{done} bit.
 A scan, in turn, scans the PPA in addition to the chunk's data 
 (\code{karray},  \code{log} or \code{SSTable}  ). If it finds a pending put
@@ -398,8 +351,8 @@ the read of \code{gen} in order to ensure that \code{seq} indexes the correct ar
 This can be done by re-reading  \code{gen} or by loading one object that references both.
 } 
 
-Upon locating the chunk,  a \code{put} grabs its \code{rebalanceLock} in shared mode to ensure that the chunk is not being rebalanced during its operation. It then  publishes itself 
-in the \code{PO} as described in~\cref{ssec:scans} above.
+Upon locating the chunk,  a \code{put} grabs its \code{rebalanceLock} in shared mode to ensure that the chunk is not being rebalanced during its operation. It then registers itself in PO with the key it intends to put
+and then reads GV and sets the version field in its PO entry to the read version. 
 It proceeds to write the new key-value pair to the  funk's \code{log} and to the 
 munk (if one exists). 
 It also updates the row cache in case the key is present there. 
@@ -408,30 +361,40 @@ whereas the row cache is not used by scans and holds only the latest version of 
 In case the put's version is the same as the current latest one, it over-writes the current one in the munk
 but appends a new one in the funk's log. 
 
+\remove{
 We note that in case multiple puts update the same key concurrently, a race may arise: 
 two concurrent puts may update the funk and munk (or the funk and row cache) in  different orders,
 and so the latest update to one will not coincide with the latest update to the other. 
 This can be addressed, for example, by locking
-keys. In our implementation we address this issue using monotonically increasing counters that determine 
-the order of puts within a version (following the approach in~\cite{kiwi});  we  enforce 
-updates to occur in order of version-counter pairs  everywhere (including the row cache).  
+keys. 
+}
+A per-chunk monotonically increasing counter is used to determine 
+the order of concurrent put operations updating the same key (following the approach in~\cite{kiwi}).
+We  enforce 
+updates to occur in order of version-counter pairs by attaching it to the value in munk, \code{PO}, funk, and row cache.
+When a new chunk is created as a result of a split the children chunks inherit the counter from their parent.  
 
-Finally, a put releases the chunk's lock and unregisters itself from \code{PO}.
-
+After completing a put unregisters itself from \code{PO} (i.e., 
+indicates that the put is complete) and releases the chunk's lock .
 
 
 
 \paragraph{Scan.}
-A scan first fetches-and-increments the GV to obtain its snapshot time \code{gv}. 
- It then publishes itself in \code{PO} with its key-range and \code{gv}, to 
- signal to concurrent rebalances not to remove versions it needs. Next, it waits for pending
- \code{put}s that affect its key range to complete or obtain larger versions. % (similarly to \code{get}). 
-Finally, it collects the relevant values from all chunks in the scanned range.
+A scan first publishes its intent to obtain a version in the \code{PO} to 
+signal to concurrent rebalances not to remove versions it needs. It
+fetches-and-increments GV to obtain its snapshot time \code{gv}. 
+and then it publishes its key-range and \code{gv} in \code{PO}.
+Next the scan
+waits for the completion of all pending  \code{put}s  that might affect it  -- these are puts of keys in the scanned key range, which either do not have a version yet or have versions lower than the scan time.
+This is done by busy waiting on the PO entry until it changes; monotonically increasing counters are used 
+in order to avoid ABA races. 
+
+Then it collects the relevant values from all chunks in the scanned range.
 Specifically, if the chunk has a munk, the scan reads from it, for each key in its range, 
 the latest version of the value that precedes its snapshot time.
 Otherwise, the scan collects all the relevant versions for keys in its range from both 
 the \code{SSTable}   and the \code{log} and merges the results.
- 
+Finally, the scan unregisters from \code{PO}.
  %are executed by calling \code{createSnapshot(fromKey, toKey)} 
 %and then iterating over the key range with \code{next} calls.
 
@@ -466,6 +429,8 @@ For each active put thread in the chunk, if the thread's PPA entry includes a va
 are copied into the new funk or munk. Otherwise, scan uses CAS to set the PPA version to ``asleep'', 
 preventing the put from setting a version. 
 }
+
+A munk rebalance iterates through the \code{PO} to collect the maximum version number among the active scans that cannot be reclaimed yet. If a scan published its intent in the \code{PO}  but published no version number yet, the rebalance waits until either the version is published or the ABA number in the entry is increased.
 When the new munk is ready, the rebalance process replaces the munk pointer in the chunk and releases \code{rebalanceLock}, thus 
 re-activating the chunk.
 %A put operation that finds the target chunk immutable or its PPA version asleep waits on  rebalanceLock
