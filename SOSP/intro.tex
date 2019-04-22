@@ -40,7 +40,7 @@ In this work, we make spatial locality a first class consideration in KV-store d
 % which leads us to rethink the design principles underlying today's popular KV-stores.
 
 % LSM is the standard but not ideal for this  because of  write path  temporal grouping leading to fragmentation and write amplification
-The de facto standard approach to building KV-stores today is \emph{LSM} -- log-structured merge trees~\cite{DBLP:journals/acta/ONeilCGO96}. 
+The de facto standard approach to building KV-stores today is \emph{LSM} (log-structured merge) trees~\cite{DBLP:journals/acta/ONeilCGO96}. 
 The LSM approach optimizes write performance by absorbing random writes in memory and periodically flushing 
 them as sequential files to disk. %While  sequential disk access dramatically improves I/O throughput, it 
 % is important to n
@@ -84,6 +84,9 @@ The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices})
 makes this scenario increasingly common.  
 
 \subsection{\sys} 
+The main goal of this work is to draw attention to the importance of spatial locality in 
+today's workloads, and to propose a design alternative  that is better suited for such locality. 
+
 % Drum roll 
 We present \sys, a persistent KV-store whose design diverges from the ubiquitous LSM approach.  
 Like  LSMs,  we optimize I/O by absorbing updates in memory before writing to disk. 
@@ -118,20 +121,17 @@ under concurrency.
 In addition, \sys\/ recovers from crashes quickly since it does not need to replay the WAL on recovery.
 
 We have implemented \sys\ in C++. We compare it to the recent release of RocksDB~\cite{RocksDB}, 
-an industry-leading KV-store  based on LSM design. Our experiments, based on the popular 
-YCSB benchmark suite~\cite{YCSB}, show that \sys\/ significantly outperforms  RocksDB 
- when spatial  locality is high and also whenever most of the working set fits in RAM. 
-For example, with composite keys and a memory-resident working set, \sys\  accelerates 
-\inred{scans 
-by up to 3x, puts by up to $1.6$x, and gets by up to $2.2$x. With larger working sets, 
-\sys\ still improves over RocksDB's throughput by $25\% - 100\%$. } In traditional YCSB workloads,  \sys\ is comparable to RocksDB. 
-As expected, 
-RocksDB continues to perform better than \sys\ in mixed read/write workloads with large active working sets and no spatial locality.  
-%  Indeed, we do not claim, that \sys\/ is better than a mature LSM-tree implementation
-%under all circumstances. 
+an industry-leading LSM KV-store, as well as to PebblesDB~\cite{PebblesDB}, a research LSM store 
+with low write amplification. Our experiments, based on the popular YCSB benchmark suite~\cite{YCSB}, 
+show the following. (1) \sys\/ significantly outperforms RocksDB when spatial  locality is high, and also 
+whenever most of the working set fits in RAM. For example, with composite keys and a memory-resident 
+working set, \sys\  accelerates \inred{scans by up to 3x, puts by up to $1.6$x, and gets by up to $2.2$x. 
+With larger working sets, \sys\ still improves over RocksDB's throughput by $25\% - 100\%$. } In traditional
+YCSB workloads,  \sys\ is comparable to RocksDB. As expected, RocksDB performs better than 
+\sys\ in mixed read/write workloads with large active working sets and no spatial locality. \inred{(2) \sys\/ 
+outperforms PebblesDB by a wide margin under all workloads, especially in high-concurrency 
+scenarios (up to $3.2$x in puts, $3.2$x in gets, and $4.5$x in scans)}. 
 
-The main goal of this work is to draw attention to the importance of spatial locality in 
-today's workloads, and to propose a design alternative  that is better suited for such locality. 
 %As with all new approaches, there is ample  room for future improvements. 
   % The rest of this paper is organized as follows ... 
 We present our design principles in~\cref{sec:principles} and  the \sys\ algorithm 

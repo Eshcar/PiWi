@@ -3,7 +3,7 @@ of access, for example, when data items with identical composite key prefixes ar
 This prevalent access pattern is underused by the ubiquitous LSM tree design underlying KV-stores today.
 
 We present \sys, a general-purpose persistent KV-store optimized for spatially-local workloads. 
-\sys\ forgoes the temporal data organization of LSM trees, and partitions data by key, both in memory and on disk. 
+\sys\ forgoes the temporal data organization of LSM trees, and partitions data by key to exploit locality. 
 %
 \sys's design also reduces write amplification and expedites in-memory operation.
 Our experiments show that \sys\ consistently outperforms the state-of-the-art (by  \inred{1.25x to 3x})
