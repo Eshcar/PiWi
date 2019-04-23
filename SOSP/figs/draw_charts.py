@@ -26,7 +26,8 @@ piwi_linestyle = '-'
 piwi_marker = 'o'
 flurry_linecolor = tableau20[0]
 zip_linecolor = tableau20[2]
-latest_linecolor = tableau20[0]
+latest_linecolor = tableau20[4]
+uniform_linecolor = tableau20[4]
 myfontsize = 15
 
 munks_label = 'Munk Cache'
@@ -39,7 +40,9 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
               'Rocks Latest': {'color': latest_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
               'Piwi Flurry': {'color': flurry_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker},
               'Piwi Zipf': {'color': zip_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker},
-              'Piwi Latest': {'color': latest_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker}}
+              'Piwi Latest': {'color': latest_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker},
+              'Rocks Uniform': {'color': uniform_linecolor, 'linestyle': rocks_linestyle, 'linewidth':linewidth, 'marker': rocks_marker},
+              'Piwi Uniform': {'color': uniform_linecolor, 'linestyle': piwi_linestyle, 'linewidth':linewidth, 'marker': piwi_marker}}
 
 
 def renamings(label):
@@ -47,7 +50,7 @@ def renamings(label):
     # order is important
     rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
               'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple', 'flurry': 'Zipf-composite', '95% ':''}
-    new_label = label.replace('Piwi', 'YoDB').replace('Rocks', 'RocksDB')
+    new_label = label.replace('Piwi', 'EvenDB').replace('Rocks', 'RocksDB')
     for key in rename.keys():
         if key in label:
             return new_label.replace(key, rename[key])
@@ -94,8 +97,12 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
         ax_leg.axis('off')
         fig_leg.savefig('legend.pdf', bbox_inches='tight')
     else:
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc=legend, fontsize=fontsize)
+        h, l = ax.get_legend_handles_labels()
+        if file_name == 'Workload P':
+            # omit the common lines from per-graph legends to save space
+            h = h[4:]
+            l = l[4:]
+        ax.legend(h, l, loc=legend, fontsize=fontsize)
 
     fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -353,6 +360,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     caching = {}
     tail = {'flurry': {}, 'zipfian': {}}
     max_log = {}
+    p_uniform = {}
     
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -426,17 +434,27 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             tail[dist][row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
             
         for row in csv_reader:
-            if (row[0] == 'Throughput'):
+            if (row[0] == 'P uniform'):
+                break
+            if (row[0] == 'Throughput' or row[0] == ''):
                 continue
             max_log[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
-            
-    return {'experiments': experiments, 'latency': latency_breakdown,
+
+        for row in csv_reader:
+            if (row[0] == ''):
+                continue
+            p_uniform[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+
+
+    return {'experiments': experiments,
+            'latency': latency_breakdown,
             'bloom_filter_partitioning': bloom_filter_partitioning,
             'amplifications': amplifications,
             'scalability': scalability,
             'caching': caching,
-            'tail':tail,
-            'max_log':max_log}
+            'tail': tail,
+            'max_log': max_log,
+            'p_uniform': p_uniform}
 
 
 def draw_bloom_filter_partitions(chart_name, data):
@@ -469,6 +487,9 @@ def draw_line_charts(data):
     for workload in workloads:
         lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]}
                  for (k, v) in experiments[workload].items()]
+        if workload == 'P':
+            lines += [{'label': renamings(k), 'data': v, 'style': line_color[k]}
+                          for (k, v) in data['p_uniform'].items()]
         if len(lines) == 4:
             lines = [lines[1], lines[3], lines[0], lines[2]]
             legend_image=True
@@ -563,7 +584,7 @@ def draw_95(data):
                   'Piwi 95% Put': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker}}
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['flurry'].items()]
-    draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, y_upper=0.35, x_bottom=0,fontsize=myfontsize+5)
+    draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['zipfian'].items()]
     draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)    
@@ -573,7 +594,7 @@ def draw_log_size_charts(data):
                   'E100 Zipfian': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
                   'A Flurry': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
                   'A Zipfian': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
-    
+    lines = []
     lines = [{'label': renamings(k), 'data': [i/1000 for i in v], 'style': line_color[k]} for (k, v) in data['max_log'].items()]
     draw_line_chart(file_name='max_log_size', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, x=['128K','256K','512K','1M','2M','4M'], x_label='Maximum log size', x_bottom=0, y_upper=225)
     
@@ -581,16 +602,16 @@ def main():
     data = read_csv()
 
     draw_line_charts(data)
-    # draw_speedup_charts(data)
-    # draw_latency_charts(data)
-    # draw_bloom_filter_charts(data)
-    # draw_ampl_charts(data)
-    # draw_scalability_charts(data)
-    # draw_caching_effect(data)
-    # draw_95(data)
-    # draw_log_size_charts(data)
+    draw_speedup_charts(data)
+    draw_latency_charts(data)
+    draw_bloom_filter_charts(data)
+    draw_ampl_charts(data)
+    draw_scalability_charts(data)
+    ###draw_caching_effect(data)
+    draw_95(data)
+    draw_log_size_charts(data)
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":
