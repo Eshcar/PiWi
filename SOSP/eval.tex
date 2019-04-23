@@ -226,9 +226,6 @@ RocksDB & 1.92	& 1.95 & 2.02 & 2.20	& 2.44 \\
 \end{tabular}
 }}
 }
-\inred{
-\sys\/ advantages are also evident when puts are uniformly distributed (green lines in Figure~\ref{fig:throughput:p}). Since funk rebalances are local, the distribution of rebalances (dictated by the distribution of puts) has little effect. In RocksDB, however, each L0 SST contains keys covering a wide range of keys, causing L0 to L1 compactions.
-}
 %\centering
 %\hspace{0.05\linewidth}
 %\begin{subfigure}{0.3\linewidth}
@@ -246,12 +243,16 @@ RocksDB & 1.92	& 1.95 & 2.02 & 2.20	& 2.44 \\
 \label{fig:writeamp}
 \end{table}
 
+\inred{
+	\sys\/ advantages are also evident when puts are uniformly distributed (green lines in Figure~\ref{fig:throughput:p}). Since funk rebalances are local, the distribution of rebalances (dictated by the distribution of puts) has little effect. In RocksDB, however, each L0 SST contains keys covering a wide range of keys, causing L0 to L1 compactions to include a large number of SSTs.
+}
+
 {\bf Mixed put-get.} YCSB-A (50\% put, 50\% get, Figure~\ref{fig:throughput:a})
  is particularly challenging for \sys\/ because it exercises a high contention between gets and puts. 
 Here, the bottleneck is  disk search in gets, primarily the linear search in funk logs 
 that keep filling up due to concurrent puts. (In-memory searches are three orders of magnitude faster.)
 
-\sys\/ achieves $1.3$x to $2.2$x throughput versus RocksDB with composite keys, 
+\sys\/ achieves $1.4$x to $3.2$x throughput versus RocksDB with composite keys, 
 thanks to better exploitation of spatial locality. Figure~\ref{fig:tail_latency:co} shows that \sys\/
 is also faster wrt the tail (95\%) put and get latency in this scenario. With simple keys,
 \sys\/ is faster than RocksDB  for small datasets that fit in memory, and slower for big datasets.  
@@ -261,8 +262,8 @@ RocksDB wrt the put latency in this setting, it falls short wrt the get latency.
 When the working set does not fit in RAM, disk access dominates the tail latencies.
 Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
 that fulfills the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
-For example, for the 64GB dataset, $1.9\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
-and the respective log search latencies are $1.7$ ms vs $4.4$ ms. This happens because in the latter, puts are more dispersed, 
+For example, for the 64GB dataset, $3.3\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
+and the respective log search latencies are $2.6$ ms vs $4.2$ ms. This happens because in the latter, puts are more dispersed, 
 hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently so their logs grow longer.
 
 \remove{
@@ -327,14 +328,14 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 
 Naturally, the efficiency of in-memory caching is paramount. In the same example, the RAM hit rate 
 (munk and row cache combined) is 
-$90.5\%$ with composite keys versus $79\%$ without them. The row cache becomes instrumental as spatial locality drops --
- it serves $32.8\%$ of gets for Zipf-simple versus $12.4\%$ for Zipf-composite. 
+$82.1\%$ with composite keys versus $79\%$ without them. The row cache becomes instrumental as spatial locality drops --
+ it serves $32.8\%$ of gets for Zipf-simple versus $4.5\%$ for Zipf-composite. 
 
 {\bf Scan-dominated.} In YCSB-E (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}).
 the number of items to iterate through is  
 sampled uniformly in the range [1,S], where S is either 10, 100, or 1000. 
 This workload (except with very short scans on very large datasets) is the best for \sys, since it exhibits the spatial locality the system has been designed for. 
-\sys\/ achieves $1.25$x to $3$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
+\sys\/ achieves $1.4$x to $3.2$x throughput versus RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
 \cref{ssec:drill} discusses how the scan performance on big datasets could be improved through dynamic adaptation of the 
 funk log size limit.
  
@@ -348,19 +349,19 @@ between scans and puts, which slows down   progress. }
 {\bf Get-only.} 
 %YCSB-B, YCSB-C and YCSB-D are all get-dominated.  
 We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}), 
-\sys\/ achieves $1.6$x to $2.1$x throughput versus RocksDB with composite keys,
-and up to $1.6$x   with simple ones.   
+\sys\/ achieves $1.2$x to $2.0$x throughput versus RocksDB with composite keys,
+and up to $1.9$x  with simple ones.   
 %{\inred{YCSB-B (5\% put, 95\% get) and YCSB-D (5\% put, 95\% get, Latest-simple distribution,  
 %which achieve similar results, %Figure~\ref{fig:throughput:d})
 %are omitted. }}
 
 {\bf Get-dominated.} 
-YCSB-B (5\% put, 95\% get, Figure~\ref{fig:throughput:b}) achieve results similar  to YCSB-C (100\% get).
-Namely, \sys\/ achieves up to $1.6$x throughput versus RocksDB both with composite keys and with simple ones.   
+YCSB-B (5\% put, 95\% get, Figure~\ref{fig:throughput:b}) achieve results similar to YCSB-C (100\% get).
+Namely, \sys\/ achieves up to $1.6$x and $1.5$x throughput versus RocksDB with composite and simple keys, respectively.   
 In workload YCSB-D (5\% put, 95\% get, Latest-simple distribution, Figure~\ref{fig:throughput:d}), the sampled key's position wrt the most recent key is distributed Zipf. This
 workload has medium spatial locality and thus exhibits similar trend to workload YCSB-B however, the gap is smaller, \sys\/ achieves up to $1.3$x throughput versus RocksDB.
 
-{\bf Read-modify-write.} \inred{TODO (when the data's available)}
+{\bf Read-modify-write.} \inred{TODO. Zipf-composite reaches 1.2x-2.4x, while zipf-simple starts with 1.5x on 4GB DB, but degrades to 0.7x on 64GB DB. This is the results of an update rate like in A, combined with 100\% read rate. The RMW implementation here was at the YCSB level, hence identical for RocksDB and \sys\/. RocksDB does have a native RMW primitive that works differently (a modification predicate is stored, moving actual computation to gets). \sys\/ doesn't have such a primitive, making the workload less indicative.}
 
 \remove{
 Since YCSB-C only exercises the read path, performance hinges on 
@@ -414,6 +415,7 @@ distributions. We exercise the YCSB-A, YCSB-C and YCSB-P scenarios, with 1 to 12
 As expected, YCSB-C (read-only scenario) scales nearly perfectly (9.4x for composite keys, 7.7x for simple ones). 
 The other workloads scale slower, due to read-write and write-write contention as well as background munk and funk rebalances. 
 %YCSB-P scales 3.8x for both distributions at 8 threads. YCSB-A scales 6.4x for Zipf-composite and 4.6x for Zipf-simple at 12 threads. 
+\inred{TODO update the graph and this paragraph when the new results are available. Ignore till then.}
 
 \begin{figure}[th]
 \centering
