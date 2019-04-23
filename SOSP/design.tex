@@ -432,10 +432,9 @@ In this simple case, the chunk's status changes to \emph{asleep} (indicating tha
 when rebalance begins, and changes back to \emph{active} when rebalance ends. 
 Note that the asleep status is tantamount to the \code{rebalanceLock} being held in exclusive mode.
 
-Since funk rebalance involves I/O, it may take a long time, and so we  refrain from sleeping for its entire 
+Since funk rebalance involves I/O, it may take a long time, and so we refrain from blocking puts for its entire 
 duration. In this case, the chunk becomes asleep after most of the funk is populated, and 
-changes back to active after we 
-migrate the \code{log}'s new tail to the new chunk and swing the funk pointer in the chunk.
+changes back to active after we migrate the \code{log}'s new tail to the new chunk and swing the funk pointer in the chunk.
 
 
 \begin{figure}[tb]
@@ -475,13 +474,12 @@ we do not implement this feature in our prototype.
 \subsection{Disk flushes and recovery}
 \label{ssec:flush-recovery}
 
-Like most popular KV-stores, \sys\ supports two modes of operation -- \emph{synchronous} and \emph{asynchronous}. 
-With the former,  updates are persisted to disk before returning to the user, and so a user is ensured when its operation
-completes that the written data will survive failures. The drawback of this approach is that it is 
-roughly an order-of-magnitude slower than the asynchronous mode in  existing KV-stores like RocksDB~\cite{RocksDB} as well as in \sys. 
-
-The asynchronous mode expedites updates by performing them in
-RAM only and periodically \emph{flushing} them to disk. This reduces write latency and increases throughput, but 
+All puts write to the funk log, regardless of whether the chunk has a munk. Like most popular KV-stores, \sys\ supports 
+two modes of operation -- \emph{synchronous} and \emph{asynchronous}. With the former,  updates are persisted to disk 
+before returning to the user, and so a user is ensured when its operation completes that the written data will survive failures. 
+The drawback of this approach is that it is roughly an order-of-magnitude slower than the asynchronous mode in existing KV-stores 
+like RocksDB~\cite{RocksDB} as well as in \sys. In asynchronous mode, updates to funk logs occur in the OS cache but might 
+not be physically persisted untilthe explicit \code{fsync} call.  Asynchronous I/O reduces write latency and increases throughput, but 
 may lead to loss of data that was written shortly before the crash. The tradeoffs between the two approaches are 
 well known and the choice is typically left to the user.
 
@@ -493,7 +491,7 @@ the funks always reflect all completed updates. In this case, recovery is straig
 the chunks linked list and chunk index from the funks on disk, and then the database is immediately ready to serve new requests, populating munks and Bloom filters on-demand.  
 
 In the asynchronous mode, some suffix of the  data written before a crash may be lost, but we  
-ensure that the data store \emph{consistently} reflects a \emph{prefix} of the  values written.
+ensure that the data store consistently reflects a \emph{prefix} of the  values written.
 For example, if \code{put(k1, v1)} completes before \code{put(k2, v2)} 
 is invoked and then the system crashes, then following the recovery, 
 if \code{k2} appears in the data store, then \code{k1} must appear in it as well. 
@@ -515,34 +513,39 @@ Note that some puts with higher versions than \code{gv} might be reflected on di
 
 Recovery in \sys\ is lazy, keeping all data on disk, and 
 allowing it to be fetched from disk into munks  on demand in the course of the normal operation mode. 
-But to ensure consistency, following a recovery,  
-retrievals from funks should ignore newer versions that were not included in the latest completed checkpoint before the crash. This must be done by every operation that reads data from a funk -- \code{get} or \code{scan} from a munk-less chunk, funk rebalance,  or a munk load. 
+To ensure consistency, following a recovery,  
+retrievals from funks should ignore newer versions that were not included in the latest completed checkpoint before the crash. 
+This must be done by every operation that reads data from a funk, namely \code{get} or \code{scan} from a chunk without a munk, 
+funk rebalance, or munk load. 
 
-To facilitate this check, 
-we distinguish between pre-crash versions and new ones created after recovery using \emph{incarnation numbers}. Specifically, a version is split into an incarnation number (in our implementation, the four most-significant bits of the version) and a per-incarnation version number. The normal mode operation incrementing the GV in effect increases the latter. The recovery procedures increments the former and resets the latter, so 
-versions in the new incarnation begin from zero. 
+To facilitate this check, we distinguish between pre-crash versions and new ones created after recovery using \emph{epoch numbers}. 
+Specifically, a version is split into an epoch number (in our implementation, the four most-significant bits of the version) and a per-epoch version number. 
+The normal mode operation incrementing the GV in effect increases the latter. The recovery procedure increments the former and resets the latter, so 
+versions in the new epoch begin from zero. 
 
-We maintain a \code{recoveryTable} mapping each recovered incarnation to its last checkpointed version number. 
-For example, Table~\ref{table:recovery} shows a possible state of the recovery table after two recoveries, i.e., during incarnation $2$. 
+We maintain a \code{recoveryTable} mapping each recovered epoch to its last checkpointed version number. 
+For example, Table~\ref{table:recovery} shows a possible state of the recovery table after two recoveries, i.e., during epoch $2$. 
 
 \begin{table}[h]
 \begin{center}
 \begin{tabular}{ll}
-incarnation & last checkpointed version \\
+epoch & last checkpointed version \\
 \hline
 0 & 1375\\
 1 &  956\\
 \end{tabular}
 \end{center}
-\caption{Example recovery table during incarnation $2$.}
+\caption{Example recovery table during epoch $2$.}
 \label{table:recovery}
 \end{table} 
  
-Every read from a funk  (during \code{get},  \code{scan}, funk rebalance,  and munk load) then
-refers to the recovery table in order to identify versions that should be ignored -- these are versions from old incarnations that exceed the checkpoint number for their incarnation. 
-
+ \remove{
+Every read from a funk  %(during get,  scan, funk rebalance,  or munk load) 
+refers to the recovery table in order to identify versions that should be ignored -- 
+these are versions from old epochs that exceed the checkpoint number for their epoch. 
+}
 %\paragraph{Recovery procedure.} 
-The recovery procedure is very simple: it reads the checkpoint time from disk, loads the \code{recoveryTable} into memory, adds a new row to it with the last incarnation and latest checkpoint time, and persists it again. It then increments the incarnation number, and resumes normal operation with version number $0$ in the new incarnation.
+The recovery procedure is very simple: it reads the checkpoint time from disk, loads the \code{recoveryTable} into memory, adds a new row to it with the last epoch and latest checkpoint time, and persists it again. It then increments the epoch number, and resumes normal operation with version number $0$ in the new epoch.
 
 
 

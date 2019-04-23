@@ -1,10 +1,8 @@
 We implement \sys\ in C++. We borrow the \code{SSTable} implementation from the RocksDB open source~\cite{RocksDB}.
 Similarly to RocksDB, we use \code{jemalloc} for memory allocation.  
 
-We now describe some of our implementation choices. 
-
-Chunk index is implemented as a sorted array holding the minimal keys of all chunks.  
-Whenever a new chunk is created (upon split), the index is rebuilt and the reference to it is atomically flipped. 
+The chunk index is implemented as a sorted array holding the minimal keys of all chunks.  
+Whenever a new chunk is created (upon split), the index is rebuilt and the reference to the index is atomically flipped. 
 We found this simple implementation to be fastest since splits are infrequent. 
 
 \remove{
@@ -35,26 +33,19 @@ A munk rebalance iterates through the \code{PSA} to collect the maximum version 
 }
 
 %\paragraph{Adaptive mechanisms.} \sys\ applies two dynamic mechanisms that adapt to the workload. 
-Munk's cache applies simple LFU eviction policy,
-in which the score is a weighted average of the number of accesses per operation type. We 
-use exponential decay to maintain the recent access counts, similar to~\cite{tinyLFU}: periodically, all counters are 
+The munk cache applies simple LFU eviction policy. %in which the score is a weighted average of the number of accesses per operation type. 
+We use exponential decay to maintain the recent access counts, similar to~\cite{tinyLFU}: periodically, all counters are 
 sliced by a factor of two. 
-
-%where the frequency is actually a score that gives a different weights to each operation type.
-%We employ a sliding window scoring mechanism, that scores each chunks only based on recent accesses. The sliding window is implemented by occasionally slicing %the counters of all chunks by a factor of two, as was done in~\cite{tinyLFU}.
-
-%Funk rebalance frequency is also crucial for the performance of the system. Excessive rebalances may reduce ingestion throughput, while immensely reducing funk rebalance frequency can degrade the performance of scans that are required to sequentially traverse a very long log. To this end, \sys\ exploits the per-operation type counters also to determine the frequency in which each funk is rebalanced.
-
-The row cache, on the other hand, implements a coarse-grained LRU policy by maintaining a fixed-size queue of hash tables. 
+The row cache implements a coarse-grained LRU policy using a fixed-size queue of hash tables. 
 New entries are inserted into the head table. Once it overflows, a new empty table is added to the head,
 and the tail is discarded. Consequently, lookups for recently cached keys are usually served by the head 
 table, and unpopular keys are removed from the cache in a bulk, once the tail table is dropped.
 
 The row cache must never serve stale values. %, yet need not contain each and every updated key. 
 Therefore, a put updates the cache  if a previous version of that key is already in the cache. 
-If the key is not present in the cache, the put does not update it, to avoid overpopulating  in write-dominated workloads. 
-After a get, the up-to-date version is added to in the head table unless it is already there.
-If the key's version also exists in another table, its value is shared by the two versions, to avoid duplication.
+If the key is not present in the cache, the put does not update it, to avoid overpopulating the cache 
+in write-dominated workloads. After a get, the up-to-date KV-pair is added to the head table unless it is already there.
+If the key's value already also exists in another table, it is shared by the two versions, to avoid duplication.
 
 \remove{
 \paragraph{Chunk merges support.}
