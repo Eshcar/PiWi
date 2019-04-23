@@ -307,9 +307,10 @@ checks the \code{PO}  for new potentially relevant puts and waits for them to co
 \EndProcedure
 \Statex
 \Procedure{scan}{key1, key2}
+		\State  \code{PO[i]}  $\leftarrow$ \code{$\langle$scan, key1, key2, $\bot \rangle$ } \Comment publish scan's intent 
 		\State \code{gv} $\leftarrow$ \code{F\&I(GV)}   \Comment read global version
 		\State  \code{PO[i]}  $\leftarrow$ \code{$\langle$scan, key1, key2, gv$\rangle$ }
-		\Comment publish in PO
+		\Comment publish version in PO
 		\State  $T \leftarrow $  PO entries updating keys in range [\code{key1, key2}] 
 		\State wait until $\forall t \in T, t$  completes or has a version $>$   \code{gv}
 		\State $C \leftarrow$ \code{lookup(key1)}
