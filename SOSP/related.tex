@@ -18,14 +18,15 @@ reduces write amplification. In contrast, \sys\/ eliminates the concept of level
 and employs a flat storage layout instead. WiscKey~\cite{WiscKey} separates key and value storage 
 in SSTables, also in order to reduce amplification. This optimization is orthogonal to \sys's concepts,
 and could benefit our work as well. 
-VT-Trees~\cite{vttrees} are LSM-trees that apply a stitching policy to avoid re-writing already sorted data. This improves performance and significantly reduces write amplification in sequential workloads like time-based ingestion, and file-system workloads. 
+VT-Trees~\cite{vttrees} are LSM-trees that apply a stitching policy to avoid rewriting already sorted data. This improves performance and significantly reduces write amplification 
+in some scenarios (e.g., time-series and filesystem metadata workloads). 
 SLM-DB~\cite{slmdb} reduces write amplification by having only a single level of SSTable files on disk, supporting a selective compaction policy, and
-exploiting persistent memory to eliminate the WAL. To expedite reads, it maintains a B$^+$-tree index that points to KV pairs on disk. Scans benefit from the spatial locality of keys in the B$^+$-tree leaves. Never the less, LSM-like temporal partitioning is used, and the actual values are retrieved from disk.
+exploiting persistent memory to eliminate the WAL. To expedite reads, it maintains a B$^+$-tree index that points to KV pairs on disk. Scans benefit from the spatial locality of keys in the B$^+$-tree leaves. Nevertheless, LSM-like temporal partitioning is used, and the actual values are retrieved from disk.
 
 In-memory compaction was previously employed by
 Accordion~\cite{accordion}, which splits the LSM in-memory buffer into mutable 
 and immutable levels. Levels are periodically merged and compacted, 
-in order to reduce disk flushes. This mechanism is similar to munk rebalance in \sys, 
+in order to reduce disk flushes. This is similar to munk rebalance in \sys, 
 but the latter rebalances data at the chunk level and so benefits from spatial locality.
 %maintains a small dynamic  to absorb write operation. This active component is frequently merged with a larger immutable in-memory component by running at the background. 
 

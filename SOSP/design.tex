@@ -509,13 +509,14 @@ Such recovery to a \emph{consistent snapshot} of the data store is important, si
 \paragraph{Checkpointing for consistent recovery.}
 To support recovery to a consistent snapshot in asynchronous mode, we use a background process to
 periodically create and persist \emph{checkpoints} of the data store.
-The checkpointing process creates a snapshot similarly to the atomic scan mechanism. That is, 
-it begins by fetching-and-incrementing GV to obtain a 
+The checkpointing process creates a snapshot similarly to the atomic scan mechanism. 
+It begins by fetching-and-incrementing GV to obtain a 
  snapshot version \code{gv}.  Next, 
 it synchronizes with pending puts via PO to ensure that all puts with smaller versions are complete. 
-It then flushes all the pending writes to disk (using an \code{fsync} call). 
-Once the flush is complete, it writes \code{gv} to a dedicated \emph{checkpoint file} on disk.
-\inred{This guarantees the consistency invariant: at any given moment, all updates pertaining to versions smaller than or equal to the version recorded in the checkpoint file have been persisted.}
+It then flushes all the pending writes to disk (using \code{fsync}). 
+Once the flush completes, it writes \code{gv} to a dedicated \emph{checkpoint file} on disk.
+This enforces the correctness invariant: at all times, all updates pertaining to versions smaller 
+than or equal to the version recorded in the checkpoint file have been persisted.
 %indicating that all updates pertaining to versions smaller than or equal to this version have been persisted.
 Note that some puts with higher versions than \code{gv} might be reflected on disk while others are not. 
 
@@ -535,7 +536,7 @@ versions in the new epoch begin from zero.
 We maintain a \code{recoveryTable} mapping each recovered epoch to its last checkpointed version number. 
 For example, Table~\ref{table:recovery} shows a possible state of the recovery table after two recoveries, i.e., during epoch $2$. 
 
-\begin{table}[h]
+\begin{table}
 \begin{center}
 \begin{tabular}{ll}
 epoch & last checkpointed version \\
