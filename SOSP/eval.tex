@@ -74,16 +74,16 @@ and  the remainder of the key is drawn uniformally at random.
 Zipf-composite exhibits high spatial locality, representing workloads 
 with composite keys, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
 social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics databases~\cite{flurry}. 
-\inred{(For completeness, we also experimented with other distributions of the key's suffix. 
-The results were similar; only the primary dimension's distribution was significant for performance.)}
+For completeness, we also experimented with other distributions of the key's suffix. 
+The results were similar; only the primary dimension's distribution was significant for performance.
 
 \item {\em Latest-simple} -- frequent access to recently added simple keys. 
 Keys are inserted in sequential  order; the read keys' distribution is skewed towards recently added ones. 
 Specifically, the sampled key's position wrt the most recent key is distributed Zipf. This is a 
-standard YCSB workload with medium spatial and temporal locality which represents, e.g., status updates and reads. 
+standard YCSB workload with medium spatial and temporal locality, which represents, e.g., status updates and reads. 
 
-\inred{\item {\em Uniform} -- load of keys in random order (the keys are sampled uniformly at random). RocksDB
-reports a similar benchmark~\cite{rocksdb-benchmarks}; we present it for completeness. }
+\item {\em Uniform} -- ingestion of keys in random order (the keys are sampled uniformly at random). RocksDB
+reports a similar benchmark~\cite{rocksdb-benchmarks}; we present it for completeness.
 
 \end{enumerate}
 
@@ -116,8 +116,8 @@ The funk log size limit is 2MB for munk-less chunks, and 20MB for chunks with mu
 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
 We evaluate RocksDB with the default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.
-\inred{In a separate experiment, we follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune its memory resources.  
-The results do not affect our conclusions significantly; we discuss them in~\cref{ssec:drill}.}
+In a separate experiment, we follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune its memory resources.  
+The results do not affect our conclusions significantly; we discuss them in~\S\S\ref{ssec:drill}.
 
 \subsection{\sys\ versus \ RocksDB}
 \label{ssec:results} 
@@ -200,22 +200,22 @@ In {YCSB-P} (100\% put, Figure~\ref{fig:throughput:p}),
 and 0.9x to 1.6x with Zipf-simple keys. This scenario's bottleneck is the reorganization of persistent data  
 (funk rebalances in \sys, compactions in RocksDB), which causes write amplification and hampers performance. 
  
- \inred{Under the Zipf-composite workload, \sys\ benefits from spatial locality whereas RocksDB's write performance 
+ Under the Zipf-composite workload, \sys\ benefits from spatial locality whereas RocksDB's write performance 
  is relatively insensitive to it, as is typical for LSM stores. For small datasets (4-8GB), \sys\/ accommodates 
 all puts in munks, and so funk rebalances are rare. In big datasets, funk rebalances do occur, but mostly in 
 munk-less chunks, which are accessed infrequently. This is thanks to \sys\/'s high log size limit for chunks 
 with munks. Hence, in both cases, funk rebalances incur less I/O than RocksDB's compactions, 
 which do not distinguish between hot and cold data. Note that \sys's recovery time is not impacted by 
-long funk-logs since they are not replayed upon recovery.}
+long funk logs since they are not replayed upon recovery.
 
- \inred{Under the Zipf-simple workload, the gains are moderate due to low spatial locality. They are most pronounced 
- for small datasets that fit into RAM.}
+ Under the Zipf-simple workload, the gains are moderate due to low spatial locality. They are most pronounced 
+ for small datasets that fit into RAM.
  
- \inred{The Uniform workload exhibits no locality of any kind, and hence, there are very few redundancies. 
+The Uniform workload exhibits no locality of any kind, and hence, there are very few redundancies. 
  \sys\/ benefits from this because the keys get dispersed evenly across all chunks, hence all funk logs grow 
  slowly, and funk rebalances are infrequent. The throughput is therefore  absolutely insensitive to the dataset 
  size. In contrast, RocksDB performs compactions frequently, with little effect (no redundancies); its throughput 
- degrades quickly with the data size.}
+ degrades quickly with the data size.
  
  \remove{
  \inred{Increasing RocksDB's block cache size to 5GB is counterproductive in this scenario because it steals 
@@ -270,20 +270,21 @@ Thus, \sys\/ also reduces disk wear in multiple scenarios.
 {\bf Mixed put-get.} In YCSB-A (50\% put, 50\% get, Figure~\ref{fig:throughput:a})
 \sys\/ achieves $1.4$x to $3.5$x throughput vs RocksDB with composite keys, 
 thanks to better exploitation of spatial locality. 
-\inred{With simple keys, this scenario is 
+With simple keys, this scenario is 
 particularly challenging for \sys\/ because it serves a lot of gets from disk due to 
 low spatial locality. Here, the bottleneck is linear search in funk logs that keep filling 
-up due to concurrent puts. RocksDB does not have this path, hence its gets are 
-faster. However, \sys is still reasonably close to RocksDB in the worst case 
-(0.75x throughput for the 64GB dataset). }
+up due to the high rate of puts.
+RocksDB caching is more effective in this scenario, allowing a lower rate of disk accesses during get operations, hence they are
+% RocksDB does not have this path, hence its gets are 
+faster. However, \sys\/ is still reasonably close to RocksDB in the worst case 
+(0.75x throughput for the 64GB dataset).
 %(In-memory searches are three orders of magnitude faster.)
 
-\inred{
 Figure~\ref{fig:tail_latency}, which depicts tail (95\%) put and get latencies in this scenario, 
-corroborates our analysis. \sys\/ has lower tail get and put latencies with composite keys
+corroborates our analysis. \sys\/ has lower put and lower or similar get latencies with composite keys
 (Figure~\ref{fig:tail_latency:co}). With simple keys (Figure~\ref{fig:tail_latency:si}),  
 \sys\/ and RocksDB have similar tail put latencies, however in large datasets \sys\/ falls 
-short in the speed of gets.}
+short in the speed of gets.
 
 When the working set does not fit in RAM, disk access dominates the tail latency.
 Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
@@ -348,12 +349,12 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 \caption{On-disk get access latency}
 \label{fig:readstat:lat}
 \end{subfigure}
-\caption{{\sys\/ 95\% tail latency analysis by serving component, under a mixed get-put workload (YCSB-A).}}
+\caption{{\sys\/ latency analysis by serving component, under a mixed get-put workload (YCSB-A).}}
 \label{fig:readstat}
 \end{figure}
 
 In-memory caching is paramount. In the same case, the RAM hit rate 
-(munks and row cache combined) is $82.1\%$ with composite keys vs $79\%$ without them. 
+(munks and row cache combined) is $82.1\%$ with composite keys vs. $79\%$ without them. 
 The row cache becomes instrumental as spatial locality drops -- it serves $32.8\%$ of gets for Zipf-simple 
 vs $4.5\%$ for Zipf-composite. 
 
@@ -372,7 +373,6 @@ Both are quite fast as they are served from memory, but in the smaller dataset t
 between scans and puts, which slows down   progress. }
 %This phenomenon becomes insignificant with longer scans. 
 
-\inred{
 {\bf Get-dominated.} 
 We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}), 
 \sys\/ performs $1.2$x to $2$x over RocksDB with composite keys,
@@ -383,10 +383,10 @@ Workload YCSB-D (5\% put, 95\% get, Latest-simple distribution, Figure~\ref{fig:
 has medium spatial locality and thus exhibits a similar trend to workload YCSB-B; however, the gap is smaller.%, \sys\/ achieves up to $1.3$x throughput vs RocksDB.
 
 {\bf Get-modify-put.} YCSB implements this in-place update scenario through separate calls to get and put (i.e., the semantics are non-atomic). 
-The results are similar to YCSB-A (same rates of gets and puts, albeit with dependent timing). With composite keys, \sys\/ overtakes 
-RocksDB by 1.2x to 2.4x, however with simple keys, \sys's throughput is 0.7x vs RocksDB's for the 64GB dataset, due to 
-relative inefficiency of search in funk-logs. 
-}
+The put rate is identical to YCSB-A, however all operations perform a get (before the put or on its own). Since gets dominate the throughput under such workloads, YCSB-F is slower than YCBA-A.
+%The results are similar to YCSB-A (same rates of gets and puts, albeit with dependent timing). 
+With composite keys, \sys\/ overtakes 
+RocksDB by 1.2x to 2.4x. With simple keys, however, \sys's throughput is 0.7x vs RocksDB's for the 64GB dataset, due to the relative inefficiency of search in funk-logs. 
 
 \remove{
 
@@ -532,7 +532,6 @@ Partitioning to 16 mini-filters gives the best result; beyond this point the ben
 The impact of Bloom filter partitioning on \sys's %end-to-end get latency as well as the 
 memory footprint is negligible.
 
-\inred{
 \paragraph{RocksDB memory tuning.} We experiment with the RocksDB memory layout, 
 following its performance manual recommendation to allocate 1/3 of the available RAM 
 (5GB) to the block cache~\cite{RocksDBMemoryTuning}. The results are mixed. For a small 
@@ -542,13 +541,12 @@ and by $1.6$x for YCSB-E. This only partially reduces the gap between
 RocksDB and \sys\/ in this setting. However, for a big dataset (64GB) the extending the 
 block cache degrades the performance by as much as 0.35x for YCSB-A, YCSB-C and 
 YCSB-E. We therefore proceed with the default configuration, to avoid over-tuning. 
-}
 
 \subsection{\sys\ versus PebblesDB}
 \label{ssec:pebbles} 
 
 We compare \sys\ to PebblesDB, which was shown to significantly improve over RocksDB~\cite{PebblesDB}
-before its most recent version has released.  Our experiments (Table~\ref{fig:pebbels-throughput}) show 
+before RocksDB's recent versions.  Our experiments (Table~\ref{fig:pebbels-throughput}) show 
 that \sys\/ performs consistently better than PebblesDB in all explored scenarios -- even under the Zipf-simple 
 workload on a 32GB dataset, which is not ideal for \sys. \sys's advantage grows with the parallelism, as we scale 
 from 1 to 8 threads. We observe a similar trend with smaller datasets. 
