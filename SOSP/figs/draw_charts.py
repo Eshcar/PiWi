@@ -60,7 +60,7 @@ def renamings(label):
 
 def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
                     y_upper=None, x=x_axis, x_label='Dataset size',
-                    x_bottom=None, legend_image=False, fontsize=myfontsize):
+                    x_bottom=None, legend_image=False, fontsize=myfontsize, ncol=1, x_upper=None, bbox_to_anchor=None):
     fig, ax = plt.subplots()
     for line in lines:
         ax.plot(x, line['data'], label=line['label'],
@@ -86,6 +86,8 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
 
     if x_bottom is not None:
         ax.set_xlim(x_bottom, ax.get_xlim()[1])
+    if x_upper is not None:
+        ax.set_xlim(ax.get_xlim()[0], x_upper)
 
     if legend_image:
         figsize = (0.1, 0.1)
@@ -102,7 +104,7 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
             # omit the common lines from per-graph legends to save space
             h = h[4:]
             l = l[4:]
-        ax.legend(h, l, loc=legend, fontsize=fontsize)
+        ax.legend(h, l, loc=legend, fontsize=fontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor)
 
     fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -576,7 +578,8 @@ def draw_scalability_charts(data):
                   'C Zipfian': {'color': tableau20[4], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
     
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['scalability'].items()]
-    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, y_upper=450, x=[1,2,4,8,12], x_label='Threads', x_bottom=0)
+    draw_line_chart(file_name='scalability', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, y_upper=200,
+                    x=[1,2,4,8,12], x_label='Threads', x_bottom=0, bbox_to_anchor=(1, 1.03))
 
 
 def draw_caching_effect(data):
@@ -621,13 +624,13 @@ def main():
     # draw_speedup_charts(data)
     # draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
-    draw_ampl_charts(data)
-    # draw_scalability_charts(data)
+    # draw_ampl_charts(data)
+    draw_scalability_charts(data)
     # ###draw_caching_effect(data)
     # draw_95(data)
     # draw_log_size_charts(data)
     plt.tight_layout()
-    # plt.show()
+    plt.show()
 
 
 if __name__ == "__main__":
