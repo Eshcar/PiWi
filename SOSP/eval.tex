@@ -222,48 +222,43 @@ long funk-logs since they are not replayed upon recovery.}
  resources from the write path (e.g., reducing the throughput by 0.33x for the 64GB dataset under Zipf-simple).}
    
 The write amplification in this experiment is summarized in 
-Table~\ref{fig:writeamp}. We see that \sys\/ reduces the disk write rate dramatically, 
-with the largest gain observed for big datasets (e.g., $1.34$ versus $3.1$ for the 64GB 
-database under Zipf-composite). Thus, \sys\/ also reduces disk wear.  
+Figure~\ref{fig:writeamp}. We see that \sys\/ reduces the disk write rate dramatically, 
+with the largest gain observed for big datasets (e.g., $1.3$ versus $3.1$ for the 64GB 
+database under Zipf-composite and $1.1$ versus $7.6$ under Uniform). Thus, \sys\/ also reduces disk wear. 
+\inred{It should be noted that \sys\/'s low write amplification on the Uniform distribution would have increased on longer runs, as logs fill up and invoke funk rebalances. However, longer runs would have also caused larger RocksDB rebalances.}
 
-\begin{table}[t]
-\centerline{
-{\small{
-\begin{tabular}{lccccc}
-\hline 
- & 4GB & 8GB & 16GB & 32GB & 64GB \\
-\hline 
-Zipf-composite: &  \multicolumn{5}{c}{}  \\
-RocksDB & 2.08	& 2.29 & 2.35 & 2.40	& {\bf {3.10}}\\
-\sys &  1.33	 & 1.30	& 1.22	& 1.25	& { {\bf 1.34}}\\
-\hline 
-Zipf-simple: &  \multicolumn{5}{c}{}   \\
-RocksDB & 1.92	& 1.95 & 2.02 & 2.20	& 2.44 \\
-\sys &  1.31	 & 1.27	& 1.08	& 1.20	& 1.19 \\
-\hline 
-Uniform: &  \multicolumn{5}{c}{}   \\
-RocksDB & 1.92	& 1.95 & 2.02 & 2.20	& 2.44 \\
-\sys &  1.31	 & 1.27	& 1.08	& 1.20	& 1.19 \\
-\hline 
-\end{tabular}
-}}
-}
-%\centering
-%\hspace{0.05\linewidth}
-%\begin{subfigure}{0.3\linewidth}
-%\includegraphics[width=0.3\textwidth]{figs/P_write_amplification_disk_line.pdf}
-%\caption{YCSB-P}
-%\label{fig:writeamp:p}
-%\end{subfigure}
-%\hspace{0.05\linewidth}
-%\begin{subfigure}{0.3\linewidth}
-%\includegraphics[width=\textwidth]{figs/Workload_A_writeamplification_disk_line.pdf}
-%\caption{YCSB-A}
-%\label{fig:writeamp:a}
-%\end{subfigure}
-\caption{{\sys\/ versus RocksDB write amplification under the put-only workload (YCSB-P).}}
-\label{fig:writeamp}
-\end{table}
+%\begin{table}[t]
+%\centerline{
+%{\small{
+%\begin{tabular}{lccccc}
+%\hline 
+% & 4GB & 8GB & 16GB & 32GB & 64GB \\
+%\hline 
+%Zipf-composite: &  \multicolumn{5}{c}{}  \\
+%RocksDB & 2.08	& 2.29 & 2.35 & 2.40	& {\bf {3.10}}\\
+%\sys &  1.33	 & 1.30	& 1.22	& 1.25	& { {\bf 1.34}}\\
+%\hline 
+%Zipf-simple: &  \multicolumn{5}{c}{}   \\
+%RocksDB & 1.92	& 1.95 & 2.02 & 2.20	& 2.44 \\
+%\sys &  1.31	 & 1.27	& 1.08	& 1.20	& 1.19 \\
+%\hline 
+%Uniform: &  \multicolumn{5}{c}{}   \\
+%RocksDB & 1.92	& 1.95 & 2.02 & 2.20	& 2.44 \\
+%\sys &  1.31	 & 1.27	& 1.08	& 1.20	& 1.19 \\
+%\hline 
+%\end{tabular}
+%}}
+%}
+%\caption{{\sys\/ versus RocksDB write amplification under the put-only workload (YCSB-P).}}
+%\label{fig:writeamp}
+%\end{table}
+
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=0.35\textwidth]{figs/write_amp_p_line.pdf}
+	\caption{{\sys\/ versus RocksDB write amplification under the put-only workload (YCSB-P).}}
+	\label{fig:writeamp}
+\end{figure}
 
 \remove{
 \inred{
