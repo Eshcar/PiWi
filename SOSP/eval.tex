@@ -1,11 +1,21 @@
-We  compare the \sys\/ prototype to RocksDB -- a mature industry-leading KV-store implementation  -- under a variety of scenarios. \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
+The baseline for our evaluation is RocksDB -- a mature industry-leading KV-store implementation. 
+\remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) 
+and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. 
+For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} 
+We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
 It is worth noting that RocksDB's performance improved significantly during the last two years, primarily through 
-optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   We also compare against PebblesDB~\cite{PebblesDB}, a flavour of LSM trees which organizes the files in a skiplist-like layout, and TokuDB~\cite{TokuDB} an implementation of a B$^\epsilon$ tree. TokuDB crashed in executions with more then one thread; its throughput in single thread executions are inferior to \sys, hence the results are not presented. \inred{Maybe mention TokuDB is depricated?}
+optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   We also compare against PebblesDB, 
+a research LSM tree prototype that focuses on write amplification reduction and demonstrates advantage
+over RocksDB in some scenarios~\cite{PebblesDB}. Finally, we experiment with TokuDB~\cite{TokuDB} -- 
+the only publicly available KV-store whose design is based B$^\epsilon$-tree. However, TokuDB crashed 
+in all executions with more then one thread, whereas in all single thread executions its performance was 
+inferior to \sys's, hence these results are not presented.
 
 The experiment setup is described in \cref{ssec:setup}. 
 Performance results for \sys\ and RocksDB in 
 different workloads are presented in \cref{ssec:results}. 
-\cref{ssec:drill} analyzes \sys's sensitivity to different configuration settings and application parallelism. Finally, comparison with PebblesDB is presented in \cref{ssec:pebbles}.
+\cref{ssec:drill} analyzes \sys's sensitivity to different configuration settings and application parallelism. 
+Finally, a comparison with PebblesDB is presented in \cref{ssec:pebbles}.
 %\cref{ssec:recover} evaluates its recovery mechanism. 
  
 
@@ -14,22 +24,23 @@ different workloads are presented in \cref{ssec:results}.
 
 \paragraph{Testbed.} We employ a C++ implementation~\cite{Cpp-YCSB} of YCSB~\cite{YCSB}, the  de facto standard  
 benchmarking platform for KV-stores. 
-YCSB provides a standard set of APIs and a workload suite. 
+YCSB provides a set of APIs and a workload suite. 
 % Most modern KV-stores implement  YCSB adapter API's. 
 %The platform decouples data access from workload generation, 
 %thereby providing common ground for backend comparison. 
 
-A workload is defined by  (1) the ratio of get, put, and scan accesses, and (2) access pattern defined as a synthetic distribution of keys. 
-YCSB provides a basic set of benchmarks  inspired by real-life applications.
+A YCSB workload is defined by  (1) the ratios of get, put, and scan accesses, 
+and (2) a synthetic distribution of key access frequencies. 
+YCSB  benchmarks  are inspired by real-life applications.
 % and allows developing new ones through workload generation APIs. 
-A typical YCSB instance stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
+A typical YCSB experiment stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
 workloads. %It aggregates the key performance metrics for the scenario under test.  
 
-Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. Unless otherwise stated, the driver application 
-exercises 12 workers in all experiments. In order to guarantee a fair memory allocation to all KV-stores, we run each 
-experiment within a Linux container with 16GB RAM. 
+Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. Unless otherwise stated, the YCSB driver  
+exercises 12 workers. In order to guarantee a fair memory allocation to all KV-stores, 
+we run each experiment within a Linux container with 16GB RAM. 
 
-\paragraph{Metrics.} Our primary performance metric is \emph{throughput} 
+\paragraph{Metrics.} Our primary performance metrics are \emph{throughput} 
 and \emph{latency percentiles}, as produced by YCSB. 
 In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
 %In order to explain the results, we also explore \emph{read amplification} (in terms of bytes as well as number of system calls per application read).  
@@ -37,12 +48,12 @@ In addition, we measure \emph{write amplification}, namely, bytes written to sto
 %The OS performance counters are retrieved from the Linux proc filesystem. 
 
 \paragraph{Workloads.} 
-We scale the dataset size from 4GB to 64GB, in order to exercise multiple locality 
-scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, we use 
-10-byte keys that YCSB pads with a fixed 4-byte prefix (effectively, 14-byte keys), and 800-byte values. 
-The data is stored uncompressed. 
+We vary the dataset size from 4GB to 64GB, in order to exercise multiple locality 
+scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
+we use a 10-byte decimal serialization of 32-bit keys, which that YCSB pads with a fixed 4-byte prefix (so effectively, 
+the keys are 14 byte long), and 800-byte values. The data is stored uncompressed. 
 
-We study two different key-access distributions:  
+We study the following key-access distributions:  
 
 \begin{enumerate}
 \item {\em Zipf-simple} -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
@@ -57,25 +68,29 @@ and no spatial locality.
 
 \item {\em Zipf-composite}  -- a Zipfian distribution over composite keys. 
 The key's $14$ most significant bits comprise the primary attribute. 
-%% Flurry1
-%Both the primary attribute and  the remainder of the key are drawn from Zipf ($\theta=0.8$) distributions over their ranges. 
-%% Flurry2
-The primary attribute is drawn from Zipf ($\theta=0.8$) distributions over its range, and  the remainder of the key is drawn uniformally at random.
+The primary attribute is drawn from a Zipf ($\theta=0.8$) distribution over its range, 
+and  the remainder of the key is drawn uniformally at random.
 Zipf-composite exhibits high spatial locality, representing workloads 
 with composite keys, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
-social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics engines~\cite{flurry}. 
+social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics databases~\cite{flurry}. 
+\inred{(For completeness, we also experimented with other distributions of the key's suffix. 
+The results were similar; only the primary dimension's distribution was significant for performance.)}
 
 \item {\em Latest-simple} -- frequent access to recently added simple keys. 
 Keys are inserted in sequential  order; the read keys' distribution is skewed towards recently added ones. 
 Specifically, the sampled key's position wrt the most recent key is distributed Zipf. This is a 
-standard YCSB workload with medium spatial and temporal locality that represents, e.g., status updates and reads. 
+standard YCSB workload with medium spatial and temporal locality which represents, e.g., status updates and reads. 
+
+\inred{\item {\em Uniform} -- load of keys in random order (the keys are sampled uniformly at random). RocksDB
+reports a similar benchmark~\cite{rocksdb-benchmarks}. }
+
 \end{enumerate}
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
-(A to F) that range from write-heavy ($50\%$ puts) to read-heavy ($95\%-100\%$ gets or scans) settings. 
-In order to stress the system even more on the write side, we introduce a new workload, named 
-YCSB-P, comprised of $100\%$ puts. It captures a data load scenario (e.g., from an 
-external data pipeline). 
+(A to F) that range from write-heavy ($50\%$ puts) to read-heavy ($95\%-100\%$ gets or scans). 
+In order to stress the system even more on the write side, we introduce a new workload,  
+YCSB-P, comprised of $100\%$ puts. It captures a non-sequential data load scenario (e.g., an ETL 
+from an external data pipeline~\cite{flurry}). 
 
 \paragraph{Evaluation methodology and configuration.} Each experiment consists of three stages. The first stage builds 
 the dataset, by filling an initially empty store with a sequence of KV-pairs, ordered by key. The second phase is a warm-up phase running read-only operations to fill the caches. The third
