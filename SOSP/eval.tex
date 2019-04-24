@@ -179,7 +179,7 @@ we mention them wherever they bear statistical significance.}
 \end{subfigure}
 \caption{
 {\sys\/ versus RocksDB throughput (Kops), under multiple workloads with Zipf distributions over composite (two-component) and
-simple (non-composite) keys and scaling dataset sizes.}
+simple (non-composite) keys.}
 }
 \label{fig:throughput}
 \end{figure*}
@@ -358,7 +358,7 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 In-memory caching is paramount. In the same case, the RAM hit rate 
 (munks and row cache combined) is $82.1\%$ with composite keys versus $79\%$ without them. 
 The row cache becomes instrumental as spatial locality drops -- it serves $32.8\%$ of gets for Zipf-simple 
-versus $4.5\%$ for Zipf-composite. 
+vs $4.5\%$ for Zipf-composite. 
 
 {\bf Scan-dominated.} In YCSB-E (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}).
 the number of items to iterate through is  
@@ -430,7 +430,7 @@ under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.3\textwidth]{figs/Workload_D_line.pdf}
-\caption{{\sys\/ versus RocksDB throughput, under the YCSB-D workload and scaling dataset sizes.}}
+\caption{{\sys\/ versus RocksDB throughput, under the YCSB-D workload.}}
 \label{fig:throughput:d}
 \end{figure}
 }
