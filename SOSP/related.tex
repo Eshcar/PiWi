@@ -40,7 +40,7 @@ buffers. $B^{\epsilon}$-trees have been used in KV-stores (TokuDB~\cite{TokuDB})
 
 Tucana~\cite{tucana} is an in-memory $B^{\epsilon}$-tree index over a persistent log of KV-pairs. It applies multiple system
 optimizations to speed up I/O (all orthogonal to our work): block-device storage access, memory-mapped files, and copy-on-write 
-on internal nodes. However, Tucana provids neither strong scan semantics nor consistent recovery. 
+on internal nodes. However, Tucana provids neither strong scan semantics nor consistent recovery, and does not support concurrent put operations.
 
 In-memory KV-stores~\cite{ignite, redis, memcached, Srinivasan:2016:AAR:3007263.3007276} have originally emerged as fast volatile 
 data storage, e.g., for web and application caches. Over time, many evolved to support durability,
@@ -48,7 +48,7 @@ data storage, e.g., for web and application caches. Over time, many evolved to s
 yet still require the complete data set to reside in memory.
 %For example, Ignite~\cite{ignite} uses a B-tree index with in-place random updates. 
 %These systems resemble \sys\/ in their memory-centric approach. 
-We are unaware of the consistency guarantees or performance optimizations wrt disk-resident data in such systems. 
+We are unaware of the consistency guarantees or performance optimizations with regards to disk-resident data in such systems. 
 
 %Their persistent storage support is based on either B-tree~\cite{ignite} or LSM-tree design~\cite{redis}. 
 %used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, , and in-place updates~\cite{ignite}  more than a KV LSM store.
