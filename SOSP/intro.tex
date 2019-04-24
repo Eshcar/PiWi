@@ -125,12 +125,12 @@ an industry-leading LSM KV-store, as well as to PebblesDB~\cite{PebblesDB}, a re
 with low write amplification. Our experiments, based on the popular YCSB benchmark suite~\cite{YCSB}, 
 show the following. (1) \sys\/ significantly outperforms RocksDB when spatial  locality is high, and also 
 whenever most of the working set fits in RAM. For example, with composite keys and a memory-resident 
-working set, \sys\  accelerates \inred{scans by up to 3x, puts by up to $1.6$x, and gets by up to $2.2$x. 
-With larger working sets, \sys\ still improves over RocksDB's throughput by $25\% - 100\%$. } In traditional
+working set, \sys\  accelerates scans by up to $3.5$x, puts by up to $2.3$x, and gets by up to $2$x. 
+With larger working sets, \sys\ still improves over RocksDB's throughput by $24\% - 75\%$. In traditional
 YCSB workloads,  \sys\ is comparable to RocksDB. As expected, RocksDB performs better than 
-\sys\ in mixed read/write workloads with large active working sets and no spatial locality. \inred{(2) \sys\/ 
+\sys\ in mixed read/write workloads with large active working sets and no spatial locality. (2) \sys\/ 
 outperforms PebblesDB by a wide margin under all workloads, especially in high-concurrency 
-scenarios (up to $3.2$x in puts, $3.2$x in gets, and $4.5$x in scans)}. 
+scenarios (up to $2.9$x in puts, $3.2$x in gets, and $4.5$x in scans). 
 
 %As with all new approaches, there is ample  room for future improvements. 
   % The rest of this paper is organized as follows ... 
