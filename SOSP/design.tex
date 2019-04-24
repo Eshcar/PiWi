@@ -81,8 +81,7 @@ As key-value pairs are added, overwritten, and removed, munks and funks need to 
 (2) \emph{sorting} keys to make searches more efficient,  and
 (3) \emph{splitting} overflowing chunks.
 All reorganizations are performed by \sys's \emph{rebalance} operation.
-If the chunk has a munk, then rebalance compacts and sorts the munk, creating a new 
-(compacted and sorted) munk instead of the existing one. 
+If the chunk has a munk, the rebalance creates a new compacted and sorted munk instead of the existing one. 
 Note that munk rebalance happens in-memory, independently of munk replacement and disk flushes. 
 Funks are also compacted and replaced by new funks, albeit less frequently.
 Splits  create new chunks as well as new  funks (and possibly munks).
