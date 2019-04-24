@@ -353,6 +353,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
     bloom_filter_partitioning = {'A_32': {'flurry': [], 'zipfian': []}}
 
+    write_amp_p = {}
     amplifications = {'P': dict(),
                       'A': dict(),
                       'C': dict()}
@@ -365,7 +366,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
-            if row[0] == 'read_write_amplification':
+            if row[0] == 'write_amp_p':
                 break
             if row[0] is not '':
                 workload = row[0].split()[-1]
@@ -375,6 +376,13 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                 experiments[workload][label] = \
                     list(map(float, [i for i in row[1:] if i is not '']))
 
+        # P write amplification (new, including uniform)
+        for row in csv_reader:
+            if row[0] == 'read_write_amplification':
+                break
+            if row[0] is '':
+                continue
+            write_amp_p[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
         # read/write amplification
         for row in csv_reader:
             if row[0] == 'Workload C latency breakdown':
@@ -449,6 +457,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     return {'experiments': experiments,
             'latency': latency_breakdown,
             'bloom_filter_partitioning': bloom_filter_partitioning,
+            'write_amp_p': write_amp_p,
             'amplifications': amplifications,
             'scalability': scalability,
             'caching': caching,
@@ -532,6 +541,13 @@ def draw_bloom_filter_charts(data):
     draw_line_chart(file_name='Bloom filter', lines=[flurry_line, zipf_line], yaxis='Throughput, Kops', legend=2, y_upper=190, x=['1','2','4','8','16'], x_label='Split factor', x_bottom=0)
 
 def draw_ampl_charts(data):
+    write_amp_p = data['write_amp_p']
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]}
+             for (k, v) in write_amp_p.items()]
+    draw_line_chart('write_amp_p',
+                    lines,
+                    yaxis='Write amplification', legend_image=False, legend='upper left', y_upper=10)
+
     amplifications = data['amplifications']
     # P write amplification disk:
     draw_line_chart('P_write_amplification_disk',
@@ -601,15 +617,15 @@ def draw_log_size_charts(data):
 def main():
     data = read_csv()
 
-    draw_line_charts(data)
-    draw_speedup_charts(data)
-    draw_latency_charts(data)
-    draw_bloom_filter_charts(data)
+    # draw_line_charts(data)
+    # draw_speedup_charts(data)
+    # draw_latency_charts(data)
+    # draw_bloom_filter_charts(data)
     draw_ampl_charts(data)
-    draw_scalability_charts(data)
-    ###draw_caching_effect(data)
-    draw_95(data)
-    draw_log_size_charts(data)
+    # draw_scalability_charts(data)
+    # ###draw_caching_effect(data)
+    # draw_95(data)
+    # draw_log_size_charts(data)
     plt.tight_layout()
     # plt.show()
 
