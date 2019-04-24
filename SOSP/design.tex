@@ -1,10 +1,12 @@
 
 % The API of \sys\ is presented in Section~\ref{ssec:api}. 
-\cref{ssec:layout}  discusses \sys's data organization. 
-We discuss atomic scans in~\cref{ssec:scans}, and summarize \sys's
-normal (maintenance-free) operation flow  in~\cref{ssec:ops}.  
-The data structure's maintenance is discussed in~\cref{ssec:rebalance}.
-Finally,~\cref{ssec:flush-recovery} discusses data flushes and failure recovery.
+
+% couldn't get cref to work with subsections - hardcoding for now...
+In~\S\S\ref{ssec:layout} we discuss \sys's data organization. 
+We move to atomic scans in~\S\S\ref{ssec:scans}, and summarize \sys's
+normal (maintenance-free) operation flow in~\S\S\ref{ssec:ops}.  
+The data structure's maintenance is discussed in~\S\S\ref{ssec:rebalance}.
+Finally,~\S\S\ref{ssec:flush-recovery} discusses data flushes and failure recovery.
 
 
 \subsection{Data organization}
@@ -20,7 +22,7 @@ Each chunk's data
 (consisting of keys in the corresponding range and values associated with them) 
 is kept on disk (funks, for persistence), and possibly in memory (munks, for fast access). 
 Chunk metadata objects are significantly smaller than munks and funks
-(typically, less than 1 KB instead of tens of MBs). Hence, at run-time, \sys\ holds them in memory.
+(typically, less than 1 KB instead of tens of MBs). Hence \sys\ holds them in memory at run-time.
 In addition, it keeps a volatile \emph{chunk index} -- a sorted map from keys to chunks. 
 Index updates are lazy, so it offers only best-effort expedited search.
 
@@ -512,8 +514,9 @@ it begins by fetching-and-incrementing GV to obtain a
  snapshot version \code{gv}.  Next, 
 it synchronizes with pending puts via PO to ensure that all puts with smaller versions are complete. 
 It then flushes all the pending writes to disk (using an \code{fsync} call). 
-Once the flush is complete, it writes \code{gv} to a dedicated \emph{checkpoint file} on disk,
-indicating that all updates pertaining to versions smaller than or equal to this version have been persisted.
+Once the flush is complete, it writes \code{gv} to a dedicated \emph{checkpoint file} on disk.
+\inred{This guarantees the consistency invariant: at any given moment, all updates pertaining to versions smaller than or equal to the version recorded in the checkpoint file have been persisted.}
+%indicating that all updates pertaining to versions smaller than or equal to this version have been persisted.
 Note that some puts with higher versions than \code{gv} might be reflected on disk while others are not. 
 
 Recovery in \sys\ is lazy, keeping all data on disk, and 
@@ -552,17 +555,6 @@ these are versions from old epochs that exceed the checkpoint number for their e
 }
 %\paragraph{Recovery procedure.} 
 The recovery procedure is very simple: it reads the checkpoint time from disk, loads the \code{recoveryTable} into memory, adds a new row to it with the last epoch and latest checkpoint time, and persists it again. It then increments the epoch number, and resumes normal operation with version number $0$ in the new epoch.
-
-
-
-
-\remove{
-\subsection{\sys\ operations}
-\label{ssec:ops}
-
-\inred{Consider if we want full pseudocode}
-}
-
 
 
 

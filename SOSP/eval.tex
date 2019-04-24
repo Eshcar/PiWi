@@ -256,7 +256,7 @@ Thus, \sys\/ also reduces disk wear in multiple scenarios.
 
 \begin{figure}[t]
 	\centering
-	\includegraphics[width=0.3\textwidth]{figs/write_amp_p_line.pdf}
+	\includegraphics[width=0.35\textwidth]{figs/write_amp_p_line.pdf}
 	\caption{{\sys\/ vs RocksDB write amplification under the put-only workload (YCSB-P).}}
 	\label{fig:writeamp}
 \end{figure}
@@ -427,7 +427,7 @@ under a read-only workload (YCSB-C) with Zipf-composite distribution.}}
 \remove{
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.3\textwidth]{figs/Workload_D_line.pdf}
+\includegraphics[width=0.4\textwidth]{figs/Workload_D_line.pdf}
 \caption{{\sys\/ vs RocksDB throughput, under the YCSB-D workload.}}
 \label{fig:throughput:d}
 \end{figure}
@@ -445,7 +445,8 @@ The other workloads scale slower, due to read-write and write-write contention a
 
 \begin{figure}[th]
 \centering
-\includegraphics[width=0.3\textwidth]{figs/scalability_line.pdf}
+\includegraphics[width=0.4\textwidth]{figs/scalability_line.pdf}
+
 \caption{{\sys\/ scalability with the number of threads for 
 the 64GB dataset and different workloads. }}
 \label{fig:scalability}
