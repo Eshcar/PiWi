@@ -5,17 +5,18 @@ For example, its compaction scheduling policies are highly tuned to minimize imp
 We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
 It is worth noting that RocksDB's performance improved significantly during the last two years, primarily through 
 optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   We also compare against PebblesDB, 
-a research LSM tree prototype that focuses on write amplification reduction and demonstrates advantage
+a research LSM tree prototype that focuses on write amplification reduction and demonstrated advantages
 over RocksDB in some scenarios~\cite{PebblesDB}. Finally, we experiment with TokuDB~\cite{TokuDB} -- 
 the only publicly available KV-store whose design is based B$^\epsilon$-tree. However, TokuDB crashed 
 in all executions with more then one thread, whereas in all single thread executions its performance was 
 inferior to \sys's, hence these results are not presented.
 
-The experiment setup is described in \cref{ssec:setup}. 
+% hardcoded subsections symbol since didn't have time to hack cref...
+The experiment setup is described in~\S\S\ref{ssec:setup}. 
 Performance results for \sys\ and RocksDB in 
-different workloads are presented in \cref{ssec:results}. 
-\cref{ssec:drill} analyzes \sys's sensitivity to different configuration settings and application parallelism. 
-Finally, a comparison with PebblesDB is presented in \cref{ssec:pebbles}.
+different workloads are presented in ~\S\S\ref{ssec:results}. 
+~\S\S\ref{ssec:drill} analyzes \sys's sensitivity to different configuration settings and application parallelism. 
+Finally, a comparison with PebblesDB is presented in ~\S\S\ref{ssec:pebbles}.
 %\cref{ssec:recover} evaluates its recovery mechanism. 
  
 
@@ -104,8 +105,8 @@ of the mean in all experiments (in most of them, below $3\%$).
 We only present the performance metrics in asynchronous logging mode, since synchronous logging 
 is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
 
-All experiments in~\cref{ssec:results} use the same \sys\/ configuration, to avoid 
-over-tuning; \cref{ssec:drill} provides insights on parameter choices.
+All experiments in~\S\S\ref{ssec:results} use the same \sys\/ configuration, to avoid 
+over-tuning; \S\S\ref{ssec:drill} provides insights on parameter choices.
 We allocate 8GB to munks and 4GB to the row cache,
 so together they consume 12GB out of the 16GB container. 
 The row cache consists of three hash tables.  
@@ -362,7 +363,7 @@ sampled uniformly in the range [1,S], where S is either 10, 100, or 1000.
 This workload (except with very short scans on very large datasets) is favorable to \sys, 
 since it exhibits the spatial locality the system has been designed for. 
 \sys\/ achieves $1.4$x to $3.2$x throughput vs RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
-\cref{ssec:drill} discusses how the scan performance on big datasets could be improved through dynamic adaptation of the 
+\S\S\ref{ssec:drill} discusses how the scan performance on big datasets could be improved through dynamic adaptation of the 
 funk log size limit.
  
 \remove{

@@ -45,7 +45,7 @@ The row cache must never serve stale values. %, yet need not contain each and ev
 Therefore, a put updates the cache  if a previous version of that key is already in the cache. 
 If the key is not present in the cache, the put does not update it, to avoid overpopulating the cache 
 in write-dominated workloads. After a get, the up-to-date KV-pair is added to the head table unless it is already there.
-If the key's value already also exists in another table, it is shared by the two versions, to avoid duplication.
+If the key's value already exists in another table, it is shared by the two tables, to avoid duplication.
 
 \remove{
 \paragraph{Chunk merges support.}

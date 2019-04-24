@@ -426,7 +426,7 @@ after the merge started get logged but do not contribute to the merge result. At
 (2) the unaccounted puts are copied to the new log, 
 (3) the funk reference is flipped, and (4) \code{rebalanceLock} is released. 
 Simultaneous rebalance of the same funk by two threads is prevented in order to avoid redundant work,
-through a separate exclusive lock (see~\cref{ssec:layout}). %s\code{funkChangeLock}, 
+through a separate exclusive lock (see~\S\S\ref{ssec:layout}). %s\code{funkChangeLock}, 
 
 \remove{
 \paragraph{Splits and chunk life cycle.}
