@@ -620,17 +620,17 @@ def draw_log_size_charts(data):
 def main():
     data = read_csv()
 
-    # draw_line_charts(data)
-    # draw_speedup_charts(data)
-    # draw_latency_charts(data)
-    # draw_bloom_filter_charts(data)
-    # draw_ampl_charts(data)
+    draw_line_charts(data)
+    draw_speedup_charts(data)
+    draw_latency_charts(data)
+    draw_bloom_filter_charts(data)
+    draw_ampl_charts(data)
     draw_scalability_charts(data)
-    # ###draw_caching_effect(data)
-    # draw_95(data)
-    # draw_log_size_charts(data)
+    ###draw_caching_effect(data)
+    draw_95(data)
+    draw_log_size_charts(data)
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":
