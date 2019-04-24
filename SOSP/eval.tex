@@ -278,19 +278,20 @@ particularly challenging for \sys\/ because it serves a lot of gets from disk du
 low spatial locality. Here, the bottleneck is linear search in funk logs that keep filling 
 up due to concurrent puts. RocksDB does not have this path, hence its gets are 
 faster. However, \sys is still reasonably close to RocksDB in the worst case 
-(0.75x throughput under a 64GB dataset). }
+(0.75x throughput for the 64GB dataset). }
 %(In-memory searches are three orders of magnitude faster.)
 
-Figure~\ref{fig:tail_latency:co} shows that \sys\/
-is also faster wrt the tail (95\%) put and get latency in this scenario. With simple keys,
-\sys\/ is faster than RocksDB  for small datasets that fit in memory, and slower for big datasets.  
-Figure~\ref{fig:tail_latency:si} zooms in on this setting: while \sys\/ is on par with 
-RocksDB wrt the put latency in this setting, it falls short wrt the get latency.
+\inred{
+Figure~\ref{fig:tail_latency}, which depicts tail (95\%) put and get latencies in this scenario, 
+corroborates our analysis. \sys\/ has lower tail get and put latencies with composite keys
+(Figure~\ref{fig:tail_latency:co}). With simple keys (Figure~\ref{fig:tail_latency:si}),  
+\sys\/ and RocksDB have similar tail put latencies, however in large datasets \sys\/ falls 
+short in the speed of gets.}
 
-When the working set does not fit in RAM, disk access dominates the tail latencies.
+When the working set does not fit in RAM, disk access dominates the tail latency.
 Figure~\ref{fig:readstat:dist} depicts the distribution of gets by the storage  component 
 that fulfills the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
-For example, for the 64GB dataset, $3.3\%$ of gets are served from logs under Zipf-composite, versus $4.0\%$ under Zipf-simple,
+For example, for the 64GB dataset, $3.3\%$ of gets are served from logs under Zipf-composite, vs $4.0\%$ under Zipf-simple,
 and the respective log search latencies are $2.6$ ms vs $4.2$ ms. This happens because in the latter, puts are more dispersed, 
 hence the funks are (1) cached less effectively by the OS, and (2) rebalanced less frequently so their logs grow longer.
 
@@ -354,10 +355,10 @@ hence the funks are (1) cached less effectively by the OS, and (2) rebalanced le
 \label{fig:readstat}
 \end{figure}
 
-Naturally, the efficiency of in-memory caching is paramount. In the same example, the RAM hit rate 
-(munk and row cache combined) is 
-$82.1\%$ with composite keys versus $79\%$ without them. The row cache becomes instrumental as spatial locality drops --
- it serves $32.8\%$ of gets for Zipf-simple versus $4.5\%$ for Zipf-composite. 
+In-memory caching is paramount. In the same case, the RAM hit rate 
+(munks and row cache combined) is $82.1\%$ with composite keys versus $79\%$ without them. 
+The row cache becomes instrumental as spatial locality drops -- it serves $32.8\%$ of gets for Zipf-simple 
+versus $4.5\%$ for Zipf-composite. 
 
 {\bf Scan-dominated.} In YCSB-E (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000}).
 the number of items to iterate through is  
