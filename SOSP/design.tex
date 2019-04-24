@@ -2,11 +2,11 @@
 % The API of \sys\ is presented in Section~\ref{ssec:api}. 
 
 % couldn't get cref to work with subsections - hardcoding for now...
-In~\S\S\ref{ssec:layout} we discuss \sys's data organization. 
-We move to atomic scans in~\S\S\ref{ssec:scans}, and summarize \sys's
-normal (maintenance-free) operation flow in~\S\S\ref{ssec:ops}.  
-The data structure's maintenance is discussed in~\S\S\ref{ssec:rebalance}.
-Finally,~\S\S\ref{ssec:flush-recovery} discusses data flushes and failure recovery.
+In~\S\ref{ssec:layout} we discuss \sys's data organization. 
+We move to atomic scans in~\S\ref{ssec:scans}, and summarize \sys's
+normal (maintenance-free) operation flow in~\S\ref{ssec:ops}.  
+The data structure's maintenance is discussed in~\S\ref{ssec:rebalance}.
+Finally,~\S\ref{ssec:flush-recovery} discusses data flushes and failure recovery.
 
 
 \subsection{Data organization}
@@ -29,8 +29,8 @@ Index updates are lazy, so it offers only best-effort expedited search.
 A chunk %is associated with a funk, % as illustrated in Figure~\ref{fig:funk}. 
 consists of two files:  a compacted and sorted  key-value map \emph{SSTable} %(Sorted String Table~\cite{Bigtable2008}) 
 and a write \emph{log}. When a funk is created, the \code{SSTable} holds all the chunk's keys with corresponding values, and the \code{log}  is empty.
-New key-value pairs are subsequently appended to the unsorted \code{log}. If a key is over-written, it remains in the \code{SSTable} associated with the old value, and is included in the \code{log} with the new one.
-That is, the \code{log} is more up-to-date.
+New key-value pairs are subsequently appended to the unsorted \code{log}. If a key is over-written, its old value remains in the \code{SSTable}, and the new one value is included in the \code{log}.
+Namely, the \code{log} is more up-to-date.
 
 \remove{
 \begin{figure}[tb]
@@ -184,8 +184,8 @@ indicating that data pertaining to the snapshot should not be modified in place.
 To allow garbage collection of old versions, \sys\  tracks snapshot times of 
 active scans in the pending operations array, PO.
 The compaction process that runs as part of rebalance removes old versions that are no longer required for any  
-scan listed in PO. Specifically, for each key, it removes all but the last version that is smaller than the minimal
-scan entry in PO and also smaller than the value of GV when the rebalance begins. 
+scan listed in PO. Specifically, for each key, it removes all but the last version smaller than the minimal
+scan entry in PO and the value of GV when the rebalance begins. 
 
 \remove{
 For linearizing (i.e., determining an order on) updates, we associate each key-value pair written to the data store 
@@ -208,7 +208,7 @@ a subtle race may arise. Consider a put operation that obtains version $7$ from 
 inserting the value to the chunk, while a scan obtains version $7$ and increments GV to $8$. The scan then proceeds 
 to read the appropriate chunk and does not find the new value although it should be included in its snapshot.
 
-To remedy this, we have puts announce (in PO) the key they intend to change when beginning their operations, and have scans wait for relevant pending puts to complete as explained below.
+To remedy this, puts announce (in PO) the key they intend to change when beginning their operations, and scans wait for relevant pending puts to complete as explained below.
 This mechanism is a simplification of the non-blocking put-scan synchronization employed (and proven correct) in~\cite{kiwi}.
 
 %For symmetry, get operations synchronize with puts the same way that scans do. 
@@ -334,11 +334,10 @@ checks the \code{PO}  for new potentially relevant puts and waits for them to co
 
 
 %Once all relevant \code{put}s that were pending when a \code{get}  began complete, the 
-A \code{get} proceeds without synchronization. If the chunk has a munk,  \code{get}   locates the key in it by first using binary search in its sorted prefix, and then traversing linked list edges. 
-Otherwise, the \code{get} searches the key in the \code{row cache}. If it is not found, it queries 
-the \code{Bloom filter} to learn whether the key might be present in the target chunk's  
- \code{log}, and if so, searches for it there.  Finally, if the key is not in any of these places, it searches
- the  \code{SSTable}.
+\code{Gets} proceed without synchronization. If the chunk has a munk, \code{get} locates the key by first using a binary search on its sorted prefix and then traversing linked list edges. 
+Otherwise, the \code{get} looks for the key in the \code{row cache}. If not found, it queries 
+the \code{Bloom filter} to determine if the key might be present in the target chunk's  
+ \code{log}, and if so, searches for it there.  If the key is in non of the above, the \code{SSTable} is searched.
 
 \remove{
 A \code{put} proceeds by allocating the next free entry in 
@@ -351,7 +350,7 @@ This can be done by re-reading  \code{gen} or by loading one object that referen
 Upon locating the chunk,  a \code{put} grabs its \code{rebalanceLock} in shared mode to ensure that the chunk is not being rebalanced during the \code{put} operation. It then registers itself in PO with the key it intends to put,
 reads GV and sets the version field in its PO entry to the read version. 
 The \code{put} then proceeds to write the new key-value pair to the  funk's \code{log} and to the 
-munk (if one exists). 
+munk, if exists. 
 If the funk has no munk and the row cache contains an old value of the key, the row cache is then updated.
 The munk and funk are multi-versioned to support atomic scans, 
 whereas the row cache is not used by scans and holds only the latest version of each key. 
@@ -395,7 +394,6 @@ Finally, the scan unregisters from \code{PO}.
 \subsection{Rebalance}
 \label{ssec:rebalance}
 
-\inred{
 Rebalance is used to improve data organization in a funk or munk by removing old versions that are no longer needed 
 for scans, removing deleted items, and sorting all the keys in the chunk. It is typically triggered when the munk (funk)
 exceeds a capacity threshold.   
@@ -409,7 +407,7 @@ chunk's reference to the new munk or funk.
 \sys\/ executes munk rebalance in the context of the application thread that triggered it. The algorithm blocks 
 the puts to the munk throughout the rebalance, so that the concurrent gets and scans can exploit the munk's 
 immutability and proceed without synchronization. The chunk's \code{rebalanceLock}, which 
-is acquired in shared mode by puts and in exclusive mode by rebalance, serves this purpose (see~\cref{ssec:layout}).   
+is acquired in shared mode by puts and in exclusive mode by rebalance, serves this purpose (see~\S\ref{ssec:layout}).   
 
 The algorithm iterates through the \code{PO} to collect the minimum version number among the active scans that cannot be reclaimed yet. 
 Since each rebalance operates on a single chunk with a known key range, scans targeting non-overlapping ranges are ignored.
@@ -426,7 +424,7 @@ after the merge started get logged but do not contribute to the merge result. At
 (2) the unaccounted puts are copied to the new log, 
 (3) the funk reference is flipped, and (4) \code{rebalanceLock} is released. 
 Simultaneous rebalance of the same funk by two threads is prevented in order to avoid redundant work,
-through a separate exclusive lock (see~\S\S\ref{ssec:layout}). %s\code{funkChangeLock}, 
+through a separate exclusive lock (see~\S\ref{ssec:layout}). %s\code{funkChangeLock}, 
 
 \remove{
 \paragraph{Splits and chunk life cycle.}
@@ -477,19 +475,18 @@ Underflowing neighbor chunks (e.g., following a massive delete) can be merged fo
 Our current \sys\/ prototype does not implement this feature yet. 
 %Merges can be handled the same way by making the two merged munks immutable for the duration of the switch; 
 %we do not implement this feature in our prototype.
-}
 
 \subsection{Disk flushes and recovery}
 \label{ssec:flush-recovery}
 
 All puts write to the funk log, regardless of whether the chunk has a munk. Like most popular KV-stores, \sys\ supports 
-two modes of operation -- \emph{synchronous} and \emph{asynchronous}. With the former,  updates are persisted to disk 
-before returning to the user, and so a user is ensured when its operation completes that the written data will survive failures. 
+two modes of operation -- \emph{synchronous} and \emph{asynchronous}. In the former,  updates are persisted to disk 
+before returning to the user, ensuring the written data will survive failures once the operation completes. 
 The drawback of this approach is that it is roughly an order-of-magnitude slower than the asynchronous mode in existing KV-stores 
-like RocksDB~\cite{RocksDB} as well as in \sys. In asynchronous mode, updates to funk logs occur in the OS cache but might 
-not be physically persisted until the explicit \code{fsync} call.  Asynchronous I/O reduces write latency and increases throughput, but 
-may lead to loss of data that was written shortly before the crash. The tradeoffs between the two approaches are 
-well known and the choice is typically left to the user.
+like RocksDB~\cite{RocksDB} as well as in \sys. In asynchronous mode, updates to funk logs are passed to the OS but might 
+not be physically persisted until an explicit \code{fsync} call.  Asynchronous I/O reduces write latency and increases throughput, but 
+may lead to loss of data that was written shortly before a crash. The tradeoffs between the two approaches are 
+well known; the choice is typically left to the user.
 
 \paragraph{Recovery semantics.}
 In the synchronous mode, 
@@ -520,8 +517,7 @@ than or equal to the version recorded in the checkpoint file have been persisted
 %indicating that all updates pertaining to versions smaller than or equal to this version have been persisted.
 Note that some puts with higher versions than \code{gv} might be reflected on disk while others are not. 
 
-Recovery in \sys\ is lazy, keeping all data on disk, and 
-allowing it to be fetched from disk into munks  on demand in the course of the normal operation mode. 
+\sys\ recovery is lazy. All data is initially on disk, fetched into munks upon need during the course of the normal operation mode. 
 To ensure consistency, following a recovery,  
 retrievals from funks should ignore newer versions that were not included in the latest completed checkpoint before the crash. 
 This must be done by every operation that reads data from a funk, namely \code{get} or \code{scan} from a chunk without a munk, 
@@ -555,7 +551,7 @@ refers to the recovery table in order to identify versions that should be ignore
 these are versions from old epochs that exceed the checkpoint number for their epoch. 
 }
 %\paragraph{Recovery procedure.} 
-The recovery procedure is very simple: it reads the checkpoint time from disk, loads the \code{recoveryTable} into memory, adds a new row to it with the last epoch and latest checkpoint time, and persists it again. It then increments the epoch number, and resumes normal operation with version number $0$ in the new epoch.
+The recovery procedure reads the checkpoint time from disk, loads the \code{recoveryTable} into memory, adds a new row to it with the last epoch and latest checkpoint time, and persists it again. It then increments the epoch number and resumes normal operation with version number $0$ in the new epoch.
 
 
 
