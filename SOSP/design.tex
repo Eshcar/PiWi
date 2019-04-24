@@ -300,8 +300,9 @@ checks the \code{PO}  for new potentially relevant puts and waits for them to co
 %			\State \code{munk.karray[seq]}  $\leftarrow$ \code{key}
 %			\State \code{munk.varray[seq]}  $\leftarrow$ \code{val}
 %			\State link \code{munk.karray[seq]} into   \code{munk.karray}
-		\EndIf
+		\Else
 		\State update \code{$\langle$key, val$\rangle$} in row cache (if key is present)
+		\EndIf
 		\State unlock($C$.\code{rebalanceLock})
 		\State \code{PO[i]}  $\leftarrow \bot$ 
 \EndProcedure
@@ -347,11 +348,11 @@ the read of \code{gen} in order to ensure that \code{seq} indexes the correct ar
 This can be done by re-reading  \code{gen} or by loading one object that references both.
 } 
 
-Upon locating the chunk,  a \code{put} grabs its \code{rebalanceLock} in shared mode to ensure that the chunk is not being rebalanced during its operation. It then registers itself in PO with the key it intends to put
-and then reads GV and sets the version field in its PO entry to the read version. 
-It proceeds to write the new key-value pair to the  funk's \code{log} and to the 
+Upon locating the chunk,  a \code{put} grabs its \code{rebalanceLock} in shared mode to ensure that the chunk is not being rebalanced during the \code{put} operation. It then registers itself in PO with the key it intends to put,
+reads GV and sets the version field in its PO entry to the read version. 
+The \code{put} then proceeds to write the new key-value pair to the  funk's \code{log} and to the 
 munk (if one exists). 
-It also updates the row cache in case the key is present there. 
+If the funk has no munk and the row cache contains an old value of the key, the row cache is then updated.
 The munk and funk are multi-versioned to support atomic scans, 
 whereas the row cache is not used by scans and holds only the latest version of each key. 
 In case the put's version is the same as the current latest one, it over-writes the current one in the munk
@@ -400,7 +401,7 @@ for scans, removing deleted items, and sorting all the keys in the chunk. It is 
 exceeds a capacity threshold.   
 %It can be triggered either by a thread attempting to access the chunk or a dedicated background thread.
 In case a chunk has a munk, rebalance reorganizes only the munk, since all searches are served by it. 
-The respective funk is reorganized much less frequently, in order to bound the log's growth. 
+The respective funk is reorganized much less frequently, merely in order to bound the log's growth. 
 Both types of rebalance operations create new munks (funks) rather than reorganize in-place, 
 in order to reduce impact on the concurrent accesses. At the end of data reshuffle, \sys\/ flips the 
 chunk's reference to the new munk or funk.
@@ -408,19 +409,28 @@ chunk's reference to the new munk or funk.
 \sys\/ executes munk rebalance in the context of the application thread that triggered it. The algorithm blocks 
 the puts to the munk throughout the rebalance, so that the concurrent gets and scans can exploit the munk's 
 immutability and proceed without synchronization. This is done through the chunk's \code{rebalanceLock} -- 
-a read-write lock that is acquired in shared mode by puts, and in exclusive mode by rebalance. 
+a shared/exclusive lock that is acquired in shared mode by puts, and in exclusive mode by rebalance. 
 
-The algorithm iterates through the \code{PO} to collect the maximum version number among the active scans that cannot be reclaimed yet. 
+The algorithm iterates through the \code{PO} to collect the minimum version number among the active scans that cannot be reclaimed yet. 
+Since each rebalance operates on a single chunk with a known key range, scans targeting non-overlapping ranges are ignored.
 If a scan published its intent in the \code{PO}  but published no version yet, the rebalance waits until the version is published. 
 When the new munk is ready, the procedure flips the munk reference
 and releases \code{rebalanceLock}.
 
+<<<<<<< HEAD
 Funk rebalance creates a new (SSTable, log) pair. \sys\/ executes this procedure in a dedicated daemon thread. If the chunk has a munk, 
 the most efficient way of performing funk rebalance is through munk rebalance that is followed by the log's truncation and the
 reordered munk's flush to the new SSTable. Otherwise, the new SSTable is created by merge of the old SSTable with its log. 
+=======
+Funk rebalance creates an (SSTable, log) pair. \sys\/ executes this procedure in a dedicated daemon thread. If the chunk has a munk, 
+the most efficient way of performing funk rebalance is by creating the new SSTable using the munk's content (after filtering obsolete versions) and then truncating the log.
+%the most efficient way of performing funk rebalance is through munk rebalance that is followed by the log's truncation and the
+%reordered munk's flush to the new SSTable. 
+Otherwise, the new SSTable is created by merging the old SSTable with its log. 
+>>>>>>> e242bbff53c81cdb3a1627b03ba4ae2bb0bfe2d4
 This procedure involves I/O and may take a long time, so we do not block puts for the most of its duration. The puts that happened 
 after the merge started get logged but do not contribute to the merge result. At the end, \sys\/ performs a catch-up: 
-(1) new puts are blocked puts through \code{rebalanceLock},
+(1) new puts are blocked using the \code{rebalanceLock},
 (2) the unaccounted puts are copied to the new log, 
 (3) the funk reference is flipped, and (4) \code{rebalanceLock} is released. 
 Simultaneous rebalance of the same funk by two threads is prevented in order to avoid redundant work,
@@ -443,7 +453,7 @@ duration. In this case, the chunk becomes asleep after most of the funk is popul
 changes back to active after we migrate the \code{log}'s new tail to the new chunk and swing the funk pointer in the chunk.
 }
 
-\paragraph{Splits and chunk lifecycle.} 
+\paragraph{Splits and chunk life cycle.} 
 \begin{figure}[tb]
 \centerline{
 \includegraphics[width=.8\columnwidth]{state-diagram.png}
@@ -458,17 +468,17 @@ are indexed. When the appropriate funks are created, the chunks become \emph{act
 If a munk rebalance exceeds the data threshold in a new munk, it resorts to chunk split. The algorithm works as 
 follows: (1) split the munk into two ordered halves (as an optimization, reuse the first half already
 created by the normal rebalance), (2) create two new chunks, each referencing a different new munk
-but sharing the same funk, (3) insert the new chunks into the list after the new chunk, then insert them 
+but temporarily sharing the same funk, (3) insert the new chunks into the list after the old chunk, then insert them 
 into the index, (4) remove the old chunk from the index and the list, (5) split (in the background) the shared 
 funk in two, using the new munks, and update the funk references. Note that the old chunk remains immutable
 throughout the process. 
 
-In order to guarantee correctness of this multi-step process, we model a chunk's lifecycle as a finite state machine, 
-depicted by Figure~\ref{fig:chunklife}. A new chunk is created in \emph{baby} state, in which it immutable. Once added 
+In order to guarantee correctness of this multi-step process, we model a chunk's life cycle as a finite state machine, 
+depicted by Figure~\ref{fig:chunklife}. A new chunk is created in \emph{baby} state, in which it is immutable. Once added 
 to the index, a chunk transitions to \emph{child} state, in which it is mutable but cannot be rebalanced yet. Finally, when 
 a chunk gets its own funk it becomes \emph{active} -- i.e., eligible for all operations. A chunk that has been split into 
 two new chunks becomes \emph{aged} -- a state in which it remains immutable but can serve the gets and the scans 
-that are concurrently access it via the index. Once it gets removed from the chunk list and has no outstanding
+that are concurrently accessing it via the index. Once it gets removed from the chunk list and has no outstanding
 reads, it can be disposed. We omit the formal correctness proof for lack of space; see~\cite{kiwi} for similar proofs.   
 
 Underflowing neighbor chunks (e.g., following a massive delete) can be merged following a similar protocol. 
@@ -485,7 +495,7 @@ two modes of operation -- \emph{synchronous} and \emph{asynchronous}. With the f
 before returning to the user, and so a user is ensured when its operation completes that the written data will survive failures. 
 The drawback of this approach is that it is roughly an order-of-magnitude slower than the asynchronous mode in existing KV-stores 
 like RocksDB~\cite{RocksDB} as well as in \sys. In asynchronous mode, updates to funk logs occur in the OS cache but might 
-not be physically persisted untilthe explicit \code{fsync} call.  Asynchronous I/O reduces write latency and increases throughput, but 
+not be physically persisted until the explicit \code{fsync} call.  Asynchronous I/O reduces write latency and increases throughput, but 
 may lead to loss of data that was written shortly before the crash. The tradeoffs between the two approaches are 
 well known and the choice is typically left to the user.
 
@@ -525,7 +535,8 @@ funk rebalance, or munk load.
 
 To facilitate this check, we distinguish between pre-crash versions and new ones created after recovery using \emph{epoch numbers}. 
 Specifically, a version is split into an epoch number (in our implementation, the four most-significant bits of the version) and a per-epoch version number. 
-The normal mode operation incrementing the GV in effect increases the latter. The recovery procedure increments the former and resets the latter, so 
+Incrementing the GV in the normal mode effectively increases the latter.
+The recovery procedure increments the former and resets the latter, so 
 versions in the new epoch begin from zero. 
 
 We maintain a \code{recoveryTable} mapping each recovered epoch to its last checkpointed version number. 
