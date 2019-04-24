@@ -90,20 +90,20 @@ The in-memory (top level) store optimizes the write-path. To optimize the read p
 For persistence, data is logged to a WAL (write-ahead log). 
 
  %\emph{In-funk logs and infrequent disk compaction.}
-\sys\ logs writes within the funks and avoids duplicating the updates  in a separate WAL. This reduces write amplification and expedites recovery. 
+\sys\ logs writes within funks and avoids duplicating the updates  in a separate WAL. This reduces write amplification and expedites recovery. 
 The  log is merged into the chunk's sorted key-value table (\emph{SSTable} -- Sorted String Table~\cite{Bigtable2008}) 
 via an infrequent background compaction process. 
-As long as a chunk is cached (has a munk), there is no urgency to improve its on-disk organization since 
+While a chunk is cached (has a munk), there is no urgency to improve its on-disk organization since 
 queries do not access it. Therefore, \sys\ infrequently performs reorganization (compaction) on such funks,
 and compacts them only in-memory.
 Conversely, when a funk holds cold data, its organization hardly deteriorates, so no compaction is needed.
 Note that this is unlike LSM trees, where all disk components are compacted, regardless of which keys reside in memory.
 % and whether keys are hot or cold. 
 
-A related data organization is that of  B-trees and B$^\epsilon$-trees (Figure~\ref{fig:bepsilon}), which also partition data by key ranges. 
-B$^\epsilon$-trees further use in-node update buffers, which resemble \sys's in-funk WALs.
-However, the buffers there are not used for persistence; rather, their intent is to amortize the $O(\log n)$ tree traversal cost across multiple updates. 
-These trees are analyzed in a model with no memory hierarchy, where all nodes are disk-resident, but in practice, their upper layers 
+A related data organization is that of  B-trees and B$^\epsilon$-trees (Figure~\ref{fig:bepsilon}), who also partition data by key range. 
+B$^\epsilon$-trees use in-node update buffers, which resemble \sys's in-funk WALs.
+However, their buffers are not used for persistence --- their intent is to amortize the $O(\log n)$ tree traversal cost across multiple updates. 
+These trees are analyzed in a model with no memory hierarchy, where all nodes are disk-resident. In practice, their upper layers 
 are typically cached in RAM. Given such caching, amortizing the $O(\log n)$ traversal cost is not important, and indeed, practical data stores inspired by
 such trees forgo the buffers in internal nodes. Thus, every write entails an in-place update of a leaf node, and every read requires disk access unless the node it reads is cached.
 

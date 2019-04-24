@@ -12,11 +12,11 @@ in all executions with more then one thread, whereas in all single thread execut
 inferior to \sys's, hence these results are not presented.
 
 % hardcoded subsections symbol since didn't have time to hack cref...
-The experiment setup is described in~\S\S\ref{ssec:setup}. 
+The experiment setup is described in~\S\ref{ssec:setup}. 
 Performance results for \sys\ and RocksDB in 
-different workloads are presented in ~\S\S\ref{ssec:results}. 
-~\S\S\ref{ssec:drill} analyzes \sys's sensitivity to different configuration settings and application parallelism. 
-Finally, a comparison with PebblesDB is presented in ~\S\S\ref{ssec:pebbles}.
+different workloads are presented in ~\S\ref{ssec:results}. 
+~\S\ref{ssec:drill} analyzes \sys's sensitivity to different configuration settings and application parallelism. 
+Finally, a comparison with PebblesDB is presented in ~\S\ref{ssec:pebbles}.
 %\cref{ssec:recover} evaluates its recovery mechanism. 
  
 
@@ -49,7 +49,7 @@ In addition, we measure \emph{write amplification}, namely, bytes written to sto
 %The OS performance counters are retrieved from the Linux proc filesystem. 
 
 \paragraph{Workloads.} 
-We vary the dataset size from 4GB to 64GB, in order to exercise multiple locality 
+We vary the dataset size from 4GB to 64GB in order to exercise multiple locality 
 scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
 the keys are 32-bit integers encoded in decimal form (10 bytes), which YCSB pads with a fixed 4-byte prefix (so effectively, 
 the keys are 14 byte long). The values are 800-byte long. The data is stored uncompressed. 
@@ -102,11 +102,11 @@ load and warming phases), and present the median metric measurement. The standar
 of the mean in all experiments (in most of them, below $3\%$). 
 
 %\paragraph{Configuration.} 
-We only present the performance metrics in asynchronous logging mode, since synchronous logging 
-is approximately 10 times slower, thereby trivializing the results of every scenario that includes puts. 
+We only present the performance metrics in asynchronous logging mode. Synchronous logging 
+is approximately 10x slower, trivializing the results of scenarios that includes puts. 
 
-All experiments in~\S\S\ref{ssec:results} use the same \sys\/ configuration, to avoid 
-over-tuning; \S\S\ref{ssec:drill} provides insights on parameter choices.
+All experiments in~\S\ref{ssec:results} use the same \sys\/ configuration, to avoid 
+over-tuning; \S\ref{ssec:drill} provides insights on parameter choices.
 We allocate 8GB to munks and 4GB to the row cache,
 so together they consume 12GB out of the 16GB container. 
 The row cache consists of three hash tables.  
@@ -117,7 +117,7 @@ The funk log size limit is 2MB for munk-less chunks, and 20MB for chunks with mu
 % \inred{for write intensive workloads, and 512KB for other workloads.}
 We evaluate RocksDB with the default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.
 In a separate experiment, we follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune its memory resources.  
-The results do not affect our conclusions significantly; we discuss them in~\S\S\ref{ssec:drill}.
+The results do not affect our conclusions significantly; we discuss them in~\S\ref{ssec:drill}.
 
 \subsection{\sys\ versus \ RocksDB}
 \label{ssec:results} 
@@ -269,11 +269,11 @@ Thus, \sys\/ also reduces disk wear in multiple scenarios.
 
 {\bf Mixed put-get.} In YCSB-A (50\% put, 50\% get, Figure~\ref{fig:throughput:a})
 \sys\/ achieves $1.4$x to $3.5$x throughput vs RocksDB with composite keys, 
-thanks to better exploitation of spatial locality. 
+due to better exploitation of spatial locality. 
 With simple keys, this scenario is 
 particularly challenging for \sys\/ because it serves a lot of gets from disk due to 
-low spatial locality. Here, the bottleneck is linear search in funk logs that keep filling 
-up due to the high rate of puts.
+low spatial locality. The bottleneck is linear search in funk logs, which keep filling 
+up due to the high puts rate.
 RocksDB caching is more effective in this scenario, allowing a lower rate of disk accesses during get operations, hence they are
 % RocksDB does not have this path, hence its gets are 
 faster. However, \sys\/ is still reasonably close to RocksDB in the worst case 
@@ -363,8 +363,8 @@ the number of items to iterate through is
 sampled uniformly in the range [1,S], where S is either 10, 100, or 1000. 
 This workload (except with very short scans on very large datasets) is favorable to \sys, 
 since it exhibits the spatial locality the system has been designed for. 
-\sys\/ achieves $1.4$x to $3.2$x throughput vs RocksDB under Zipf-composite, and in Zipf-simple, improves over RocksDB in small datasets. 
-\S\S\ref{ssec:drill} discusses how the scan performance on big datasets could be improved through dynamic adaptation of the 
+\sys\/ achieves $1.4$x to $3.2$x throughput vs RocksDB under Zipf-composite, and in Zipf-simple, overcomes RocksDB in small datasets. 
+\S\ref{ssec:drill} discusses how scan performance on big datasets could be improved by dynamic adaptation of the 
 funk log size limit.
  
 \remove{
@@ -383,10 +383,10 @@ Workload YCSB-D (5\% put, 95\% get, Latest-simple distribution, Figure~\ref{fig:
 has medium spatial locality and thus exhibits a similar trend to workload YCSB-B; however, the gap is smaller.%, \sys\/ achieves up to $1.3$x throughput vs RocksDB.
 
 {\bf Get-modify-put.} YCSB implements this in-place update scenario through separate calls to get and put (i.e., the semantics are non-atomic). 
-The put rate is identical to YCSB-A, however all operations perform a get (before the put or on its own). Since gets dominate the throughput under such workloads, YCSB-F is slower than YCBA-A.
+The put rate is identical to YCSB-A, but all operations perform a get (before the put or on its own). As gets dominate the throughput under such workloads, YCSB-F is slower than YCBC-A.
 %The results are similar to YCSB-A (same rates of gets and puts, albeit with dependent timing). 
 With composite keys, \sys\/ overtakes 
-RocksDB by 1.2x to 2.4x. With simple keys, however, \sys's throughput is 0.7x vs RocksDB's for the 64GB dataset, due to the relative inefficiency of search in funk-logs. 
+RocksDB by 1.2x to 2.4x. With simple keys, however, \sys's throughput is 0.7x vs RocksDB's for the 64GB dataset, due to the inefficiency of log searches. 
 
 \remove{
 
