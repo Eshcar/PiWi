@@ -6,9 +6,10 @@ We present \sys, a general-purpose persistent KV-store optimized for spatially-l
 \sys\ forgoes the temporal data organization of LSM trees, and partitions data by key to exploit locality. 
 %
 \sys's design also reduces write amplification and expedites in-memory operation.
-Our experiments show that \sys\ consistently outperforms the state-of-the-art (by up to 3.5x)
-(1)  in cases of high spatial locality; and (2) when the system has sufficient DRAM to hold most of the active working set. 
-In traditional YCSB workloads with larger working sets than the available  DRAM, \sys\ is on par with 
-today's leading storage solutions.
-\sys\/ scales on multicore platforms and provides strong (atomic) guarantees for updates, lookups, and scans. 
+Our experiments show that \sys\ consistently outperforms the state-of-the-art performance 
+(by up to 3.5x) (1) in cases of high spatial locality; and (2) when the system has sufficient DRAM 
+to hold most of the active working set. 
+In traditional YCSB workloads with larger working sets,% than the available  DRAM, \
+\sys\ is on par with today's leading designs.
+\sys\/ provides low write amplification, scales on multicore platforms and guarantees strong (atomic) semantics for updates, lookups, and scans. 
 %Finally, it provides consistent crash recovery semantics, with near-instant recovery time. 
