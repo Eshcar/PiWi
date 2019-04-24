@@ -411,8 +411,8 @@ immutability and proceed without synchronization. This is done through the chunk
 a read-write lock that is acquired in shared mode by puts, and in exclusive mode by rebalance. 
 
 The algorithm iterates through the \code{PO} to collect the maximum version number among the active scans that cannot be reclaimed yet. 
-If a scan published its intent in the \code{PO}  but published no version number yet, the rebalance waits until either the version is published 
-or the ABA number in the entry is increased. When the new munk is ready, the procedure flips the munk reference
+If a scan published its intent in the \code{PO}  but published no version yet, the rebalance waits until the version is published. 
+When the new munk is ready, the procedure flips the munk reference
 and releases \code{rebalanceLock}.
 
 Funk rebalance creates a (SSTable, log) pair. \sys\/ executes this procedure in a dedicated daemon thread. If the chunk has a munk, 
