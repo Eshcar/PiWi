@@ -50,8 +50,8 @@ In addition, we measure \emph{write amplification}, namely, bytes written to sto
 \paragraph{Workloads.} 
 We vary the dataset size from 4GB to 64GB, in order to exercise multiple locality 
 scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
-we use a 10-byte decimal serialization of 32-bit keys, which that YCSB pads with a fixed 4-byte prefix (so effectively, 
-the keys are 14 byte long), and 800-byte values. The data is stored uncompressed. 
+the keys are 32-bit integers encoded in decimal form (10 bytes), which YCSB pads with a fixed 4-byte prefix (so effectively, 
+the keys are 14 byte long). The values are 800-byte long. The data is stored uncompressed. 
 
 We study the following key-access distributions:  
 

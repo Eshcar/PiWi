@@ -172,8 +172,6 @@ eliminate in our implementation by tracking the pending puts in per-chunk arrays
 \subsection{Multi-versioning for atomic scans}
 \label{ssec:scans}
 
-% \paragraph{Multi-versioning.}
-
 We support atomic scans via multi-versioning using the system-wide global version, GV. 
 A scan operation creates a \emph{snapshot} associated with GV's current value by incrementing GV, 
 which signals to ensuing put operations that they must not overwrite values  with the highest
@@ -408,33 +406,25 @@ chunk's reference to the new munk or funk.
 
 \sys\/ executes munk rebalance in the context of the application thread that triggered it. The algorithm blocks 
 the puts to the munk throughout the rebalance, so that the concurrent gets and scans can exploit the munk's 
-immutability and proceed without synchronization. This is done through the chunk's \code{rebalanceLock} -- 
-a shared/exclusive lock that is acquired in shared mode by puts, and in exclusive mode by rebalance. 
+immutability and proceed without synchronization. The chunk's \code{rebalanceLock}, which 
+is acquired in shared mode by puts and in exclusive mode by rebalance, serves this purpose (see~\cref{ssec:layout}).   
 
 The algorithm iterates through the \code{PO} to collect the minimum version number among the active scans that cannot be reclaimed yet. 
 Since each rebalance operates on a single chunk with a known key range, scans targeting non-overlapping ranges are ignored.
 If a scan published its intent in the \code{PO}  but published no version yet, the rebalance waits until the version is published. 
-When the new munk is ready, the procedure flips the munk reference
-and releases \code{rebalanceLock}.
+When the new munk is ready, the munk reference is flipped and \code{rebalanceLock} is released.
 
-<<<<<<< HEAD
 Funk rebalance creates a new (SSTable, log) pair. \sys\/ executes this procedure in a dedicated daemon thread. If the chunk has a munk, 
 the most efficient way of performing funk rebalance is through munk rebalance that is followed by the log's truncation and the
 reordered munk's flush to the new SSTable. Otherwise, the new SSTable is created by merge of the old SSTable with its log. 
-=======
-Funk rebalance creates an (SSTable, log) pair. \sys\/ executes this procedure in a dedicated daemon thread. If the chunk has a munk, 
-the most efficient way of performing funk rebalance is by creating the new SSTable using the munk's content (after filtering obsolete versions) and then truncating the log.
-%the most efficient way of performing funk rebalance is through munk rebalance that is followed by the log's truncation and the
-%reordered munk's flush to the new SSTable. 
-Otherwise, the new SSTable is created by merging the old SSTable with its log. 
->>>>>>> e242bbff53c81cdb3a1627b03ba4ae2bb0bfe2d4
+%the most efficient way of performing funk rebalance is by creating the new SSTable using the munk's content (after filtering obsolete versions) and then truncating the log.
 This procedure involves I/O and may take a long time, so we do not block puts for the most of its duration. The puts that happened 
 after the merge started get logged but do not contribute to the merge result. At the end, \sys\/ performs a catch-up: 
 (1) new puts are blocked using the \code{rebalanceLock},
 (2) the unaccounted puts are copied to the new log, 
 (3) the funk reference is flipped, and (4) \code{rebalanceLock} is released. 
 Simultaneous rebalance of the same funk by two threads is prevented in order to avoid redundant work,
-through a separate exclusive lock. %s\code{funkChangeLock}, 
+through a separate exclusive lock (see~\cref{ssec:layout}). %s\code{funkChangeLock}, 
 
 \remove{
 \paragraph{Splits and chunk life cycle.}
