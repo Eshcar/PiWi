@@ -146,7 +146,7 @@ The results do not affect our conclusions significantly; we discuss them in~\cre
 \end{subfigure}
 \begin{subfigure}{0.33\linewidth}
 \includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
-\caption{YCSB-D -- Latest, 5\% put, 95\% get}
+\caption{YCSB-D -- Latest-simple, 5\% put, 95\% get}
 \label{fig:throughput:d}
 \end{subfigure}
 \begin{subfigure}{0.33\linewidth}
@@ -177,14 +177,13 @@ The results do not affect our conclusions significantly; we discuss them in~\cre
 }
 \end{subfigure}
 \caption{
-{\sys\/ vs RocksDB throughput (Kops), under multiple workloads with Zipf distributions over composite (two-component) and
-simple (non-composite) keys.}
+{\sys\/ vs RocksDB throughput (Kops), under multiple workloads and key distributions.}
 }
 \label{fig:throughput}
 \end{figure*}
 
 Figure~\ref{fig:throughput} presents throughput measurements of \sys\/ and RocksDB
-in all YCSB workloads. Except YCSB-D, which exercises the Latest access pattern
+in all YCSB workloads. Except YCSB-D, which exercises the Latest-simple access pattern
 (depicted green), all benchmarks are run both under the Zipf-simple (depicted orange) 
 and Zipf-composite (depicted blue) key distributions. The YCSB-P (put-only) workload 
 also exercises the Uniform access pattern (depicted green). \sys\/ is depicted using solid
@@ -257,7 +256,7 @@ Thus, \sys\/ also reduces disk wear in multiple scenarios.
 
 \begin{figure}[t]
 	\centering
-	\includegraphics[width=0.35\textwidth]{figs/write_amp_p_line.pdf}
+	\includegraphics[width=0.3\textwidth]{figs/write_amp_p_line.pdf}
 	\caption{{\sys\/ vs RocksDB write amplification under the put-only workload (YCSB-P).}}
 	\label{fig:writeamp}
 \end{figure}
@@ -379,7 +378,7 @@ We see that in YCSB-C (100\% get, Figure~\ref{fig:throughput:c}),
 and up to $1.9$x  with simple ones (for small datasets). For YCSB-B (5\% put, 95\% get, Figure~\ref{fig:throughput:b}),
 the results are similar, since the impact of puts is small.  
 %Namely, \sys\/ achieves up to $1.6$x and $1.5$x throughput vs RocksDB with composite and simple keys, respectively.   
-Workload YCSB-D (5\% put, 95\% get, Latest distribution, Figure~\ref{fig:throughput:d})
+Workload YCSB-D (5\% put, 95\% get, Latest-simple distribution, Figure~\ref{fig:throughput:d})
 has medium spatial locality and thus exhibits a similar trend to workload YCSB-B; however, the gap is smaller.%, \sys\/ achieves up to $1.3$x throughput vs RocksDB.
 
 {\bf Get-modify-put.} YCSB implements this in-place update scenario through separate calls to get and put (i.e., the semantics are non-atomic). 
@@ -446,7 +445,7 @@ The other workloads scale slower, due to read-write and write-write contention a
 
 \begin{figure}[th]
 \centering
-\includegraphics[width=0.35\textwidth]{figs/scalability_line.pdf}
+\includegraphics[width=0.3\textwidth]{figs/scalability_line.pdf}
 \caption{{\sys\/ scalability with the number of threads for 
 the 64GB dataset and different workloads. }}
 \label{fig:scalability}
@@ -546,34 +545,29 @@ YCSB-E. We therefore proceed with the default configuration, to avoid over-tunin
 \subsection{\sys\ versus PebblesDB}
 \label{ssec:pebbles} 
 
-We compared \sys\ and PebblesDB 
-Table~\ref{fig:pebbels-throughput} presents the range of throughput lift of \sys\ over PebblesDB. 
-%We compare both the Zipf-simple and Zipf-composite 
-We compare workloads YCSB-P, and YCSB-A through YCSB-E. Experiments run Zipf-simple key distribution on 32GB data set, which is not our optimal execution point, and with 1 to 8 threads.
- \inred{TODO: time permitting, run pebblesDB with 12 threads, and also some mixed workload YCSB-A or YCSB-B or both}.
-We note that across workloads the more threads being used the greater the lift is. We see similar trends also running with smaller data sets.
-In general, RocksDB outperforms PebblesDB. This can be attributed to running on different hardware, using container and running with more threads than in the experiments presented in~\cite{PebblesDB}.
+We compare \sys\ to PebblesDB, which was shown to significantly improve over RocksDB~\cite{PebblesDB}
+before its most recent version has released.  Our experiments (Table~\ref{fig:pebbels-throughput}) show 
+that \sys\/ performs consistently better than PebblesDB in all explored scenarios -- even under the Zipf-simple 
+workload on a 32GB dataset, which is not ideal for \sys. \sys's advantage grows with the parallelism, as we scale 
+from 1 to 8 threads. We observe a similar trend with smaller datasets. 
 
+In our experiments, RocksDB also outperforms PebblesDB. The gap with~\cite{PebblesDB} 
+can be attributed, e.g., to RocksDB evolution, different hardware, resource constraints (running within a 
+container), and increased benchmark parallelism.   
 
 \begin{table}
 \centering
 {\small{
-\begin{tabular}{|l|c|}
+\begin{tabular}{|c|c|c|c|c|}
 %Workload & Zipf-simple & Zipf-composite \\
 \hline 
-Workload & lift range \\
+YCSB-P & YCSB-C & YCSB-E10 & YCSB-E100 & YCSB-E100 \\
 \hline 
-YCSB-P & 1.5-2.9x \\
-%YCSB-A & x.x-x.x  \\
-%YCSB-B & x.x-x.x \\
-YCSB-C & 2.1-3.2x\\
-YCSB-E10 & 2.2-4.5x \\
-YCSB-E100 & 2.2-3.8x \\
-YCSB-E1000 & 2.4-4.2x \\
+1.5x--2.9x & 2.1x--3.2x & 2.2x--4.5x & 2.2x--3.8x & 2.4x--4.2x \\
 \hline 
 \end{tabular}
 }}
-\caption{{\sys\/ lift over PebblesDB, running on 32GB with 1 to 8 threads}}
+\caption{{\sys\/ throughput improvement over PebblesDB, on a 32GB dataset with Zipf-simple keys, with 1 to 8 threads.}}
 \label{fig:pebbels-throughput}
 \end{table}
 
