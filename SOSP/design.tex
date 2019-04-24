@@ -112,7 +112,7 @@ content of part of the \code{log}; this allows us to know not only whether or no
 \paragraph{Chunk metadata structure.}
 
 The metadata structure is given in Algorithm~\ref{alg:chunk}. 
-The first field is its \code{status}, which is explained in \cref{ssec:rebalance}  below. 
+The first field is its \code{state}, which is explained in \cref{ssec:rebalance}  below. 
 It next holds a pointer to the appropriate funk, and either a munk or a Bloom filter, as well as a pointer to the next 
 chunk in the chunk linked list.
 \remove{
@@ -126,7 +126,7 @@ Finally, the chunk includes locks to synchronize concurrent access by multiple t
 \begin{algorithm}[htb]
 
 \begin{algorithmic}
-\State \code{status} \Comment  baby, child, active, asleep, or aged
+\State \code{state} \Comment  baby, child, active, asleep, or aged
 \State ptr \code{funk} \Comment funk disk address
 \State ptr \code{munk} \Comment munk memory pointer
 \State ptr \code{next} \Comment next chunk in linked list
@@ -415,7 +415,7 @@ If a scan published its intent in the \code{PO}  but published no version yet, t
 When the new munk is ready, the procedure flips the munk reference
 and releases \code{rebalanceLock}.
 
-Funk rebalance creates a (SSTable, log) pair. \sys\/ executes this procedure in a dedicated daemon thread. If the chunk has a munk, 
+Funk rebalance creates a new (SSTable, log) pair. \sys\/ executes this procedure in a dedicated daemon thread. If the chunk has a munk, 
 the most efficient way of performing funk rebalance is through munk rebalance that is followed by the log's truncation and the
 reordered munk's flush to the new SSTable. Otherwise, the new SSTable is created by merge of the old SSTable with its log. 
 This procedure involves I/O and may take a long time, so we do not block puts for the most of its duration. The puts that happened 
@@ -434,9 +434,9 @@ The latter affects the chunk object as well as the munk (if exists) and the funk
 
 In case of a munk rebalance, the chunk is immutable throughout the rebalance operation.
 %, and put operations targeting that chunk must wait or help rebalance to complete. 
-In this simple case, the chunk's status changes to \emph{asleep} (indicating that it is immutable)
+In this simple case, the chunk's state changes to \emph{asleep} (indicating that it is immutable)
 when rebalance begins, and changes back to \emph{active} when rebalance ends. 
-Note that the asleep status is tantamount to the \code{rebalanceLock} being held in exclusive mode.
+Note that the asleep state is tantamount to the \code{rebalanceLock} being held in exclusive mode.
 
 Since funk rebalance involves I/O, it may take a long time, and so we refrain from blocking puts for its entire 
 duration. In this case, the chunk becomes asleep after most of the funk is populated, and 
@@ -449,7 +449,7 @@ changes back to active after we migrate the \code{log}'s new tail to the new chu
 \includegraphics[width=.8\columnwidth]{state-diagram.png}
 }
 \caption{Chunk life cycle; immutable states are grey and mutable ones are white.
-Chunk splits  create new chunks in immutable \emph{baby} status, which changes to the mutable \emph{child} state once they 
+Chunk splits  create new chunks in immutable \emph{baby} state, which changes to the mutable \emph{child} state once they 
 are indexed. When the appropriate funks are created, the chunks become \emph{active}. All rebalance operations go through an 
 \emph{asleep} state when the chunk is immutable.}
 \label{fig:chunklife}
