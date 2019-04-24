@@ -17,14 +17,14 @@ Finally,~\S\ref{ssec:flush-recovery} discusses data flushes and failure recovery
 \sys's data layout is depicted in Figure~\ref{fig:piwi}.
 %Similarly to BTrees and other disk-friendly and cache-friendly data structures~\cite{kiwi}, 
 Data resides in chunks, each holding a contiguous key range.
-This improves the efficiency of both disk access and memory access, in particular, for  range scans. 
+This improves the efficiency of both disk and memory accesses, mostly for range scans. 
 Each chunk's data 
 (consisting of keys in the corresponding range and values associated with them) 
 is kept on disk (funks, for persistence), and possibly in memory (munks, for fast access). 
 Chunk metadata objects are significantly smaller than munks and funks
-(typically, less than 1 KB instead of tens of MBs). Hence \sys\ holds them in memory at run-time.
-In addition, it keeps a volatile \emph{chunk index} -- a sorted map from keys to chunks. 
-Index updates are lazy, so it offers only best-effort expedited search.
+(typically, less than 1 KB vs. tens of MBs). \sys\ thus always holds them in memory.
+Further, it keeps a volatile \emph{chunk index}, mapping keys to chunks. 
+Index updates are lazy, offering only best-effort expedited search.
 
 A chunk %is associated with a funk, % as illustrated in Figure~\ref{fig:funk}. 
 consists of two files:  a compacted and sorted  key-value map \emph{SSTable} %(Sorted String Table~\cite{Bigtable2008}) 
@@ -201,11 +201,11 @@ A put obtains a version number from GV without incrementing it. Thus, multiple p
 %Ordering concurrent puts with the same key and version is discussed in the next section where we elaborate on the put operation's logic.
 
 %A scan begins by fetching-and-incrementing GV.
-If a put obtains its version before a scan increments GV, then the new value must be included in the scan's snapshot. 
+If a put obtains its version before a scan increments GV, the new value must be included in the scan's snapshot. 
 However, because the put's access to the GV and the insertion of the new value to the chunk do not occur atomically,
-a subtle race may arise. Consider a put operation that obtains version $7$ from GV and then stalls before
+a subtle race may arise. Consider a put, which obtains version $7$ from GV and then stalls before
 inserting the value to the chunk, while a scan obtains version $7$ and increments GV to $8$. The scan then proceeds 
-to read the appropriate chunk and does not find the new value although it should be included in its snapshot.
+to read the appropriate chunk, missing the new value it should have included in its snapshot.
 
 To remedy this, puts announce (in PO) the key they intend to change when beginning their operations, and scans wait for relevant pending puts to complete as explained below.
 This mechanism is a simplification of the non-blocking put-scan synchronization employed (and proven correct) in~\cite{kiwi}.

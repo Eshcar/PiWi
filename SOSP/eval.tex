@@ -69,8 +69,7 @@ and no spatial locality.
 
 \item {\em Zipf-composite}  -- a Zipfian distribution over composite keys. 
 The key's $14$ most significant bits comprise the primary attribute. 
-The primary attribute is drawn from a Zipf ($\theta=0.8$) distribution over its range, 
-and  the remainder of the key is drawn uniformally at random.
+The primary attribute is drawn from a Zipf ($\theta=0.8$) distribution over its range. The remainder of the key is drawn uniformally at random.
 Zipf-composite exhibits high spatial locality, representing workloads 
 with composite keys, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
 social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics databases~\cite{flurry}. 
