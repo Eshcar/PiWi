@@ -18,8 +18,9 @@ reduces write amplification. In contrast, \sys\/ eliminates the concept of level
 and employs a flat storage layout instead. WiscKey~\cite{WiscKey} separates key and value storage 
 in SSTables, also in order to reduce amplification. This optimization is orthogonal to \sys's concepts,
 and could benefit our work as well. 
-VT-Trees~\cite{vttrees} are LSM-trees that apply a stitching policy to avoid rewriting already sorted data. This improves performance and significantly reduces write amplification 
-in some scenarios (e.g., time-series and filesystem metadata workloads). 
+
+VT-Trees~\cite{vttrees} are LSM-trees that apply stitching to avoid rewriting already sorted data. This improves performance and significantly reduces write amplification 
+in some scenarios (e.g., time-series ingestion). 
 SLM-DB~\cite{slmdb} reduces write amplification by having only a single level of SSTable files on disk, supporting a selective compaction policy, and
 exploiting persistent memory to eliminate the WAL. To expedite reads, it maintains a B$^+$-tree index that points to KV pairs on disk. Scans benefit from the spatial locality of keys in the B$^+$-tree leaves. Nevertheless, LSM-like temporal partitioning is used, and the actual values are retrieved from disk.
 
