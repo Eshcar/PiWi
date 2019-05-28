@@ -8,7 +8,7 @@ et al.~\cite{DBLP:journals/acta/ONeilCGO96, Muth1998}.
 Due to LSM's design popularity, much effort has been invested into working around its bottlenecks.
 A variety of compaction strategies has been implemented in production systems~\cite{CallaghanCompaction, 
 ScyllaCompaction} and research prototypes~\cite{triad, PebblesDB, vttrees, slmdb}. Other suggestions include storage
-optimizations~\cite{WiscKey, PebblesDB, vttrees, slmdb}, boost of in-memory parallelism~\cite{scylladb, clsm2015}, and leveraging 
+optimizations~\cite{WiscKey, PebblesDB, vttrees, slmdb,Papagiannis:2018:EMK:3267809.3267824}, boost of in-memory parallelism~\cite{scylladb, clsm2015}, and leveraging 
  workload redundancies to defer disk flushes~\cite{triad, accordion}. 
 
 A number of systems focus on reducing write amplification.
@@ -21,12 +21,11 @@ in SSTables, also in order to reduce amplification. This optimization is orthogo
 and could benefit our work as well. 
 
 VT-Trees~\cite{vttrees} are LSM-trees that apply stitching to avoid rewriting already sorted data. This improves performance and significantly reduces write amplification 
-in some scenarios (e.g., time-series ingestion). 
-SLM-DB~\cite{slmdb} exploits novel persistent memory hardware to reduce write amplification.  
-It has a single level of SSTable files on disk and 
-exploits persistent memory to eliminate the WAL. To expedite reads, it maintains a B$^+$-tree index that holds keys in B$^+$-tree leaves in persistent memory, 
-along with pointers to disk-resident data. 
-Scans benefit from the spatial locality of keys in the B$^+$-tree leaves. Nevertheless, LSM-like temporal data partitioning is used, and the actual values are retrieved from disk.
+in some scenarios (e.g., time-series ingestion).
+
+SLM-DB~\cite{slmdb} is an LSM design that relies on persistent memory for its mutable component and thus avoids WAL maintenance. It also re-designs the traditional LSM read path, utilizing a 
+ B$^+$-tree index in persistent memory on top of a flat list of SSTables with LSM-like temporal data partitioning. In contrast, EvenDB does not rely on special hardware. 
+ Moreover, to the best of our knowledge, SLM-DB does not support concurrent operations.
 
 In-memory compaction has been recently implemented in HBase~\cite{accordion} by organizing
 HBase's in-memory write store  as an LSM tree, eliminating redundancies 
