@@ -50,7 +50,7 @@ def renamings(label):
     # order is important
     rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
               'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple', 'flurry': 'Zipf-composite', '95% ':''}
-    new_label = label.replace('Piwi', 'EvenDB').replace('Rocks', 'RocksDB')
+    new_label = label.replace('Piwi', 'PowerRanger').replace('Rocks', 'RocksDB')
     for key in rename.keys():
         if key in label:
             return new_label.replace(key, rename[key])
@@ -90,14 +90,28 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
         ax.set_xlim(ax.get_xlim()[0], x_upper)
 
     if legend_image:
-        figsize = (0.1, 0.1)
-        fig_leg = plt.figure(figsize=figsize)
-        ax_leg = fig_leg.add_subplot(111)
-        # add the legend from the previous axes
-        ax_leg.legend(*ax.get_legend_handles_labels(), loc='center', ncol=4)
-        # hide the axes frame and the x/y labels
-        ax_leg.axis('off')
-        fig_leg.savefig('legend.pdf', bbox_inches='tight')
+        if len(lines) == 4: # don't draw shared legend when drawing D
+            figsize = (0.1, 0.1)
+            fig_leg = plt.figure(figsize=figsize)
+            ax_leg = fig_leg.add_subplot(111)
+            # add the latest (workload D) entries just so they appear in the shared legend
+            lines_d = [{'label': renamings(k), 'data': [], 'style': line_color[k]}
+                    for k in ['Piwi Latest', 'Rocks Latest']]
+            for line in lines_d:
+                ax.plot([], [], label=line['label'], # no data points - just adding for the legend
+                        color=line['style']['color'],
+                        linestyle=line['style']['linestyle'],
+                        linewidth=line['style']['linewidth'],
+                        marker=line['style']['marker'],
+                        markersize=marksize)
+            # reorder the legend so the 3 columns are ordered sensibly
+            h, l = ax.get_legend_handles_labels()
+            h2 = [h[0], h[2], h[1], h[3], h[4], h[5]]
+            l2 = [l[0], l[2], l[1], l[3], l[4], l[5]]
+            ax_leg.legend(h2, l2, loc='center', ncol=3)
+            # hide the axes frame and the x/y labels
+            ax_leg.axis('off')
+            fig_leg.savefig('legend.pdf', bbox_inches='tight')
     else:
         h, l = ax.get_legend_handles_labels()
         if file_name == 'Workload P':
@@ -505,7 +519,7 @@ def draw_line_charts(data):
             lines = [lines[1], lines[3], lines[0], lines[2]]
             legend_image=True
         else:
-            legend_image=False
+            legend_image=False if workload != 'D' else True
         draw_line_chart('Workload ' + workload,
                         lines,
                         yaxis='Throughput, Kops', legend_image=legend_image)
@@ -548,7 +562,7 @@ def draw_ampl_charts(data):
              for (k, v) in write_amp_p.items()]
     draw_line_chart('write_amp_p',
                     lines,
-                    yaxis='Write amplification', legend_image=False, legend='upper left', y_upper=10)
+                    yaxis='Write amplification', legend_image=False, legend='upper left', y_upper=12)
 
     amplifications = data['amplifications']
     # P write amplification disk:
