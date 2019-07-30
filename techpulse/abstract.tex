@@ -1,0 +1,30 @@
+Many applications of key-value (KV-)storage exhibit high spatial locality
+of access e.g., when data items with identical composite key prefixes are created or scanned together.
+A prominent example at Verizon Media is Flurry Analytics which aggregate mobile application usage statistics typically 
+identified by a composition of app id, device, time, location, event id, etc. The query API is app id-centric, hence this dimension is the key prefix.
+This prevalent access pattern is underused by the ubiquitous LSM tree design underlying major KV-stores today.
+
+We present \sys, a general-purpose persistent KV-store optimized for spatially-local workloads.
+\sys\ forgoes the temporal data organization of LSM trees, and partitions data by key to exploit locality.
+\sys's design also reduces write amplification, scales on multicore platforms and guarantees strong (atomic) semantics for updates, lookups, and scans. 
+Our experiments with Flurry workload show that \sys\ consistently outperforms the state-of-the-art performance by 2.5-4x in ingestion rate and by 1.3-2.4x in scan speed.
+Furthermore, traditional microbenchmarks show a lift in performance of up to 3.5x (1) in cases of high spatial locality; and (2) when the system has sufficient DRAM
+to hold most of the active working set.
+
+\remove{
+Many applications of key-value (KV-)storage exhibit high \emph{spatial locality}
+of access, for example, when data items with identical composite key prefixes are created or scanned together.  
+This prevalent access pattern is underused by the ubiquitous LSM tree design underlying KV-stores today.
+
+We present \sys, a general-purpose persistent KV-store optimized for spatially-local workloads. 
+\sys\ forgoes the temporal data organization of LSM trees, and partitions data by key to exploit locality. 
+%
+\sys's design also reduces write amplification and expedites in-memory operation.
+Our experiments show that \sys\ consistently outperforms the state-of-the-art performance 
+(by up to 3.5x) (1) in cases of high spatial locality; and (2) when the system has sufficient DRAM 
+to hold most of the active working set. 
+In traditional YCSB workloads with larger working sets, % than the available  DRAM, \
+\sys\ is on par with today's leading designs.
+\sys\/ provides low write amplification, scales on multicore platforms and guarantees strong (atomic) semantics for updates, lookups, and scans. 
+%Finally, it provides consistent crash recovery semantics, with near-instant recovery time. 
+}
