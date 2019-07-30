@@ -26,17 +26,44 @@ Finally,~\S\ref{ssec:pebbles} compares \sys\ with PebblesDB.
 %\cref{ssec:recover} evaluates its recovery mechanism. 
 } 
 
-We experimented with workloads that are derived from Flurry application production data to compare performance of \sys\ and RocksDB. 
+We experimented with workload that is derived from Flurry production data to compare performance of \sys\ and RocksDB. 
 We also used YCSB~\cite{YCSB}, the  de facto standard  
 benchmarking platform for KV-stores to run 
 different synthetic workloads.
-Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. 
 
-\inred{move configuration here}
+Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. 
+In order to guarantee fair memory allocation across KV-stores, 
+we run each experiment within a Linux container with 16GB RAM. 
+%\paragraph{Metrics.} 
+Our primary performance metrics are \emph{throughput} 
+and \emph{latency percentiles}. 
+In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
+%In order to explain the results, we also explore \emph{read amplification} (in terms of bytes as well as number of system calls per application read).  
+%as well as the number of read \inred{ and write} system calls. 
+%The OS performance counters are retrieved from the Linux proc filesystem. 
+
+\paragraph{Configuration.} 
+We focus on the asynchronous logging mode. 
+%Synchronous logging 
+%is approximately 10x slower, trivializing the results of scenarios that includes puts. 
+\remove{
+All experiments in~\S\ref{ssec:results} use the same default configuration, to avoid 
+over-tuning; \S\ref{ssec:drill} then explores different configurations and 
+provides insights on parameter choices.
+}
+\sys's default configuration 
+allocates 6-8GB to munks and 4GB to the row cache,
+so together they consume 10-12GB out of the 16GB container. 
+The row cache consists of three hash tables.  
+The Bloom filters for funks are partitioned 16-way.  
+We set \sys\/ maximum munk size limit to 10MB, and the rebalance size trigger to 7MB. 
+The funk log size limit is 2MB for munk-less chunks, and 20MB for chunks with munks. 
+% \inred{for write intensive workloads, and 512KB for other workloads.}
+We evaluate RocksDB with its default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.
 
 \subsection{Flurry Workload}
 We extracted 35 minutes of events data from the Fluorobenzene feed, total of 380M events. Specifically, we extracted the name of the application that triggered the event and the event timestamp.
-We then used this data to generate composite keys with the application name as the main field and the timestamp as secondary field. 
+We then used this data to generate composite keys with the application name as the primary dimension and the timestamp as secondary dimension. 
 Databases of size 64GB, 128GB, and 256GB are created by loading 80M, 160M and 320M rows respectively, where each row contains a composite key with randomly generated 800-byte long values.
 To evaluate the ingestion performance of \sys\ vs RocksDB we fed the rows to the systems by their temporal order. This simulated realtime ingestion.
 The throughput and write amplification results are presented in Table~\ref{table:flurry-write}.
@@ -115,18 +142,7 @@ YCSB  benchmarks  are inspired by real-life applications.
 % and allows developing new ones through workload generation APIs. 
 A typical YCSB experiment stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
 workloads. %It aggregates the key performance metrics for the scenario under test.  
-
-Unless otherwise stated, the YCSB driver  
-exercises 12 workers. In order to guarantee fair memory allocation across KV-stores, 
-we run each experiment within a Linux container with 16GB RAM. 
-
-%\paragraph{Metrics.} 
-Our primary performance metrics are \emph{throughput} 
-and \emph{latency percentiles}, as produced by YCSB. 
-In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
-%In order to explain the results, we also explore \emph{read amplification} (in terms of bytes as well as number of system calls per application read).  
-%as well as the number of read \inred{ and write} system calls. 
-%The OS performance counters are retrieved from the Linux proc filesystem. 
+The YCSB driver  exercises 12 workers. 
 
 %\paragraph{Workloads.} 
 We vary the dataset size from 4GB to 64GB in order to exercise multiple locality 
@@ -192,24 +208,7 @@ of the mean, and in most of them below $3\%$.
 To avoid cluttering the graphs, we do not present the STD. 
 }
 
-\paragraph{Configuration.} 
-We focus on the asynchronous logging mode. 
-%Synchronous logging 
-%is approximately 10x slower, trivializing the results of scenarios that includes puts. 
-\remove{
-All experiments in~\S\ref{ssec:results} use the same default configuration, to avoid 
-over-tuning; \S\ref{ssec:drill} then explores different configurations and 
-provides insights on parameter choices.
-}
-\sys's default configuration 
-allocates 8GB to munks and 4GB to the row cache,
-so together they consume 12GB out of the 16GB container. 
-The row cache consists of three hash tables.  
-The Bloom filters for funks are partitioned 16-way.  
-We set the \sys\/ maximum chunk size limit to 10MB, and the rebalance size trigger to 7MB. 
-The funk log size limit is 2MB for munk-less chunks, and 20MB for chunks with munks. 
-% \inred{for write intensive workloads, and 512KB for other workloads.}
-We evaluate RocksDB with its default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.
+
 \remove{
 In \S\ref{ssec:drill}, we follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune its memory resources.  
 The results do not affect our conclusions significantly. %; we discuss them in~\S\ref{ssec:drill}.
@@ -245,33 +244,33 @@ the project's repository~\cite{pebbles-git-issue}.
 %\caption{P -- 100\% put}
 %\label{fig:throughput:p}
 %\end{subfigure}
-\begin{subfigure}{0.47\columnwidth}
+\begin{subfigure}{0.49\columnwidth}
 \includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
 \caption{A -- 50\% put, 50\% get}
 \label{fig:throughput:a}
 \end{subfigure}
-\begin{subfigure}{0.47\columnwidth}
+\begin{subfigure}{0.49\columnwidth}
 \includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
 \caption{B -- 5\% put, 95\% get}
 \label{fig:throughput:b}
 \end{subfigure}
-\begin{subfigure}{0.47\columnwidth}
+\begin{subfigure}{0.49\columnwidth}
 \includegraphics[width=\textwidth]{figs/Workload_C_line.pdf}
 \caption{C -- 100\% get}
 \label{fig:throughput:c}
 \end{subfigure}
-\hspace{70pt}
-\begin{subfigure}{0.47\columnwidth}
+%\hspace{70pt}
+\begin{subfigure}{0.49\columnwidth}
 \includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
-\caption{D -- Latest-simple, 5\% put, 95\% get}
+\caption{D -- Latest, 5\% put, 95\% get}
 \label{fig:throughput:d}
 \end{subfigure}
-\begin{subfigure}{0.47\columnwidth}
+\begin{subfigure}{0.49\columnwidth}
 \includegraphics[width=\textwidth]{figs/Workload_E+_line.pdf}
-\caption{E -- 5\% put, 95\% scan (1000 rows)}
+\caption{E -- 5\% put, 95\% scan}
 \label{fig:throughput:e1000}
 \end{subfigure}
-\begin{subfigure}{0.47\columnwidth}
+\begin{subfigure}{0.49\columnwidth}
 \includegraphics[width=\textwidth]{figs/Workload_F_line.pdf}
 \caption{F -- 100\% get-modify-put}
 \label{fig:throughput:f}
@@ -312,8 +311,8 @@ We now discuss the results for the different scenarios.
 
 \paragraph{ Put-only (data ingestion)} is tested in workload
 {P} (100\% put, Figure~\ref{fig:throughput:p}). 
-\sys's throughput is 1.8x to 6.4x that of RocksDB's with uniform keys, 1.3x to 2.3x with Zipf-composite keys, 
-and 0.9x to 1.6x with Zipf-simple keys. This scenario's bottleneck is the reorganization of persistent data  
+\sys's throughput is 1.8-6.4x that of RocksDB's with uniform keys, 1.3-2.3x with Zipf-composite keys, 
+and 0.9-1.6x with Zipf-simple keys. The bottleneck is the reorganization of persistent data  
 (funk rebalances in \sys, compactions in RocksDB), which causes write amplification and hampers performance. 
  
  Under the Zipf-composite workload, \sys\ and RocksDB's write performance exhibit similar behaviour as exhibited under the Flurry workload.

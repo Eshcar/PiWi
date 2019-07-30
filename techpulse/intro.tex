@@ -16,56 +16,60 @@ This approach arises in many domains, for example:
 (1) Mobile analytics services such as Flurry Analytics~\cite{flurry} aggregate statistics 
 on data identified by composite keys consisting of attributes such as app id, device, time, location, 
 event id, etc. The query API~\cite{flurry-api} is app id-centric, hence this dimension is the key prefix.
-(2) In messaging and email, keys are typically a concatenation of user id with additional fields 
+(2) In messaging and email, keys are typically a concatenation of user id with additional dimensions 
 such as thread id, time, and post id. A query in Facebook Messenger may retrieve, e.g., the last 100 messages for a 
 given user~\cite{Borthakur:2011:AHG:1989323.1989438}. %, or the hourly impression counts %over the last 24 hours for a given advertiser. 
 (3) In Facebook's social network, a graph edge is indexed by a key consisting of two 
 object ids and an association type~\cite{Armstrong:2013:LDB:2463676.2465296}.
-%An example  query retrieves all friendship relations for a given user id.  
 
-%\begin{figure}[tb]
-\begin{wrapfigure}{r}{0.5\columnwidth}
-\centering
-\includegraphics[width=0.5\columnwidth]{figs/cdf.pdf}
-\caption{
-{Application name CDF in Flurry workload.}
-}
-\label{fig:cdf}
-\end{wrapfigure}
-%\end{figure}
+%An example  query retrieves all friendship relations for a given user id.  
 % Composite keys imply spatial data locality (in ranges) 
 Composite keys induce \emph{spatial locality} in workloads with high {temporal locality}, as 
 popular entities 
 %(email or social network users, apps tracked by an analytics engine, etc.) 
-result in popular \emph{key ranges}. 
+result in popular \emph{key ranges}. We demonstrate this via Flurry data. 
 %Spatial locality may also arise with simple (non-composite) keys, for example, when 
 %reverse  URL domains are used as keys for web  indexing~\cite{Cho:1998:ECT:297805.297835}. 
-\inred{For example, Figure~\ref{fig:cdf} depicts the comulative distribution function of application name in 15 minutes of Flurry data pertaining around 200M events of over 40K applications.
-It shows that 10\% of the application cover over 99.5\% of the events; 1\% of the applications cover 94\% of the events; and less than 0.1\% cover 70\% of the events. This means the data is highly skewed and with a very long tail (that is not depicted in the figure).
-Table~\ref {table:popular} shows the comulative distribution of the top-20 popular application, covering more than 50\% of the events. }
+
+
+\begin{figure}[tb]
+%\begin{wrapfigure}{r}{0.5\columnwidth}
+\centering
+\includegraphics[width=0.8\columnwidth]{figs/cdf.pdf}
+\caption{
+{Application name CDF in Flurry workload.}
+}
+\label{fig:cdf}
+%\end{wrapfigure}
+\end{figure}
+Figure~\ref{fig:cdf} depicts the cumulative distribution function of application name in $4$ minutes of Flurry data consisting of $200$M events of over $40$K applications.
+It shows that $10$\% of the applications cover over $99.5$\% of the events; $1$\% of the applications cover $94$\% of the events; and less than $0.1$\% cover $70$\% of the events. This means the data is highly skewed and with a very long tail (not depicted in the figure).
+Table~\ref {table:popular} shows the cumulative probability of the top-$20$ popular applications, covering more than $50$\% of the events. 
+With application name as the primary dimension of a composite key this distribution induces high spatial locality.
 
 
 \begin{table}[tb]
-{\small{
+\center
+{\footnotesize{
 \begin{tabular}{|l|c|c||l|c|c|}
 \hline 
-  & \#events & Comulative &  & \#events & Comulative  \\
+  & \#events & cumulative &  & \#events & cumulative  \\
   &  &  probability& &  &  probability \\
 \hline 
-1 & 19272320 & 0.091 &11 & 4176189 & 0.419\\
-2 & 11424325 & 0.146&12 & 3109832 & 0.434\\
-3 & 11340475  & 0.200&13 & 3106912 & 0.449\\
-4& 8232683 &0.239 &14 & 2512155 & 0.460\\
-5& 6579999 &0.270 &15& 2474689 & 0.472\\
-6& 6172832 & 0.299&16 & 2343138 & 0.483\\
-7& 5960979 & 0.327&17 & 2184674 &0.494 \\
-8 & 5530707& 0.354&18 & 1973152& 0.503\\
-9& 4948991 & 0.377&19 & 1971366& 0.512\\
-10 & 4657214 & 0.399&20 & 1964174& 0.522\\
+1 & 19,272,320 & 0.091 &11 & 4,176,189 & 0.419\\
+2 & 11,424,325 & 0.146&12 & 3,109,832 & 0.434\\
+3 & 11,340,475  & 0.200&13 & 3,106,912 & 0.449\\
+4& 8,232,683 &0.239 &14 & 2,512,155 & 0.460\\
+5& 6,579,999 &0.270 &15& 2,474,689 & 0.472\\
+6& 6,172,832 & 0.299&16 & 2,343,138 & 0.483\\
+7& 5,960,979 & 0.327&17 & 2,184,674 &0.494 \\
+8 & 5,530,707& 0.354&18 & 1,973,152& 0.503\\
+9& 4,948,991 & 0.377&19 & 1,971,366& 0.512\\
+10 & 4,657,214 & 0.399&20 & 1,964,174& 0.522\\
 \hline 
 \end{tabular}
 }}
-\caption{{Top-20 popular applications cumulative probability in Flurry workload.}}
+\caption{{Top-20 popular applications cumulative probability in 4 minutes of Flurry workload.}}
 \label{table:popular}
 \end{table}
 
@@ -126,8 +130,7 @@ The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices})
 makes this scenario increasingly common.  
 
 %\subsection{\sys} 
-The main goal of this work is to propose a design alternative  that is better suited for spatial locality in 
-today's workloads. 
+The main goal of this work is to propose a design alternative  that is better suited for spatial locality workloads. 
 
 % Drum roll 
 We present \sys, a persistent KV-store whose design diverges from the ubiquitous LSM approach.  
@@ -157,19 +160,20 @@ a dedicated \emph{row cache} for hot keys.
 %this design is less optimal for mixed read/write workloads lacking spatial locality,
 %where the LSM approach may be more suitable.  
 
-\sys's performance scales with the number of threads on multicore hardware, 
-and all its APIs (put, get, and scan) provide strong (atomic) consistency guarantees 
-under concurrency. 
+\sys's APIs (put, get, and scan) provide strong consistency guarantees 
+under concurrency.  Its performance scales with the number of threads on multicore hardware, 
+and
 % We employ scalable concurrent data structures for in-memory processing. %, to scale with the number of cores. 
-In addition, \sys\/ recovers from crashes quickly since it does not need to replay the WAL on recovery.
+in addition, \sys\/ recovers from crashes quickly since it does not need to replay the WAL on recovery.
 
 We have implemented \sys\ in C++. 
-\inred{
-FLURY BENCHMARKS RESULTS}
 We compare it to the recent release of RocksDB~\cite{RocksDB}, 
 an industry-leading LSM KV-store.
+\inred{
+Our experiments, based on Flurry data show ingestion throughput is 3x higher for \sys, while write amplification is 2.5-4.5x higher for RocksDB. \sys improves scans speed by Xx in medium size data bases and by Yx in large databases.}
 %, as well as to PebblesDB~\cite{PebblesDB}, a research LSM store with low write amplification. 
-Our experiments, based on the popular YCSB benchmark suite~\cite{YCSB}, 
+
+Experiments based on the popular YCSB benchmark suite~\cite{YCSB}, 
 show \sys\/ significantly outperforms RocksDB when spatial  locality is high, and also 
 whenever most of the working set fits in RAM. For example, with composite keys and a memory-resident 
 working set, \sys\  accelerates scans by up to $2$x, puts by up to $2.3$x, and gets by up to $2$x. 
