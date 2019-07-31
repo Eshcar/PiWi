@@ -166,11 +166,10 @@ and
 % We employ scalable concurrent data structures for in-memory processing. %, to scale with the number of cores. 
 in addition, \sys\/ recovers from crashes quickly since it does not need to replay the WAL on recovery.
 
-We have implemented \sys\ in C++. 
+We implemented \sys\ in C++. 
 We compare it to the recent release of RocksDB~\cite{RocksDB}, 
 an industry-leading LSM KV-store.
-\inred{
-Our experiments, based on Flurry data show ingestion throughput is 3x higher for \sys, while write amplification is 2.5-4.5x higher for RocksDB. \sys improves scans speed by Xx in medium size data bases and by Yx in large databases.}
+Our experiments, based on Flurry data show ingestion throughput is up to 3.8x higher for \sys, while write amplification is 2.4x-4x higher for RocksDB. \sys improves short scans speed by 90\% in medium size data bases and by 20\%-50\% in long scans and large databases.
 %, as well as to PebblesDB~\cite{PebblesDB}, a research LSM store with low write amplification. 
 
 Experiments based on the popular YCSB benchmark suite~\cite{YCSB}, 

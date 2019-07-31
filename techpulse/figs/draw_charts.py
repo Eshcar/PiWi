@@ -28,7 +28,7 @@ flurry_linecolor = tableau20[0]
 zip_linecolor = tableau20[2]
 latest_linecolor = tableau20[4]
 uniform_linecolor = tableau20[4]
-myfontsize = 15
+myfontsize = 16
 
 munks_label = 'Munk Cache'
 rc_label = 'Row Cache'
@@ -48,9 +48,9 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
 def renamings(label):
 
     # order is important
-    rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
+    rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple', 'Uniform': 'Uniform',
               'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple', 'flurry': 'Zipf-composite', '95% ':''}
-    new_label = label.replace('Piwi', 'PowerRanger').replace('Rocks', 'RocksDB')
+    new_label = label.replace('Piwi', 'FunKey').replace('Rocks', 'RocksDB')
     for key in rename.keys():
         if key in label:
             return new_label.replace(key, rename[key])
@@ -108,17 +108,33 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
             h, l = ax.get_legend_handles_labels()
             h2 = [h[0], h[2], h[1], h[3], h[4], h[5]]
             l2 = [l[0], l[2], l[1], l[3], l[4], l[5]]
-            ax_leg.legend(h2, l2, loc='center', ncol=3)
+            ax_leg.legend(h2, l2, loc='center', ncol=3, fontsize=myfontsize)
             # hide the axes frame and the x/y labels
             ax_leg.axis('off')
             fig_leg.savefig('legend.pdf', bbox_inches='tight')
+            lines_d1 = [{'label': renamings(k), 'data': [], 'style': line_color[k]}
+                    for k in ['Piwi Uniform', 'Rocks Uniform']]
+            for line in lines_d1:
+                ax.plot([], [], label=line['label'], # no data points - just adding for the legend
+                        color=line['style']['color'],
+                        linestyle=line['style']['linestyle'],
+                        linewidth=line['style']['linewidth'],
+                        marker=line['style']['marker'],
+                        markersize=marksize)
+            h, l = ax.get_legend_handles_labels()
+            h3 = [h[0], h[2], h[1], h[3], h[4], h[5]]
+            l3 = [l[0], l[2], l[3], l[3], l[4], l[5]]
+            ax_leg.legend(h3, l3, loc='center', ncol=3, fontsize=myfontsize)
+            # hide the axes frame and the x/y labels
+            ax_leg.axis('off')
+            fig_leg.savefig('legend0.pdf', bbox_inches='tight')
     else:
         h, l = ax.get_legend_handles_labels()
         if file_name == 'Workload P':
             # omit the common lines from per-graph legends to save space
             h = h[4:]
             l = l[4:]
-        ax.legend(h, l, loc=legend, fontsize=fontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor)
+        ax.legend(h, l, loc=legend, fontsize=myfontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor)
 
     fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -569,7 +585,7 @@ def draw_ampl_charts(data):
     draw_line_chart('P_write_amplification_disk',
                     [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
                      for (k, v) in amplifications['P'].items() if 'disk' in k],
-                    yaxis='Amplification', legend=3)
+                    yaxis='Amplification', legend_image=False, legend=3)
 
     # C read amplification disk:
     draw_line_chart('C_read_amplification_disk',

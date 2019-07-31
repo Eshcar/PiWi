@@ -1,4 +1,4 @@
-We implement \sys\ in C++. We borrow the \code{SSTable} implementation from the RocksDB open source~\cite{RocksDB}.
+We implement \sys\ in C++. The \code{SSTable} implementation is borrowed from the RocksDB open source~\cite{RocksDB}.
 Similarly to RocksDB, we use \code{jemalloc} for memory allocation.  
 
 The chunk index is implemented as a sorted array holding the minimal keys of all chunks.  
