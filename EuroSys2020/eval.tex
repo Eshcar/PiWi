@@ -13,29 +13,25 @@ inferior to \sys's, hence these results are not presented.
 
 % hardcoded subsections symbol since didn't have time to hack cref...
 The experiment setup is described in~\S\ref{ssec:setup}. 
-Performance results for \sys\ and RocksDB in 
-different workloads are presented in~\S\ref{ssec:results}. 
-We then study  \sys's sensitivity to different configuration settings and its scalability in~\S\ref{ssec:drill}. 
-Finally,~\S\ref{ssec:pebbles} compares \sys\ with PebblesDB.
+Performance results for \sys\ and RocksDB are presented in~\S\ref{ssec:prod} (production workloads)
+and~\S\ref{ssec:synthetic} (synthetic workloads). We study  \sys's scalability and sensitivity to  
+configuration settings in~\S\ref{ssec:drill}. Finally,~\S\ref{ssec:pebbles} compares \sys\ with PebblesDB.
 %\cref{ssec:recover} evaluates its recovery mechanism. 
  
-
 \subsection{Setup}
 \label{ssec:setup} 
 
 \paragraph{Testbed.} We employ a C++ implementation~\cite{Cpp-YCSB} of YCSB~\cite{YCSB}, the  de facto standard  
-benchmarking platform for KV-stores. 
-YCSB provides a set of APIs and a workload suite. 
+benchmarking platform for KV-stores. YCSB provides a set of APIs and a synthetic workload suite inspired 
+by real-life applications. \inred{In order to exercise production workloads, we extend YCSB to replay log files.}
+ 
 % Most modern KV-stores implement  YCSB adapter API's. 
 %The platform decouples data access from workload generation, 
 %thereby providing common ground for backend comparison. 
 
-A YCSB workload is defined by  (1) the ratios of get, put, and scan accesses, 
-and (2) a synthetic distribution of key access frequencies. 
-YCSB  benchmarks  are inspired by real-life applications.
-% and allows developing new ones through workload generation APIs. 
 A typical YCSB experiment stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
-workloads. %It aggregates the key performance metrics for the scenario under test.  
+(synthetic or real) workloads. A synthetic workload is defined by  (1) the ratios of get, put, and scan accesses, and 
+(2) a distribution of key access frequencies. 
 
 Our hardware is a 12-core Intel Xeon 5 machine with 4TB SSD disk. Unless otherwise stated, the YCSB driver  
 exercises 12 workers. In order to guarantee fair memory allocation across KV-stores, 
@@ -48,74 +44,21 @@ In addition, we measure \emph{write amplification}, namely, bytes written to sto
 %as well as the number of read \inred{ and write} system calls. 
 %The OS performance counters are retrieved from the Linux proc filesystem. 
 
-\paragraph{Workloads.} 
-We vary the dataset size from 4GB to 64GB in order to exercise multiple locality 
-scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
-the keys are 32-bit integers encoded in decimal form (10 bytes), which YCSB pads with a fixed 4-byte prefix (so effectively, 
-the keys are 14 byte long). The values are 800-byte long. The data is stored uncompressed. 
+\paragraph{Methodology.} 
+%To make sure that the results  are reproduced, 
+We run 5 experiments for each data point and present the median measurement. Since experiments are long, the results vary 
+little across runs. In all of our experiments, the STD was within $6.1\%$ of the mean, and in most of them below $3\%$. 
+%To avoid cluttering the plots, we do not present the STD. 
 
-We study the following key-access distributions:  
-
-\begin{description}
-\item [Zipf-simple] -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
-Key access frequencies are sampled from the heavy-tailed Zipf distribution 
-following the description in~\cite{Gray:1994:QGB:191839.191886}, with $\theta = 0.8$. 
-The ranking is over a random permutation of the entire key range, so popular keys are uniformly dispersed.
-% The key locations are sampled uniformly at random from the whole data range. 
-
-This workload exhibits 
-medium temporal locality (e.g., the most popular key's frequency is approximately $0.7\%$)
-and no spatial locality. 
-%This is a standard YCSB workload that captures a multitude of use cases  -- e.g., a web page cache distribution by URL. 
-
-\item [Zipf-composite]  -- a Zipfian distribution over composite keys. 
-The key's $14$ most significant bits comprise the primary attribute. 
-The primary attribute is drawn from a Zipf ($\theta=0.8$) distribution over its range. The remainder of the key is drawn uniformally at random.
-We also experimented with a Zipfian distribution of the key's suffix; 
-the performance trends were similar since performance is most affected by 
- the primary dimension's distribution.
- 
-Zipf-composite exhibits high spatial locality. It represents workloads 
-with composite keys, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
-social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics databases~\cite{flurry},
-and other scenarios with spatial locality of keys, e.g.,  reverse URL domains.
-
-\item [Latest-simple] -- reading  recently added simple keys. 
-Keys are inserted in sequential  order; the read keys' distribution is skewed towards recently added ones. 
-Specifically, the sampled key's position wrt the most recent key is distributed Zipf. This is a 
-standard YCSB workload with medium spatial and temporal locality, which represents, e.g., status updates and reads. 
-
-\item [Uniform] -- ingestion of keys in random order (the keys are sampled uniformly at random). RocksDB
-reports a similar benchmark~\cite{rocksdb-benchmarks}; we present it for completeness.
-
-\end{description}
-
-The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
-(A to F) that range from write-heavy ($50\%$ puts) to read-heavy ($95\%-100\%$ gets or scans). 
-In order to stress the system even more on the write side, we introduce a new workload,  
-P, comprised of $100\%$ puts. It captures a non-sequential data load scenario (e.g., an ETL 
-from an external data pipeline~\cite{flurry}). 
-
-\paragraph{Methodology.} Each experiment consists of three stages. The first stage builds 
-the dataset by filling an initially empty store with a sequence of KV-pairs, ordered by key. The second phase is warm-up, running read-only operations to warm the caches. The third
-phase exercises the specific scenario; all worker threads follow the same access pattern. We 
-measure performance only during the steady state (skipping the load and warm-up phases). 
-Most experiments  perform 80 million data accesses. Experiments with scans perform 4 to 16 million accesses, depending 
-on the scan size. 
-
-To make sure that the results  are reproduced, we run 5 experiments for each data point and present the median measurement. 
-Since experiments are long,
-the results vary little across runs. In all of our experiments, the STD was within $6.1\%$ 
-of the mean, and in most of them below $3\%$. 
-To avoid cluttering the graphs, we do not present the STD. 
 
 \paragraph{Configuration.} 
-We focus on the asynchronous logging mode. Synchronous logging 
-is approximately 10x slower, trivializing the results of scenarios that includes puts. 
-
-All experiments in~\S\ref{ssec:results} use the same default configuration, to avoid 
-over-tuning; \S\ref{ssec:drill} then explores different configurations and 
-provides insights on parameter choices.
+\inred{
+All experiments in~\S\ref{ssec:prod}, \S\ref{ssec:synthetic} and~\S\ref{ssec:pebbles} use the default \sys, RocksDB, 
+and PebblesDB configurations, to avoid over-tuning. \S\ref{ssec:drill} explores different \sys\/ configurations and provides 
+insights on parameter choices. RocksDB's configuration the same as exercised by the public performance benchmarks~\cite{RocksDBPerf}. 
+In \S\ref{ssec:drill}, we follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune its memory resources; 
+the results do not affect our conclusions significantly.  Finally, the PebblesDB code includes a fix to  a data race reported 
+in the project's repository~\cite{pebbles-git-issue}. }
 
 \sys's default configuration 
 allocates 8GB to munks and 4GB to the row cache,
@@ -124,16 +67,18 @@ The row cache consists of three hash tables.
 The Bloom filters for funks are partitioned 16-way.  
 We set the \sys\/ maximum chunk size limit to 10MB, and the rebalance size trigger to 7MB. 
 The funk log size limit is 2MB for munk-less chunks, and 20MB for chunks with munks. 
+Finally, we focus on the asynchronous logging mode (with synchronous logging the system
+is approximately 10x slower, trivializing the results of scenarios that include puts). 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
 
-We evaluate RocksDB with its default configuration, which is also used by its public performance benchmarks~\cite{RocksDBPerf}.
-In \S\ref{ssec:drill}, we follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune its memory resources.  
-The results do not affect our conclusions significantly. %; we discuss them in~\S\ref{ssec:drill}.
-We run PebblesDB with the default configuration after fixing a data race reported in 
-the project's repository~\cite{pebbles-git-issue}. 
 
-\subsection{\sys\ versus \ RocksDB}
-\label{ssec:results} 
+
+\subsection{Production benchmarks}
+\label{ssec:prod}
+
+\subsection{Synthetic benchmarks}
+%\subsection{\sys\ versus \ RocksDB}
+\label{ssec:synthetic} 
 
 \begin{figure*}[tb]
 \centering
@@ -196,6 +141,66 @@ the project's repository~\cite{pebbles-git-issue}.
 \label{fig:throughput}
 \end{figure*}
 
+We vary the dataset size from 4GB to 64GB in order to exercise multiple locality 
+scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
+the keys are 32-bit integers encoded in decimal form (10 bytes), which YCSB pads with a fixed 4-byte prefix (so effectively, 
+the keys are 14 byte long). The values are 800-byte long. The data is stored uncompressed. 
+
+
+Each experiment consists of three stages. The first stage populates the dataset by filling an initially empty store 
+with a sequence of KV-pairs, ordered by key. 
+The second phase is warm-up, running read-only operations to warm the caches. The third
+phase exercises the specific scenario; all worker threads follow the same access pattern. We 
+measure performance only during the steady state (skipping the load and warm-up phases). 
+Most experiments  perform 80 million data accesses. Experiments with scans perform 4 to 16 million 
+accesses, depending on the scan size. 
+
+\subsubsection{Workloads}
+%\paragraph{Workloads.} 
+
+
+We study the following key-access distributions:  
+
+%\begin{description}
+%\item [Zipf-simple] 
+\paragraph{Zipf-simple} -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
+Key access frequencies are sampled from the heavy-tailed Zipf distribution 
+following the description in~\cite{Gray:1994:QGB:191839.191886}, with $\theta = 0.8$. 
+The ranking is over a random permutation of the entire key range, so popular keys are uniformly dispersed.
+% The key locations are sampled uniformly at random from the whole data range. 
+This workload exhibits medium temporal locality (e.g., the most popular key's frequency is approximately $0.7\%$)
+and no spatial locality. 
+%This is a standard YCSB workload that captures a multitude of use cases  -- e.g., a web page cache distribution by URL. 
+
+%\item [Zipf-composite]  
+\paragraph{Zipf-composite} -- a Zipfian distribution over composite keys. 
+The key's $14$ most significant bits comprise the primary attribute. 
+The primary attribute is drawn from a Zipf ($\theta=0.8$) distribution over its range. The remainder of the key is drawn uniformally at random.
+We also experimented with a Zipfian distribution of the key's suffix; 
+the performance trends were similar since performance is most affected by 
+ the primary dimension's distribution. Zipf-composite exhibits high spatial locality.% it represents workloads 
+%with composite keys.%, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
+%social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics databases~\cite{flurry},
+%and other scenarios with spatial locality of keys, e.g.,  reverse URL domains.
+
+%\item [Latest-simple] 
+\paragraph{Latest-simple} -- reading  recently added simple keys (e.g., status updates and reads). 
+Keys are inserted in sequential  order; the read keys' distribution is skewed towards recently added ones. 
+Specifically, the sampled key's position wrt the most recent key is distributed Zipf. This is a 
+standard YCSB workload with medium spatial and temporal locality.
+
+%\item [Uniform] 
+\paragraph{Uniform} -- ingestion of keys in random order (the keys are sampled uniformly at random). RocksDB
+reports a similar benchmark~\cite{rocksdb-benchmarks}; we present it for completeness.
+%\end{description}
+
+The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
+(A to F) that range from write-heavy ($50\%$ puts) to read-heavy ($95\%-100\%$ gets or scans). 
+In order to stress the system even more on the write side, we introduce a new workload,  
+P, comprised of $100\%$ puts; it captures a massive data ingestion scenario. 
+%non-sequential data load scenario (e.g., an ETL from an external data pipeline~\cite{flurry}). 
+
+\subsubsection{Evaluation results}
 Figure~\ref{fig:throughput} presents throughput measurements of \sys\/ and RocksDB
 in all YCSB workloads. Except workload D, which exercises the Latest-simple access pattern
 (depicted in green), all benchmarks are run with both  Zipf-simple (orange) 
@@ -565,7 +570,7 @@ However, for  bigger datasets (32GB and 64GB),   using a  bigger
 block cache degrades  RocksDB's performance. Figure~\ref{fig:rocks-memory} shows 
 RocksDB's speedup with different block cache sizes for the 64GB data set in the various workloads. 
 We see that the default configuration gives the best results for most of the workload suite (i.e., the 
-speedups are mostly below $1$). We therefore used this configuration  in~\S\ref{ssec:results} above.   
+speedups are mostly below $1$). We therefore used this configuration  in~\S\ref{ssec:synthetic} above.   
 
 \subsection{\sys\ versus PebblesDB}
 \label{ssec:pebbles} 
