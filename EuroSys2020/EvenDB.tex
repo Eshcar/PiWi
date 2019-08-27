@@ -1,23 +1,19 @@
-% 
-%% Replace 'XX' with your paper number (assigned when you register abstract)
-%% Replace 'NN' with actual number of pages. 
 \documentclass[sigplan,10pt]{acmart}
 \renewcommand\footnotetextcopyrightpermission[1]{}
 \pagestyle{plain}
 
-%\documentclass[letterpaper,twocolumn,10pt]{article}
-%\usepackage{usenix2019,epsfig,subcaption}
-\usepackage{epsfig,subcaption}
 %========================
 %  Packages
 %========================
 %\usepackage{datetime}
+\usepackage{epsfig,subcaption}
 \usepackage{url}
 %\usepackage{hyperref}
 \usepackage{color}
 %\usepackage{graphicx}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
+\usepackage{enumitem}
 
 %========================
 %  Macros
@@ -29,6 +25,7 @@
 %\newcommand{\inred}[1]{ {#1} } % reddening macro commented out
 \newcommand{\remove}[1]{}
 \newcommand{\Idit}[1]{\inred{[Idit: #1]}}
+\newcommand{\idit}[1]{\inred{[Idit: #1]}}
 
 \newcommand{\sys}{EvenDB}
 
@@ -45,7 +42,7 @@
 
 \setlength{\abovecaptionskip}{5pt}
 %\setlength{\belowcaptionskip}{0pt}
-%\setlength{\textfloatsep}{5pt}
+\setlength{\textfloatsep}{7pt}
 
 % Actual document begins below.
 \begin{document}
