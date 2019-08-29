@@ -6,3 +6,4 @@ venv
 *.out
 SOSP/Persistent-KVStore-for-RTAnalytics.pdf
 *.gz
+EuroSys2020/EvenDB.tcp
