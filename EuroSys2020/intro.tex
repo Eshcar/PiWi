@@ -18,12 +18,13 @@ Typically, the first attribute -- called the \emph{primary key} -- has a skewed 
 popular primary keys result in popular \emph{key ranges}. 
 
 One example of this arises in mobile app analytics platforms~\cite{medium-mobile-analytics}.   
-Such platforms typically ingest massive streams of event reports (e.g., app start/stop,  exercising a particular code path within an app) from over a billion mobile users.  
-They employ data stores indexed by a composite key consisting of  app name (or id) and additional attributes (time, user id, device, location, event type, etc.) 
+Such platforms typically ingest massive streams of event reports (e.g., app start/stop or  exercising a particular code path within an app),
+from a billion+ mobile users.  
+They aggregate data in large KV-stores indexed by a composite key consisting of app name and additional attributes (time, user id, device, location, event type, etc.) 
 %The query API is app id-centric, hence this dimension is the key prefix.
-We examine a real trace of  $200$ million events captured from a production mobile analytics engine over the course of $4$ minutes.  
-\Cref{fig:cdf} shows the access frequency distribution over the  $40$K app names appearing in this stream. 
-We find that $10$\% of the apps cover over $99.5$\% of the events; $1$\% of them  cover $94$\% of the events; and fewer than $0.1$\% cover $70$\% of the events. 
+We examine a real trace of  $200$ million events captured from a production mobile analytics engine over the course of four minutes.  
+\Cref{fig:cdf} shows the access frequency distribution over the  $40$K app names occurring in this stream; here,
+$10$\% of the apps cover over $99.5$\% of the events; $1$\% of them  cover $94$\%; and fewer than $0.1$\% cover $70$\% of the events. 
 % This means the data is highly skewed and with a very long tail (not depicted in the figure).
 %Table~\ref {table:popular} shows the cumulative probability of the top-$20$ popular applications, covering more than $50$\% of the events. 
 %With application name as the primary dimension of a composite key this distribution induces high spatial locality.
@@ -37,11 +38,12 @@ We find that $10$\% of the apps cover over $99.5$\% of the events; $1$\% of them
 \end{figure}
 
 Composite keys arise in many additional domains, including messaging and social networks. 
-For example a backend query in Facebook Messenger may retrieve the last 100 messages for a 
-given user~\cite{Borthakur:2011:AHG:1989323.1989438}, where the primary key is user id. 
+For example a backend Facebook Messenger query may retrieve the last 100 messages for a 
+given user~\cite{Borthakur:2011:AHG:1989323.1989438}. %, where the primary key is user id. 
 In Facebook's social network, a graph edge is indexed by a key consisting of two 
 object ids and an association type~\cite{Armstrong:2013:LDB:2463676.2465296}.
-Note further that spatial locality   also arises with simple (non-composite) keys, for example, when 
+%Note further that 
+Spatial locality   also arises with simple (non-composite) keys, for example, when 
 reverse  URL domains are used as keys for web  indexing~\cite{Cho:1998:ECT:297805.297835}. 
 
 % Overfitting for Zipf 
@@ -49,7 +51,7 @@ The prevalence of skewed  access  in real workloads is widely-recognized,
 and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions like Zipf.
 But 
 these benchmarks fail to capture the spatial aspect of locality.
-This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys with no spatial locality,
+This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys, % with no spatial locality,
 e.g., by partitioning data by recent access time as opposed to by key.
 In this work, we make spatial locality a first class consideration in KV-store design.
 % which leads us to rethink the design principles underlying today's popular KV-stores.
@@ -60,12 +62,14 @@ In this work, we make spatial locality a first class consideration in KV-store d
 \subsection{Performance with spatial locality: the challenge }  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The main goal of this work is to draw attention to the importance of spatial locality in 
-today's write-intensive KV-store workloads and to put forth a design alternative  that is better suited for such locality. 
+Our main goal is to 
+%draw attention to the importance of spatial locality in today's KV-store workloads and to 
+put forth a KV-store design alternative  suited for the 
+spatial locality arising in today's  workloads. 
 
 
 % LSM is the standard 
-The de facto standard approach to building high-throughput KV-stores today is \emph{LSM} (log-structured merge) trees~\cite{DBLP:journals/acta/ONeilCGO96}. 
+The de facto standard approach used in high-throughput KV-stores today is \emph{LSM} (log-structured merge) trees~\cite{DBLP:journals/acta/ONeilCGO96}. 
 The LSM design initially groups writes  into files \emph{temporally}, and not by key-range. 
 A background \emph{compaction} process later merge-sorts any number of files, grouping data by keys. 
 
@@ -86,7 +90,7 @@ Beyond increasing write amplification, this makes the flushed keys unavailable f
 which is  wasteful if the system incorporates sufficient DRAM to hold most of the active working set. 
 The drop in DRAM prices (more than $6.6$x since 2010~\cite{dram-prices}) makes the latter scenario increasingly common.  
 
-Yet  LSMs have supplanted the more traditional spatial data partitioning of B-trees for a reason~\cite{rocks-vs-inno}.
+Yet  LSMs have supplanted the  traditional spatial data partitioning of B-trees for a reason~\cite{rocks-vs-inno}.
 %A crucial challenge arising in spatially-organized  storage is how to persist all updates in a consistent way without sacrificing performance.
 In  B-trees, each update induces a random I/O operation to a leaf, resulting in poor write performance.
 Moreover, the need to preserve a consistent image of a leaf while it is being over-written induces high write amplification. 
@@ -113,22 +117,24 @@ Obviously, we do not claim that spatial data partitioning is new; indeed, classi
  A key challenge is what to persist when and in what format. 
  }
  
-A second advantage of LSMs is ensuring consistency -- in particular, atomic scans --  in the face of concurrent access (multi-threading). 
+A second advantage of LSMs is ensuring consistency -- in particular, atomic scans --   under multi-threaded access. 
 %This can be  tricky when a scan spans both memory-resident and disk-resident data.
-LSMs provide these without locks using multi-versioning. 
-In contrast, databases based on B- or  B$^\epsilon$-trees either use locks or forgo scan consistency.
+LSMs provide atomic scans without locks using multi-versioning. 
+In contrast, databases based on B- or  B$^\epsilon$-trees either use locks \inred{[citations]} or forgo scan consistency~\cite{tucana}.
+
 %We are not aware of any published solution for atomic scans in storage based on  B- or  B$^\epsilon$-trees.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Our contributions: \sys}
+\subsection{Our contribution: \sys}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Drum roll 
 We present \sys, a high-throughput persistent KV-store geared towards spatial locality. 
-\sys\ combines a spatial data organization with LSM-like optimized batch I/O, as described in \cref{sec:principles}.
-\sys\ is organized  as a list (rather than a tree) of large \emph{chunks} holding contiguous key ranges.
+\sys's  architecture (\cref{sec:principles}) 
+combines a spatial data organization with LSM-like optimized batch I/O.
+It is organized  as a list (rather than a tree) of large \emph{chunks} holding contiguous key ranges.
 %
-To achieve good performance with this data layout, we employ the following mechanisms: 
+To achieve good performance with this data layout, we employ a number of mechanisms: 
 
 \begin{enumerate} 
      \setlength{\itemindent}{-10pt}
@@ -146,24 +152,26 @@ Bloom filters to expedite reads from disk; and
 a   cache for hot keys in workloads lacking spatial locality.
 \end{enumerate}
 
-Our algorithm, given in \cref{sec:design}, is designed for high concurrency among threads running put, get, and scan operations, as well as background maintenance (compaction). 
-It supports atomic scans using low-overhead multi-versioning, where versions are increased only by scans and not by updates. And it ensures consistency and correct recovery from failures. 
+Our algorithm (\cref{sec:design}) is designed for high %multi-threaded 
+concurrency. 
+%among threads running put, get, and scan operations, as well as background maintenance (compaction). 
+It supports atomic scans using low-overhead multi-versioning, where versions are increased only by scans and not by updates. And it ensures consistency and correct recovery from failures. While the mechanisms we employ are all variants of ones appearing in the literature, their combination is novel and results in a high-performance storage system.
 
 
 
 
 
-We implement \sys\ in  C++, as discussed  in \cref{sec:impl}. 
-In~\cref{sec:eval}, we extensively evaluate \sys. 
-We experiment with three types of workloads: (1) a production trace collected from a large-scale mobile analytics platform; 
-(2)  workloads with synthetically-generated composite keys exercising the standard scenarios of the popular YCSB benchmark suite~\cite{YCSB};
+We implement \sys\ in  C++ (\cref{sec:impl}) and extensively evaluate it (\cref{sec:eval})
+via three types of workloads: (1) a production trace collected from a large-scale mobile analytics platform; 
+(2)  workloads with synthetically-generated composite keys exercising  standard YCSB scenarios~\cite{YCSB};
 and (3)  YCSB's traditional benchmarks, which employ simple (non-composite) keys.  
-In all cases, we compare \sys\ to the recent (Oct 2018) release of RocksDB~\cite{RocksDB}, a mature industry-leading LSM KV-store. 
-We further experimented with two additional open-source KV-stores, PebblesDB~\cite{PebblesDB} (a recent LSM-based KV-store) and  
+%In all cases, 
+We compare \sys\ to the recent (Oct 2018) release of RocksDB~\cite{RocksDB}, a mature industry-leading LSM KV-store. 
+We  experimented with two additional open-source KV-stores, PebblesDB~\cite{PebblesDB} (a recent LSM KV-store) and  
 % PreconaFT/
-TokuDB~\cite{TokuDB} --  the only
-publicly-available KV store that uses a $B^{\epsilon}$-tree design; both performed significantly worse than  RocksDB and \sys, 
-so we do not discuss them further.
+TokuDB~\cite{TokuDB} (the only publicly-available $B^{\epsilon}$-tree-based 
+KV-store); both performed significantly worse than  RocksDB and \sys, so we focus on RocksDB results. 
+%so we do not discuss them further.
 %\inred{across the entire YCSB benchmark suite.} %, which is in line with previous studies of PerconaFT~\cite{tucana}, so we excluded them from further tests. 
 Our main findings are: 
 \begin{enumerate} 
@@ -176,12 +184,12 @@ and reduces write amplification by nearly 4x.
 %For example, with synthetic composite keys and a memory-resident working set, \sys\  
 accelerating scans by up to $3.5$x, puts by up to $2.3$x, and gets by up to $2$x. 
 \item \sys\ is comparable to RocksDB in traditional YCSB workloads without spatial locality. 
-\item \sys\ performs 20--25\% worse  than \sys\ in mixed read/write workloads with large active working sets and no spatial locality. 
-\item \inred{Something about write amplification.}
+\item \sys\ performs 20--25\% worse  than RocksDB  in mixed read/write workloads with large active working sets and no spatial locality. 
+\item \sys\ has lower write amplification, especially on large datasets. \inred{Production trace?} 
 \end{enumerate}
 
 % Benefits
-These results underscore the advantage of \sys's spatially-organized chunks:
+Our results underscore the advantage of \sys's spatially-organized chunks:
 (1) there is little fragmentation of key ranges and hence better  performance under spatial locality; 
 (2) in-memory chunk compaction saves disk flushes and reduces write volume;  
 (3) keeping hot ranges in memory leads to better performance, especially when most of the working set fits in RAM.
@@ -189,7 +197,6 @@ In addition, in-chunk WALs  allow quick recovery from crashes with no need to re
 
 % Downsides
 The downside of spatial partitioning is that if the data lacks spatial locality and the active working set is big, 
-caching an entire chunk for a single popular key is wasteful.  This design is less optimal for mixed read/write workloads lacking spatial locality,
-where the LSM approach may be more suitable.  
+caching an entire chunk for a single popular key is wasteful.  This design is less optimal for mixed read/write workloads lacking spatial locality, where the LSM approach may be more suitable.  
 
 ~\cref{sec:related}  surveys related work and~\cref{sec:conclusions} concludes this paper. 

@@ -8,3 +8,4 @@ SOSP/Persistent-KVStore-for-RTAnalytics.pdf
 *.gz
 EuroSys2020/EvenDB.tcp
 EuroSys2020/EvenDB.pdf
+*.tps

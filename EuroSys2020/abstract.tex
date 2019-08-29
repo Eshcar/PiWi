@@ -1,20 +1,20 @@
 Applications of key-value (KV-)storage often exhibit high \emph{spatial locality}, such as  
 when data items with identical composite key prefixes are created or scanned together.  
-This prevalent access pattern is underused by the ubiquitous LSM tree design underlying 
+This prevalent access pattern is underused by the ubiquitous LSM  design underlying 
 high-throughput KV-stores today.
 
-We present \sys, a general-purpose persistent KV-store optimized for spatially-local write-intensive
+We present \sys, a general-purpose persistent KV-store optimized for spatially-local %write-intensive
 workloads. 
 \sys\ forgoes the temporal data organization of LSM trees and instead partitions data by key to exploit locality. 
-It does so via a novel design that ensures consistency under multi-threaded access,   
-offers much faster in-memory access than existing KV-stores, and 
-reduces write amplification. 
+Its novel design achieves high throughput, 
+ensures consistency under multi-threaded access,   
+%offers much faster in-memory access than existing KV-stores, 
+and reduces write amplification. 
 
 Experiments with real-world data from a large analytics platform show that \sys\  
-consistently outperforms the state-of-the-art. For example, on a 256GB analytics dataset, 
+consistently outperforms the state-of-the-art. For example, on a 256GB production dataset, 
 \sys\ ingests data 3.7x faster than RocksDB,  scans recently ingested data up to 27\% faster, 
 and reduces write amplification by nearly 4x. 
-\sys\ further outperforms existing solutions whenever 
-the system has sufficient DRAM to hold most of the active working set. 
+%\sys\ further outperforms existing solutions whenever the system has sufficient DRAM to hold most of the active working set. 
 In traditional YCSB workloads, %with working sets that are larger than the available DRAM size, 
-\sys\ is on par with RocksDBS and significantly outperforms other open-source solutions we tested.
+\sys\ is on par with RocksDB and significantly outperforms other open-source solutions we tested.

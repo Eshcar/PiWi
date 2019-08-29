@@ -203,9 +203,9 @@ P, comprised of $100\%$ puts; it captures a massive data ingestion scenario.
 \subsubsection{Evaluation results}
 Figure~\ref{fig:throughput} presents throughput measurements of \sys\/ and RocksDB
 in all YCSB workloads. Except workload D, which exercises the Latest-simple access pattern
-(depicted in green), all benchmarks are run with both  Zipf-simple (orange) 
+(depicted in green \inred{todo: change}), all benchmarks are run with both  Zipf-simple (orange) 
 and Zipf-composite (blue). The P (put-only) workload 
-additionally exercises the Uniform access pattern (green \inred{todo: change}). \sys\/ results are depicted with solid
+additionally exercises the Uniform access pattern (green). \sys\/ results are depicted with solid
 lines, and RocksDB with dotted lines. 
 
 We now discuss the results for the different scenarios.
@@ -568,7 +568,7 @@ RocksDB and \sys\/ in this setting.
 
 However, for  bigger datasets (32GB and 64GB),   using a  bigger 
 block cache degrades  RocksDB's performance. Figure~\ref{fig:rocks-memory} shows 
-RocksDB's speedup with different block cache sizes for the 64GB data set in the various workloads. 
+RocksDB's speedup with different block cache sizes for the 64GB dataset in the various workloads. 
 We see that the default configuration gives the best results for most of the workload suite (i.e., the 
 speedups are mostly below $1$). We therefore used this configuration  in~\S\ref{ssec:synthetic} above.   
 
