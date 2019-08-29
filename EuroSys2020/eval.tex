@@ -13,8 +13,8 @@ inferior to \sys's, hence these results are not presented.
 
 % hardcoded subsections symbol since didn't have time to hack cref...
 The experiment setup is described in~\S\ref{ssec:setup}. 
-Performance results for \sys\ and RocksDB are presented in~\S\ref{ssec:prod} (production workloads)
-and~\S\ref{ssec:synthetic} (synthetic workloads). We study  \sys's scalability and sensitivity to  
+Performance results for \sys\ and RocksDB are presented in~\S\ref{ssec:synthetic} (synthetic data) 
+and~\S\ref{ssec:prod} (production data). We study  \sys's scalability and sensitivity to  
 configuration settings in~\S\ref{ssec:drill}. Finally,~\S\ref{ssec:pebbles} compares \sys\ with PebblesDB.
 %\cref{ssec:recover} evaluates its recovery mechanism. 
  
@@ -53,12 +53,12 @@ little across runs. In all of our experiments, the STD was within $6.1\%$ of the
 
 \paragraph{Configuration.} 
 \inred{
-All experiments in~\S\ref{ssec:prod}, \S\ref{ssec:synthetic} and~\S\ref{ssec:pebbles} use the default \sys, RocksDB, 
-and PebblesDB configurations, to avoid over-tuning. \S\ref{ssec:drill} explores different \sys\/ configurations and provides 
-insights on parameter choices. RocksDB's configuration the same as exercised by the public performance benchmarks~\cite{RocksDBPerf}. 
-In \S\ref{ssec:drill}, we follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune its memory resources; 
-the results do not affect our conclusions significantly.  Finally, the PebblesDB code includes a fix to  a data race reported 
-in the project's repository~\cite{pebbles-git-issue}. }
+All experiments in~\S\ref{ssec:synthetic}, \S\ref{ssec:prod} and~\S\ref{ssec:pebbles} use the default \sys, RocksDB, 
+and PebblesDB configurations, to avoid over-tuning. RocksDB's configuration the same as exercised by the public 
+performance benchmarks~\cite{RocksDBPerf}. \S\ref{ssec:drill} explores different \sys\/ configurations and provides 
+insights on parameter choices. We also follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune 
+its memory resources; the results do not affect our conclusions significantly.  Finally, the PebblesDB code includes a fix 
+to  a data race reported in the project's repository~\cite{pebbles-git-issue}. }
 
 \sys's default configuration 
 allocates 8GB to munks and 4GB to the row cache,
@@ -70,11 +70,6 @@ The funk log size limit is 2MB for munk-less chunks, and 20MB for chunks with mu
 Finally, we focus on the asynchronous logging mode (with synchronous logging the system
 is approximately 10x slower, trivializing the results of scenarios that include puts). 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
-
-
-
-\subsection{Production benchmarks}
-\label{ssec:prod}
 
 \subsection{Synthetic benchmarks}
 %\subsection{\sys\ versus \ RocksDB}
@@ -202,10 +197,10 @@ P, comprised of $100\%$ puts; it captures a massive data ingestion scenario.
 
 \subsubsection{Evaluation results}
 Figure~\ref{fig:throughput} presents throughput measurements of \sys\/ and RocksDB
-in all YCSB workloads. Except workload D, which exercises the Latest-simple access pattern
+in all YCSB workloads. Except workload D, which exercises the Latest-simple pattern
 (depicted in green), all benchmarks are run with both  Zipf-simple (orange) 
 and Zipf-composite (blue). The P (put-only) workload 
-additionally exercises the Uniform access pattern (green \inred{todo: change}). \sys\/ results are depicted with solid
+additionally exercises the Uniform access pattern (red). \sys\/ results are depicted with solid
 lines, and RocksDB with dotted lines. 
 
 We now discuss the results for the different scenarios.
@@ -451,6 +446,9 @@ under a read-only workload C with Zipf-composite distribution.}}
 \label{fig:throughput:d}
 \end{figure}
 }
+
+\subsection{Production benchmarks}
+\label{ssec:prod}
 
 \subsection{Insights}
 \label{ssec:drill} 
