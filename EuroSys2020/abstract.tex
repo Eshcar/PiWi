@@ -13,8 +13,8 @@ and reduces write amplification.
 
 Experiments with real-world data from a large analytics platform show that \sys\  
 consistently outperforms the state-of-the-art. For example, on a 256GB production dataset, 
-\sys\ ingests data 3.7x faster than RocksDB,  scans recently ingested data up to 27\% faster, 
+\sys\ ingests data 3.7x faster than RocksDB,  scans recently ingested data up to \inred{1.7x} faster, 
 and reduces write amplification by nearly 4x. 
 %\sys\ further outperforms existing solutions whenever the system has sufficient DRAM to hold most of the active working set. 
 In traditional YCSB workloads, %with working sets that are larger than the available DRAM size, 
-\sys\ is on par with RocksDB and significantly outperforms other open-source solutions we tested.
+\sys\ is on par with RocksDB and significantly outperforms other open-source solutions we explored.

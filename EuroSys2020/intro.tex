@@ -17,14 +17,21 @@ A common design pattern is the use of \emph{composite} keys that represent an ag
 Typically, the first attribute -- called the \emph{primary key} -- has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
 popular primary keys result in popular \emph{key ranges}. 
 
-One example of this arises in mobile app analytics platforms~\cite{medium-mobile-analytics}.   
-Such platforms typically ingest massive streams of event reports (e.g., app start/stop or  exercising a particular code path within an app),
-from a billion+ mobile users.  
-They aggregate data in large KV-stores indexed by a composite key consisting of app name and additional attributes (time, user id, device, location, event type, etc.) 
-%The query API is app id-centric, hence this dimension is the key prefix.
-We examine a real trace of  $200$ million events captured from a production mobile analytics engine over the course of four minutes.  
-\Cref{fig:cdf} shows the access frequency distribution over the  $40$K app names occurring in this stream; here,
-$10$\% of the apps cover over $99.5$\% of the events; $1$\% of them  cover $94$\%; and fewer than $0.1$\% cover $70$\% of the events. 
+One example of this arises in mobile analytics platforms, \inred{e.g., AppsFlyer~\cite{appsflyer}, Flurry~\cite{flurry}, 
+and Google Firebase~\cite{firebase}. %~\cite{medium-mobile-analytics}.   
+Such platforms help mobile developers to collect user activity data, analyze it, and optimize their app experience. 
+They ingest massive streams of app event reports %(e.g., start, stop, or particular scenario within an app), 
+in the real time, and provide a variety of insight queries into the data. For example, Flurry provided insights for  
+1M+ apps across 2.6B user devices  in 2017~\cite{FlurryReport2017}. In order to support efficient analytics on 
+per-app basis, such services aggregate data in KV-stores indexed by a composite key prefixed by unique app 
+id. Other key attributes (timestamp, app version, user id, device model, location, event type, etc.) may vary
+across the index tables.} 
+%
+We examine a trace of $200$ million events captured from a production mobile analytics engine over the course of four minutes.  
+\Cref{fig:cdf} shows the access frequency distribution over the  $40$K app names occurring in this stream. \inred{It follows an  
+explicit heavy-tail pattern:} $10$\% of the apps cover over $99.5$\% of the events; $1$\% of them  cover $94$\%; and fewer 
+than $0.1$\% cover $70$\% of the events. 
+
 % This means the data is highly skewed and with a very long tail (not depicted in the figure).
 %Table~\ref {table:popular} shows the cumulative probability of the top-$20$ popular applications, covering more than $50$\% of the events. 
 %With application name as the primary dimension of a composite key this distribution induces high spatial locality.
@@ -49,8 +56,7 @@ reverse  URL domains are used as keys for web  indexing~\cite{Cho:1998:ECT:29780
 % Overfitting for Zipf 
 The prevalence of skewed  access  in real workloads is widely-recognized, 
 and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions like Zipf.
-But 
-these benchmarks fail to capture the spatial aspect of locality.
+But these benchmarks fail to capture the spatial aspect of locality.
 This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys, % with no spatial locality,
 e.g., by partitioning data by recent access time as opposed to by key.
 In this work, we make spatial locality a first class consideration in KV-store design.
@@ -120,7 +126,8 @@ Obviously, we do not claim that spatial data partitioning is new; indeed, classi
 A second advantage of LSMs is ensuring consistency -- in particular, atomic scans --   under multi-threaded access. 
 %This can be  tricky when a scan spans both memory-resident and disk-resident data.
 LSMs provide atomic scans without locks using multi-versioning. 
-In contrast, databases based on B- or  B$^\epsilon$-trees either use locks \inred{[citations]} or forgo scan consistency~\cite{tucana}.
+In contrast, databases based on B- or  B$^\epsilon$-trees either use locks~\cite{innodblocking} 
+or forgo scan consistency~\cite{tucana}.
 
 %We are not aware of any published solution for atomic scans in storage based on  B- or  B$^\epsilon$-trees.
 
