@@ -1,6 +1,6 @@
 %\subsection{Goals}
-\subsection{Guarantees and optimization goals}
-\sys\ is a persistent ordered key-value store. Similarly to popular industrial KV-stores~\cite{hbase,leveldb,RocksDB}, 
+\subsection{Access semantics and optimization goals}
+\sys\ is a persistent ordered key-value store. Similarly to popular industrial ones~\cite{hbase,leveldb,RocksDB}, 
  it supports concurrent access by multiple threads and ensures 
 strong consistency. 
 %\begin{enumerate}\itemsep0pt
@@ -9,38 +9,40 @@ Specifically its \emph{put, get}, and \emph{range scan} (or scan) operations are
 For scans, this means that all key-value pairs returned by a single scan belong to a consistent 
 snapshot reflecting the state of the data store at a unique point in time.
 
-Additionally, \sys\ ensures \emph{consistent recovery}: following a crash, the system recovers to a well defined execution 
-point some time before the crash. 
+Additionally, \sys\ ensures {consistent recovery}: following a crash, the system recovers to a well-defined execution 
+point.  
 When persistence is \emph{asynchronous}, puts are buffered and persisted to disk in the background,  
  trading durability for speed. In this case, some recent updates may be lost but 
  recovery is to a \emph{consistent} state  
-in the sense that if some put is lost, then all ensuing (and thus possibly dependent) puts are lost as well.
+in the sense that if some put is lost, then no ensuing (and thus possibly dependent) puts are reflected in the data store.
 %\end{enumerate}
 
 Our key optimization goals are the following:
 \begin{enumerate}
 %\itemsep0pt
-\item \emph{Focus on spatial locality.}
+\item {\bf Optimize for spatial locality}, e.g., workloads that employ composite keys.
+\remove{
  Many NoSQL applications embed multi-dimensional data in a single-dimension composite key. 
  This design provides high spatial locality on the primary dimension (key prefix). We strive
  to express this locality in physical data organization.
+ }
  % to exploit it efficiently for scans  by the primary dimension. 
 %In addition, a query that retrieves data pertaining to a particular dimension thus needs to atomically 
 %retrieve the values pertaining to a range of keys. 
 %To favor analytics queries, it is important to optimize such scans. 
 
 
-\item \emph{Low write amplification.} We seek to minimize disk writes in order to boost performance 
-and reduce disk wear, especially for SSD devices.
+\item {\bf Low write amplification}  to boost performance 
+and reduce disk wear.%, especially for SSD devices.
  
-\item \emph{High performance  with memory-resident working sets.}
-To sustain high speed, key-value stores nowadays leverage increasing RAM sizes 
-where they can hold most of the active working set. We strive for maximum performance 
-in this ``hyper-local'' case. Note that we do \emph{not} expect the entire database to fit in
-memory, only the active working set.  
+\item {\bf High performance  with memory-resident working sets.}
+%To sustain high speed, key-value stores nowadays leverage increasing RAM sizes where they can hold most of the active working set. 
+We strive for high performance in the ``hyper-local'' scenario when most of the active working set fits in RAM. 
+Note that we do \emph{not} expect the entire database to fit in
+memory, only the active data.  
  
-\item \emph{Fast recovery.}  Because crashes are inevitable, 
-the downtime they entail should be kept  short. 
+\item {\bf Fast consistent recovery.}  Because crashes are inevitable, recovery must ensure consistency and 
+the downtime it entails should be kept  short. 
 \end{enumerate}
 
 \subsection{Design choices}
@@ -49,15 +51,50 @@ the downtime they entail should be kept  short.
 
 % Given the aforementioned requirements, we make the following design choices:
 
-\paragraph{Data organization and caching.}
+%\paragraph{Data organization and caching.}
 
-\sys\  combines the spatial locality of B-trees  with the optimized I/O and quick access of LSM stores. 
-Its data layout is illustrated in Figure~\ref{fig:piwi}. 
-For spatial locality, we organize data, both on-disk and in-memory, in large chunks pertaining to  key ranges.  
-Each chunk has a file representation called  \emph{funk} (file chunk), and may be cached in a  memory data structure called \emph{munk} (memory chunk).
+\sys\ combines the spatial locality of B-trees with the optimized I/O and quick access of LSM. 
+Its data layout is illustrated in Figure~\ref{fig:piwi}.  We now discuss our key design choices.   
+
+\begin{figure}[tb]
+\includegraphics[width=\columnwidth]{PiWi.png}
+\caption{\sys's  organization. Gray boxes depict metadata, light blue areas show RAM caches of KV-pairs, and blue areas represent on-disk KV storage.}
+\label{fig:piwi}
+\end{figure}
+
+
+{\bf Spatial organization.\ }
+In order to leverage spatial locality, we partition data -- both into files and in memory -- by key.
+Our in-memory data structure is organized as a sorted linked list of \emph{chunks} holding consecutive key ranges.
+The chunks themselves are lightweight metadata objects. They are volatile and are reconstructed from disk on recovery.
+
+{\bf Sequential I/O with in-chunk logging.\ }
+For persistence, each chunk has a file representation called  \emph{funk} (file chunk), which holds all the KV-pairs in the chunk's range.
+Within funks, we adopt LSM's sequential I/O approach. To this end, the funk 
+is divided into two parts: (1) a sorted \emph{SSTable} (Sorted String Table~\cite{Bigtable2008}), and (2) an unsorted \emph{log}. 
+New updates are appended to the log; the log is  merged into the SSTable via an infrequent background compaction process. 
+Unlike LSMs, \sys\ logs writes exclusively within their funks and avoids duplicating the updates  in a separate WAL. This reduces write amplification and expedites recovery. 
+
+{\bf Key-range caching with in-memory compaction.\ }
+Caching KV-pairs in RAM is instrumental for achieving high read performance in persistent KV-stores. 
+Because we target workloads with high spatial locality, we employ caching at the granularity of chunks.
+Namely, popular chunks are cached in a  memory data structure called \emph{munk} (memory chunk).
+While traditionally, caching  only serves the read-path, working at the chunk granularity allows us to 
+leverage it also in the write-path, specifically, for in-memory compaction.  Whereas appending writes to 
+the log is essential for persistence, compacting the log is only required for performance (specifically, to 
+reduce on-disk search time). But the latter is not required when the chunk is cached. Thus, when 
+a chunk has a munk, we compact it almost exclusively in memory. 
+%Note that typically only ``cold'' chunks do not have munks, and since little data is 
+
+%\paragraph{Chunk-based organization for spatial locality}
+
+
 % This organization exploits spatial locality and is friendly to range scans.
 
 
+
+
+\remove{
 \begin{figure*}[tb]
 %\centerline{
 \begin{subfigure}{0.34\linewidth}
@@ -81,10 +118,10 @@ Each chunk has a file representation called  \emph{funk} (file chunk), and may b
 \caption{\sys's data layout compared to LSMs and B$^\epsilon$ trees.}
 \label{fig:layout}
 \end{figure*}
+}
 
-
-Chunks are organized in a linked list. To speed up key access, 
-we index the chunks using a volatile index (a sorted array in our implementation).  
+Chunks are organized in a sorted linked list. To speed up key access, they are 
+indexed using a volatile index (a sorted array in our implementation).  
 We also partially sort the keys in each chunk for fast in-chunk search.  
  To expedite access to  keys whose chunks are only on-disk  (i.e., have no munks), 
 individual popular keys are cached in a \emph{row cache}, 

@@ -17,19 +17,18 @@ A common design pattern is the use of \emph{composite} keys that represent an ag
 Typically, the first attribute -- called the \emph{primary key} -- has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
 popular primary keys result in popular \emph{key ranges}. 
 
-One example of this arises in mobile analytics platforms, \inred{e.g., AppsFlyer~\cite{appsflyer}, Flurry~\cite{flurry}, 
+One example of this arises in mobile analytics platforms, e.g., AppsFlyer~\cite{appsflyer}, Flurry~\cite{flurry}, 
 and Google Firebase~\cite{firebase}. %~\cite{medium-mobile-analytics}.   
-Such platforms help mobile developers to collect user activity data, analyze it, and optimize their app experience. 
-They ingest massive streams of app event reports %(e.g., start, stop, or particular scenario within an app), 
-in the real time, and provide a variety of insight queries into the data. For example, Flurry provided insights for  
-1M+ apps across 2.6B user devices  in 2017~\cite{FlurryReport2017}. In order to support efficient analytics on 
-per-app basis, such services aggregate data in KV-stores indexed by a composite key prefixed by unique app 
-id. Other key attributes (timestamp, app version, user id, device model, location, event type, etc.) may vary
-across the index tables.} 
+Such platforms %help mobile developers collect user activity data, analyze it, and optimize their app experience. They 
+ingest massive streams of app event reports %(e.g., start, stop, or particular scenario within an app), 
+in  real time and provide a variety of insight queries into the data. For example, Flurry provided insights for  
+1M+ apps across 2.6B user devices  in 2017~\cite{FlurryReport2017}. In order to offer per-app analytics efficiently,
+such services aggregate data in KV-stores indexed by a composite key prefixed by a unique app 
+id,  followed by a variety of other attributes (time, user id, device model, location, event type, etc.)
 %
 We examine a trace of $200$ million events captured from a production mobile analytics engine over the course of four minutes.  
-\Cref{fig:cdf} shows the access frequency distribution over the  $40$K app names occurring in this stream. \inred{It follows an  
-explicit heavy-tail pattern:} $10$\% of the apps cover over $99.5$\% of the events; $1$\% of them  cover $94$\%; and fewer 
+\Cref{fig:cdf} shows the access frequency distribution over the  $40$K app ids occurring in this stream. It follows a marked
+heavy-tail pattern: $10$\% of the apps cover over $99.5$\% of the events; $1$\% of them  cover $94$\%; and fewer 
 than $0.1$\% cover $70$\% of the events. 
 
 % This means the data is highly skewed and with a very long tail (not depicted in the figure).
@@ -40,7 +39,7 @@ than $0.1$\% cover $70$\% of the events.
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.7\columnwidth]{figs/cdf.pdf}
-\caption{CDF of app names in a real-world mobile analytics event stream consisting of 200 million events.}
+\caption{CDF of app names in a real-world mobile analytics event stream consisting of 200 million events. \inred{Name -> id}}
 \label{fig:cdf}
 \end{figure}
 
@@ -55,10 +54,10 @@ reverse  URL domains are used as keys for web  indexing~\cite{Cho:1998:ECT:29780
 
 % Overfitting for Zipf 
 The prevalence of skewed  access  in real workloads is widely-recognized, 
-and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature skewed key-access distributions like Zipf.
+and indeed standard benchmarks (e.g., YCSB~\cite{YCSB})  feature heavy-tailed key-access distributions like Zipf.
 But these benchmarks fail to capture the spatial aspect of locality.
 This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys, % with no spatial locality,
-e.g., by partitioning data by recent access time as opposed to by key.
+e.g., in partitioning data by recent access time as opposed to by key.
 In this work, we make spatial locality a first class consideration in KV-store design.
 % which leads us to rethink the design principles underlying today's popular KV-stores.
 
@@ -90,7 +89,7 @@ Since new (lower level) files are always merged with old (higher level) ones,
  ``cold'' key ranges  continue to be repeatedly re-located by  compactions.  
 
 % LSM is not the best when the entire working set fits in memory
-Additionally, we note that LSM's temporal  organization optimizes disk I/O but induces a penalty on in-memory operation. 
+Note also that LSM's temporal  organization optimizes disk I/O but induces a penalty on in-memory operation. 
 All keys -- including popular ones -- are flushed to disk periodically, even though persistence is assured via a separate \emph{write-ahead-log (WAL)}.
 Beyond increasing write amplification, this makes the flushed keys unavailable for fast read from memory,
 which is  wasteful if the system incorporates sufficient DRAM to hold most of the active working set. 
@@ -107,7 +106,7 @@ If the buffers reside on disk, the lookup time is unacceptably slow, whereas
 if they are in RAM then they have to be complemented by a separate persistence mechanism, with its own costs.  
 LSM's temporal organization overcomes these challenges by absorbing random writes in memory and periodically flushing them as 
 sequential files to disk. 
-Its resounding performance advantage has been repeatedly demonstrated, 
+The resounding performance advantage of the LSM approach  has been repeatedly demonstrated, 
 e.g., in a recent  study of the Percona mySQL server using three storage engines -- RocksDB, TokuDB, and InnoDB --
 based on LSM, a B$^{\epsilon}$-tree, and a B-tree, respectively~\cite{toku-rocks-inno}.
 
@@ -138,10 +137,10 @@ or forgo scan consistency~\cite{tucana}.
 % Drum roll 
 We present \sys, a high-throughput persistent KV-store geared towards spatial locality. 
 \sys's  architecture (\cref{sec:principles}) 
-combines a spatial data organization with LSM-like optimized batch I/O.
+combines a spatial data organization with LSM-like  batch I/O.
 It is organized  as a list (rather than a tree) of large \emph{chunks} holding contiguous key ranges.
 %
-To achieve good performance with this data layout, we employ a number of mechanisms: 
+To boost performance with this data layout, we employ a number of mechanisms: 
 
 \begin{enumerate} 
      \setlength{\itemindent}{-10pt}
@@ -183,9 +182,9 @@ KV-store); both performed significantly worse than  RocksDB and \sys, so we focu
 Our main findings are: 
 \begin{enumerate} 
   %   \setlength{\itemindent}{-10pt}
-\item \sys\/ significantly outperforms RocksDB when spatial  locality is high.  
-For instance, on a 256GB production dataset, \sys\ ingests data 3.7x faster than RocksDB,  scans recent  data up to 27\% faster, 
-and reduces write amplification by nearly 4x. 
+\item \sys\/ significantly outperforms RocksDB under high spatial  locality.  
+For instance, on a 256GB production dataset, \sys\ ingests data 3.7x faster than RocksDB %,  scans recent  data up to 27\% faster, 
+and reduces write amplification by almost 4x. 
 %And in large synthetic composite-key workloads, \sys\  improves over RocksDB's throughput by $24\% - 75\%$. 
 \item \sys\/ significantly outperforms RocksDB whenever most of the working set fits in RAM, 
 %For example, with synthetic composite keys and a memory-resident working set, \sys\  
