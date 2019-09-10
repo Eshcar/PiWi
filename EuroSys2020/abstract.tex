@@ -5,16 +5,17 @@ high-throughput KV-stores today.
 
 We present \sys, a general-purpose persistent KV-store optimized for spatially-local %write-intensive
 workloads. 
-\sys\ forgoes the temporal data organization of LSM trees and instead partitions data by key to exploit locality. 
-Its novel design achieves high throughput, 
+\sys\ combines spatial data partitioning with LSM-like  batch I/O. 
+%forgoes the temporal data organization of LSM trees and instead partitions data by key to exploit locality. 
+It achieves high throughput, 
 ensures consistency under multi-threaded access,   
 %offers much faster in-memory access than existing KV-stores, 
 and reduces write amplification. 
 
-Experiments with real-world data from a large analytics platform show that \sys\  
-consistently outperforms the state-of-the-art. For example, on a 256GB production dataset, 
-\sys\ ingests data 3.7x faster than RocksDB,  scans recently ingested data up to \inred{1.7x} faster, 
+In experiments with real-world data from a large analytics platform,  \sys\  
+consistently outperforms the state-of-the-art. E.g., on a 256GB production dataset, 
+\sys\ ingests data 3.7x faster than RocksDB  %scans recently ingested data up to \inred{1.7x} faster, 
 and reduces write amplification by nearly 4x. 
 %\sys\ further outperforms existing solutions whenever the system has sufficient DRAM to hold most of the active working set. 
-In traditional YCSB workloads, %with working sets that are larger than the available DRAM size, 
-\sys\ is on par with RocksDB and significantly outperforms other open-source solutions we explored.
+In traditional YCSB workloads lacking spatial locality, %with working sets that are larger than the available DRAM size, 
+\sys\ is on par with RocksDB and significantly better than other open-source solutions we explored.
