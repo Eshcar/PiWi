@@ -24,7 +24,7 @@ ingest massive streams of app event reports %(e.g., start, stop, or particular s
 in  real-time and provide a variety of insight queries into the data. For example, Flurry provided insights for  
 1M+ apps across 2.6B user devices  in 2017~\cite{FlurryReport2017}. In order to offer per-app analytics efficiently,
 such services aggregate data in KV-stores indexed by a composite key prefixed by a unique app 
-id,  followed by a variety of other attributes (time, user id, device model, location, event type, etc.)
+id,  followed by a variety of other attributes (time, user id, device model, location, event type, etc.).
 %
 We examine a trace of $200$ million events captured from a production mobile analytics engine over the course of four minutes.  
 \Cref{fig:cdf} shows the access frequency distribution over the  $40$K app ids occurring in this stream. It follows a marked
