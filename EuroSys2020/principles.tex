@@ -51,7 +51,7 @@ Its data layout is illustrated in Figure~\ref{fig:piwi}.  We now discuss its key
 
 
 {\bf Chunks.\ }
-To leverage spatial locality, we partition data -- both into files and in memory -- by key.
+To leverage spatial locality, we partition data -- both on-disk and in-memory -- by key.
 Our  data structure is organized as a sorted linked list of \emph{chunks} holding consecutive key ranges.
 All chunks are represented in memory via lightweight metadata objects. They are volatile and are reconstructed from disk on recovery.
 

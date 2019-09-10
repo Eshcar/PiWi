@@ -106,9 +106,9 @@ The resounding performance advantage of the LSM approach over B- and B$^{\epsilo
 e.g., in a recent  study of the Percona mySQL server using three storage engines -- RocksDB, TokuDB, and InnoDB --
 based on LSM, a B$^{\epsilon}$-tree, and a B-tree, respectively~\cite{toku-rocks-inno}.
 %
-Another advantage of LSMs is ensuring consistency -- in particular, atomic scans --   under multi-threaded access. 
+Another advantage of LSMs is that they readily ensure consistency under multi-threaded access -- in particular, atomic scans --   
+via lock-free multi-versioning.
 %This can be  tricky when a scan spans both memory-resident and disk-resident data.
-LSMs provide atomic scans without locks using multi-versioning. 
 In contrast, databases based on B- or  B$^\epsilon$-trees either use locks~\cite{innodblocking} 
 or forgo scan consistency~\cite{tucana}.
 
@@ -129,7 +129,7 @@ put forth a KV-store design alternative  suited for the
 spatial locality arising in today's  workloads, without forfeiting the benefits achieved by the LSM approach.
 
 
-%We are not aware of any published solution for atomic scans in storage based on  B- or  B$^\epsilon$-trees.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Our contribution: \sys}
@@ -141,13 +141,13 @@ We present \sys, a high-throughput persistent KV-store geared towards spatial lo
 The pillars of our design are large \emph{chunks} holding contiguous key ranges. 
 \sys's chunks are not merely  a means to organize data on-disk (like nodes in a B-Tree); they 
 are also the basic units for DRAM caching, I/O-batching, logging, and compaction. 
-This approach is unique:  typical storage systems rely on OS-managed page caches (whereas chunks consist of many pages),  
-supplemented by application-level caches of individual rows (KV-pairs) that serve only the read-path; 
-they use WALs for the write-path.
+This approach is unique:  typical KV-stores rely on OS-managed page caches (whereas chunks consist of many pages)  
+supplemented by application-level caches. In LSMs, these caches serve only the read-path. 
+Storage systems use system-level WALs for the write-path.
 
 Our novel chunk-based organization has several benefits. 
 First, chunk caching is effective for spatially-local workloads.
-Second, chunk-level logging eliminates the need to log each update in a dedicated WAL, thus 
+Second, chunk-level logging eliminates the need to log each update in a system-level WAL, thus 
 reducing write amplification and expediting crash-recovery. 
 Finally, using the same data structure for both the read-path (as a cache) and the write-path
 (as a log) allows us to perform \emph{in-memory compaction}, reducing write amplification even further.
@@ -173,7 +173,7 @@ via three types of workloads: (1) a production trace collected from a large-scal
 and (3)  YCSB's traditional benchmarks, which employ simple (non-composite) keys.  
 %In all cases, 
 We compare \sys\ to the recent (Oct 2018) release of RocksDB~\cite{RocksDB}, a mature industry-leading LSM KV-store. 
-We  experimented with two additional open-source KV-stores, PebblesDB~\cite{PebblesDB} (a recent LSM KV-store) and  
+We  experimented with two additional open-source KV-stores, PebblesDB~\cite{PebblesDB}  and  
 % PreconaFT/
 TokuDB~\cite{TokuDB} (the only publicly-available $B^{\epsilon}$-tree-based 
 KV-store); both performed significantly worse than  RocksDB and \sys, so we focus on RocksDB results. 
