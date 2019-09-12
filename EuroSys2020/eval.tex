@@ -76,28 +76,37 @@ is approximately 10x slower, trivializing the results of scenarios that include 
 We evaluate a prototype application that ingests and analyzes a time-series stream of mobile 
 app events. We use a log of production mobile analytics engine as data source. The log captures 
 a stream that generates approximately 64GB data (80M events) per minute. The events are imported 
-into a table ordered by app id and timestamp. As described in~\S\ref{sec:intro}, the app id distribution 
-is heavy-tailed, i.e., the table content is spatially local. 
+into a table ordered by lexicographically by app id and timestamp. As described in~\S\ref{sec:intro}, 
+the app id distribution is heavy-tailed, i.e., the data organization is spatially local. 
 
-The experiment consists of two stages - ingestion and analytics. In the first stage, all operations 
-are puts (in timestamp order). We ingest 64GB, 128GB and 256GB of data in 12 workers. In the 
-second stage, 95\% of the operations are range queries, whereas the rest are puts (lagging data or fixes).  
-Every range query scans a sequence of recent events within one app (i.e., all the scanned rows share 
-the same app id key prefix).  We study short, medium, and long scans -- 1s, 10s, and 1min of the app's 
-event history.  The app id is sampled from the data distribution (i.e., popular apps are queried more frequently).  
+Two workloads are exercised.  
 
-Figure~\ref{fig:prod:ingestion:a} depicts the ingestion rates. \sys's advantage gets more pronounced with 
-the dataset's growth. For example, it ingests 256GB of data within 1.1 hours, whereas RocksDB requires 4.8 hours 
-(4.4x speedup). Figure~\ref{fig:prod:ingestion:b} depicts the ingestion rate dynamics during the 256GB experiment.
-Although RocksDB's throughput is stable overall, it suffers from long periods (1min or longer) of degraded performance 
-(10\% of the average rate), due to compactions. \sys's throughput is much noisier, due to frequent munk rebalances; 
-however, it prevails even at its slowest. Figure~\ref{fig:prod:ingestion:c} summarizes the write amplification
-factors. While \sys's write amplification is hardly affected by the dataset size, RocksDB's deteriorates as the dataset 
-(and consequently, the number of LSM levels) grows. For instance, RocksDB's amplification factor for 256G is 11.4x, 
-whereas \sys's is only 2.6x. 
+\paragraph{Put-only (data ingestion).} We load 64GB, 128GB and 256GB of data, in timestamp order. 
+Figure~\ref{fig:prod:ingestion:a} depicts the ingestion rates. \sys's advantage gets more pronounced with the dataset's growth. 
+For example, it ingests 256GB of data within 1.1 hours, whereas RocksDB requires 4.8 hours (4.4x speedup). 
+Figure~\ref{fig:prod:ingestion:b} depicts the ingestion rate dynamics with the 256GB dataset. Although RocksDB's 
+throughput is stable overall, it suffers from long periods (1min or longer) of degraded performance (10\% of the average rate), 
+due to compactions. \sys's throughput is much noisier, due to frequent munk rebalances; however, it prevails even at its slowest. 
+Figure~\ref{fig:prod:ingestion:c} presents the write amplification results. While \sys's write amplification is hardly affected by 
+the dataset size, RocksDB's deteriorates as the dataset (and consequently, the number of LSM levels) grows. For instance, 
+RocksDB's amplification factor for 256G is 11.4x, whereas \sys's is only 2.6x. 
 
 All in all, \sys\/ is CPU-bound, whereas RocksDB is IO-bound. With 256GB data, 
-e.g., \sys\/ utilizes 3x more CPU cycles, whereas RocksDB reads and writes 4x more bytes.}
+e.g., \sys\/ utilizes 3x more CPU cycles, whereas RocksDB reads and writes 4x more bytes.
+
+\paragraph{Scan-dominated (analytics).} We run on top of the KV-store produced by the ingestion 
+workload. Here, 95\% of the operations are range queries, whereas the rest are puts (lagging data or fixes).  
+Every range query scans a sequence of recent events within one app (i.e., all the scanned rows share 
+the same app id key prefix).  We study short, medium, and long scans -- 1s, 10s, and 1min of the app's 
+event history. The app id is sampled from the data distribution (i.e., popular apps are queried more frequently).  
+
+Figure~\ref{fig:prod:analytics} depicts the throughput dynamics for the 256GB dataset with 1min queries. 
+\sys's performance stabilizes almost instantly upon the transition from ingestion to analytics. This happens 
+because the two workloads are identically distributed, and hence, the working set munks are already in memory, 
+organized to serve the scans. It takes RocksDB almost 40 minutes to match \sys's performance. During this period, 
+it goes through multiple compactions, which degrade the application throughput by 70\% on average. Eventually, 
+RocksDB completes this process, populates its read cache with the working set, and catches up with \sys.
+}
 
 \begin{figure*}[tb]
 \centering
