@@ -13,8 +13,8 @@ inferior to \sys's, hence these results are not presented.
 
 % hardcoded subsections symbol since didn't have time to hack cref...
 The experiment setup is described in~\S\ref{ssec:setup}. 
-Performance results for \sys\ and RocksDB are presented in~\S\ref{ssec:synthetic} (synthetic data) 
-and~\S\ref{ssec:prod} (production data). We study  \sys's scalability and sensitivity to  
+Performance results for \sys\ and RocksDB are presented in~\S\ref{ssec:prod} (production data)
+and~\S\ref{ssec:synthetic} (synthetic data). We study  \sys's scalability and sensitivity to  
 configuration settings in~\S\ref{ssec:drill}. Finally,~\S\ref{ssec:pebbles} compares \sys\ with PebblesDB.
 %\cref{ssec:recover} evaluates its recovery mechanism. 
  
@@ -50,7 +50,6 @@ We run 5 experiments for each data point and present the median measurement. Sin
 little across runs. In all of our experiments, the STD was within $6.1\%$ of the mean, and in most of them below $3\%$. 
 %To avoid cluttering the plots, we do not present the STD. 
 
-
 \paragraph{Configuration.} 
 \inred{
 All experiments in~\S\ref{ssec:synthetic}, \S\ref{ssec:prod} and~\S\ref{ssec:pebbles} use the default \sys, RocksDB, 
@@ -70,6 +69,56 @@ The funk log size limit is 2MB for munk-less chunks, and 20MB for chunks with mu
 Finally, we focus on the asynchronous logging mode (with synchronous logging the system
 is approximately 10x slower, trivializing the results of scenarios that include puts). 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
+
+\subsection{Production benchmarks}
+\label{ssec:prod}
+\inred{
+We evaluate a prototype application that ingests and analyzes a time-series stream of mobile 
+app events. We use a log of production mobile analytics engine as data source. The log captures 
+a stream that generates approximately 64GB data (80M events) per minute. The events are imported 
+into a table ordered by app id and timestamp. As described in~\S\ref{sec:intro}, the app id distribution 
+is heavy-tailed, i.e., the table content is spatially local. 
+
+The experiment consists of two stages - ingestion and analytics. In the first stage, all operations 
+are puts (in timestamp order). We ingest 64GB, 128GB and 256GB of data in 12 workers. In the 
+second stage, 95\% of the operations are range queries, whereas the rest are puts (lagging data or fixes).  
+Every range query scans a sequence of recent events within one app (i.e., all the scanned rows share 
+the same app id key prefix).  We study short, medium, and long scans -- 1s, 10s, and 1min of the app's 
+event history.  The app id is sampled from the data distribution (i.e., popular apps are queried more frequently).  
+
+Figure~\ref{fig:prod:ingestion:a} depicts the ingestion rates. \sys's advantage gets more pronounced with 
+the dataset's growth. For example, it ingests 256GB of data within 1.1 hours, whereas RocksDB requires 4.8 hours 
+(4.4x speedup). Figure~\ref{fig:prod:ingestion:b} depicts the ingestion rate dynamics during the 256GB experiment.
+Although RocksDB's throughput is stable overall, it suffers from long periods (1min or longer) of degraded performance 
+(10\% of the average rate), due to compactions. \sys's throughput is much noisier, due to frequent munk rebalances; 
+however, it prevails even at its slowest. Figure~\ref{fig:prod:ingestion:c} summarizes the write amplification
+factors. While \sys's write amplification is hardly affected by the dataset size, RocksDB's deteriorates as the dataset 
+(and consequently, the number of LSM levels) grows. For instance, RocksDB's amplification factor for 256G is 11.4x, 
+whereas \sys's is only 2.6x. 
+
+All in all, \sys\/ is CPU-bound, whereas RocksDB is IO-bound. With 256GB data, 
+e.g., \sys\/ utilizes 3x more CPU cycles, whereas RocksDB reads and writes 4x more bytes.}
+
+\begin{figure*}[tb]
+\centering
+\begin{subfigure}{0.33\linewidth}
+%\includegraphics[width=\textwidth]{figs/Workload_P_line.pdf}
+\caption{Throughput}
+\label{fig:prod:ingestion:a}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+%\includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
+\caption{Throughput dynamics, 256GB}
+\label{fig:prod:ingestion:b}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+%\includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
+\caption{Write amplification}
+\label{fig:prod:ingestion:c}
+\end{subfigure}
+\caption{\sys\/ vs RocksDB ingestion performance, under production workload.}
+\label{fig:prod:ingestion}
+\end{figure*}
 
 \subsection{Synthetic benchmarks}
 %\subsection{\sys\ versus \ RocksDB}
@@ -446,9 +495,6 @@ under a read-only workload C with Zipf-composite distribution.}}
 \label{fig:throughput:d}
 \end{figure}
 }
-
-\subsection{Production benchmarks}
-\label{ssec:prod}
 
 \subsection{Insights}
 \label{ssec:drill} 
