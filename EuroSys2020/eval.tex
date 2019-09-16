@@ -2,20 +2,21 @@ The baseline for our evaluation is RocksDB -- a mature and widely-used industria
 \remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) 
 and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. 
 For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} 
-We use the most recent RocksDB release 5.17.2, available Oct 24, 2018.  
-It is worth noting that RocksDB's performance has significantly improved  over the last two years, primarily through 
-optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   We also compare against PebblesDB, 
-a research LSM tree prototype that reduces  write amplification  and demonstrated performance advantages
-over RocksDB in some scenarios~\cite{PebblesDB}. We further attempted to experiment with TokuDB~\cite{TokuDB} -- 
+We use the recent RocksDB release 5.17.2, available Oct 24, 2018.  It is worth noting that RocksDB's performance 
+has significantly improved  over the last two years, primarily through optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   
+We also compare against PebblesDB~\cite{PebblesDB}, a research LSM prototype, and TokuDB~\cite{TokuDB} -- the only publicly 
+available KV-store whose design is inspired by B$^\epsilon$-trees.
+\remove{that reduces  write amplification  and demonstrated performance 
+advantages over RocksDB in some scenarios. We further attempted to experiment with TokuDB~\cite{TokuDB} -- 
 the only publicly available KV-store whose design is inspired by B$^\epsilon$-trees. However, TokuDB crashed 
 in all executions with more than one thread, and in all single-threaded executions its performance was 
-inferior to \sys's, hence these results are not presented.
+inferior to \sys's, hence these results are not presented.}
 
 % hardcoded subsections symbol since didn't have time to hack cref...
 The experiment setup is described in~\S\ref{ssec:setup}. 
 Performance results for \sys\ and RocksDB are presented in~\S\ref{ssec:prod} (production data)
-and~\S\ref{ssec:synthetic} (synthetic data). We study  \sys's scalability and sensitivity to  
-configuration settings in~\S\ref{ssec:drill}. Finally,~\S\ref{ssec:pebbles} compares \sys\ with PebblesDB.
+and~\S\ref{ssec:synthetic} (synthetic data). ~\S\ref{ssec:pebbles} compares \sys\ with PebblesDB and TokuDB. 
+Finally, we study  \sys's scalability and sensitivity to configuration settings in~\S\ref{ssec:drill}. 
 %\cref{ssec:recover} evaluates its recovery mechanism. 
  
 \subsection{Setup}
@@ -38,8 +39,9 @@ exercises 12 workers. In order to guarantee fair memory allocation across KV-sto
 we run each experiment within a Linux container with 16GB RAM. 
 
 \paragraph{Metrics.} Our primary performance metrics are \emph{throughput} 
-and \emph{latency percentiles}, as produced by YCSB. 
-In addition, we measure \emph{write amplification}, namely, bytes written to storage over bytes passed from the application. 
+and \emph{latency percentiles}, as produced by YCSB. In addition, we report \emph{write amplification}, 
+namely, bytes written to storage over bytes passed from the application. \inred{The iostat utility 
+provides the OS-level measurements.}
 %In order to explain the results, we also explore \emph{read amplification} (in terms of bytes as well as number of system calls per application read).  
 %as well as the number of read \inred{ and write} system calls. 
 %The OS performance counters are retrieved from the Linux proc filesystem. 
@@ -53,7 +55,7 @@ little across runs. In all of our experiments, the STD was within $6.1\%$ of the
 \paragraph{Configuration.} 
 \inred{
 All experiments in~\S\ref{ssec:synthetic}, \S\ref{ssec:prod} and~\S\ref{ssec:pebbles} use the default \sys, RocksDB, 
-and PebblesDB configurations, to avoid over-tuning. RocksDB's configuration the same as exercised by the public 
+TokuDB and PebblesDB configurations, to avoid over-tuning. RocksDB's configuration the same as exercised by the public 
 performance benchmarks~\cite{RocksDBPerf}. \S\ref{ssec:drill} explores different \sys\/ configurations and provides 
 insights on parameter choices. We also follow the RocksDB performance guide~\cite{RocksDBMemoryTuning} to tune 
 its memory resources; the results do not affect our conclusions significantly.  Finally, the PebblesDB code includes a fix 
@@ -75,18 +77,19 @@ is approximately 10x slower, trivializing the results of scenarios that include 
 \inred{
 We evaluate a prototype application that ingests and analyzes a time-series stream of mobile 
 app events. We use a log of production mobile analytics engine as data source. The log captures 
-a stream that generates approximately 64GB data (80M events) per minute. The events are imported 
+a stream that generates approximately 64GB of data (80M events) per minute. The events are imported 
 into a table ordered by lexicographically by app id and timestamp. As described in~\S\ref{sec:intro}, 
 the app id distribution is heavy-tailed, i.e., the data organization is spatially local. 
 
 Two workloads are exercised.  
 
 \paragraph{Put-only (data ingestion).} We load 64GB, 128GB and 256GB of data, in timestamp order. 
-Figure~\ref{fig:prod:ingestion:a} depicts the ingestion rates. \sys's advantage gets more pronounced with the dataset's growth. 
-For example, it ingests 256GB of data within 1.1 hours, whereas RocksDB requires 4.8 hours (4.4x speedup). 
-Figure~\ref{fig:prod:ingestion:b} depicts the ingestion rate dynamics with the 256GB dataset. Although RocksDB's 
-throughput is stable overall, it suffers from long periods (1min or longer) of degraded performance (10\% of the average rate), 
-due to compactions. \sys's throughput is much noisier, due to frequent munk rebalances; however, it prevails even at its slowest. 
+Figure~\ref{fig:prod:ingestion:a} depicts the ingestion rates. \sys\/ is much faster in all cases; its advantage 
+gets more pronounced with the dataset's growth. For example, \sys\/ ingests 256GB of data within 1.1 hours, 
+whereas RocksDB requires 4.8 hours (4.4x speedup). Figure~\ref{fig:prod:ingestion:b} depicts the ingestion 
+rate dynamics with the 256GB dataset. Although RocksDB's throughput is stable overall, it suffers from long 
+periods (1min or longer) of degraded performance (10\% of the average rate), due to compactions. 
+\sys's throughput is much noisier, due to frequent munk rebalances; however, it prevails even at its slowest. 
 Figure~\ref{fig:prod:ingestion:c} presents the write amplification results. While \sys's write amplification is hardly affected by 
 the dataset size, RocksDB's deteriorates as the dataset (and consequently, the number of LSM levels) grows. For instance, 
 RocksDB's amplification factor for 256G is 11.4x, whereas \sys's is only 2.6x. 
@@ -94,19 +97,18 @@ RocksDB's amplification factor for 256G is 11.4x, whereas \sys's is only 2.6x.
 All in all, \sys\/ is CPU-bound, whereas RocksDB is IO-bound. With 256GB data, 
 e.g., \sys\/ utilizes 3x more CPU cycles, whereas RocksDB reads and writes 4x more bytes.
 
-\paragraph{Scan-dominated (analytics).} We run on top of the KV-store produced by the ingestion 
-workload. Here, 95\% of the operations are range queries, whereas the rest are puts (lagging data or fixes).  
-Every range query scans a sequence of recent events within one app (i.e., all the scanned rows share 
-the same app id key prefix).  We study short, medium, and long scans -- 1s, 10s, and 1min of the app's 
+\paragraph{Scan-dominated (analytics).} We run on top of the KV-store produced by the 256GB 
+ingestion workload. Here, 95\% of the operations are range queries, whereas the rest are puts that capture 
+lagging updates. Every range query scans a sequence of recent events within one app (i.e., all the scanned rows 
+share the same app id key prefix).  We study short, medium, and long scans -- 1s, 10s, and 1min of the app's 
 event history. The app id is sampled from the data distribution (i.e., popular apps are queried more frequently).  
 
-Figure~\ref{fig:prod:analytics} depicts the throughput dynamics for the 256GB dataset with 1min queries. 
-\sys's performance stabilizes almost instantly upon the transition from ingestion to analytics. This happens 
-because the two workloads are identically distributed, and hence, the working set munks are already in memory, 
-organized to serve the scans. It takes RocksDB almost 40 minutes to match \sys's performance. During this period, 
-it goes through multiple compactions, which degrade the application throughput by 70\% on average. Eventually, 
-RocksDB completes this process, populates its read cache with the working set, and catches up with \sys.
-}
+In the long run, \sys\/ and RocksDB exhibit similar throughputs under this workload (XXK, YYK, and 1.6K 
+operations per second, respectively). However, the system dynamic are different. \sys's throughput stabilizes 
+almost instantly upon transition from ingestion to analytics because its working set munks are already in memory. 
+In contrast, it takes RocksDB approximately 35 minutes (!) to reach the stable-state performance. During this period, 
+it goes through multiple compactions, which degrade its application-level throughput by 90\%. 
+Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-min history ranges.}
 
 \begin{figure*}[tb]
 \centering
@@ -125,9 +127,16 @@ RocksDB completes this process, populates its read cache with the working set, a
 \caption{Write amplification}
 \label{fig:prod:ingestion:c}
 \end{subfigure}
-\caption{\sys\/ vs RocksDB ingestion performance, under production workload.}
+\caption{\sys\/ vs RocksDB throughput (Kops), under ingestion (100\% put) workload, with production datasets.}
 \label{fig:prod:ingestion}
 \end{figure*}
+
+\begin{figure}[tb]
+%\includegraphics[width=0.4\textwidth]
+\caption{\sys\/ vs RocksDB throughput (Kops),  under scan-dominated (95\% scan/5\% put) workload, 
+with a 256GB production dataset.}
+\label{fig:prod:analytics}
+\end{figure}
 
 \subsection{Synthetic benchmarks}
 %\subsection{\sys\ versus \ RocksDB}
@@ -505,6 +514,40 @@ under a read-only workload C with Zipf-composite distribution.}}
 \end{figure}
 }
 
+\subsection{\sys\ versus PebblesDB}
+\label{ssec:pebbles} 
+
+We compare \sys\ to PebblesDB, which was shown to significantly improve over RocksDB~\cite{PebblesDB},
+mostly in single-thread experiments, before RocksDB's recent version was released.  
+We compare \sys\ to PebbelesDB in a challenging  scenario for \sys, with a 32GB dataset and the Zipf-simple key 
+distribution. We run each YCSB workload with 1, 2, 4, and 8 threads. The results are summarized in Table~\ref{fig:pebbels-throughput}. 
+In all experiments, \sys\ is consistently better than PebblesDB, with its performance improvements ranging from \inred{1.5x} with a single thread
+on P, to \inred{4.5x} with eight threads on E10.  In all benchmarks, 
+ \sys's advantage grows with the level of parallelism. 
+\inred{  
+We observed a similar trend with smaller datasets. 
+Idit: can we say more?
+}
+
+We note that in our experiments, RocksDB also consistently outperforms PebblesDB. 
+The gap with the results reported in~\cite{PebblesDB} 
+can be attributed, e.g., to RocksDB's evolution, resource constraints (running within a 
+container), different hardware, and increased benchmark parallelism.   
+
+\begin{table}
+\centering
+{\small{
+\begin{tabular}{ccccccc}
+%Workload & Zipf-simple & Zipf-composite \\
+P & A & B & C & D& E10--1000 & F \\
+\hline 
+1.5--2.9x & \inred{TBD} & \inred{TBD} & 2.1--3.2x &  \inred{TBD} & 2.2--4.5x &  \inred{TBD}  \\
+\end{tabular}
+}}
+\caption{{\sys\/ throughput improvement over PebblesDB, on a 32GB dataset with Zipf-simple keys, with 1 to 8 threads.}}
+\label{fig:pebbels-throughput}
+\end{table}
+
 \subsection{Insights}
 \label{ssec:drill} 
 
@@ -625,39 +668,6 @@ RocksDB's speedup with different block cache sizes for the 64GB dataset in the v
 We see that the default configuration gives the best results for most of the workload suite (i.e., the 
 speedups are mostly below $1$). We therefore used this configuration  in~\S\ref{ssec:synthetic} above.   
 
-\subsection{\sys\ versus PebblesDB}
-\label{ssec:pebbles} 
-
-We compare \sys\ to PebblesDB, which was shown to significantly improve over RocksDB~\cite{PebblesDB},
-mostly in single-thread experiments, before RocksDB's recent version was released.  
-We compare \sys\ to PebbelesDB in a challenging  scenario for \sys, with a 32GB dataset and the Zipf-simple key 
-distribution. We run each YCSB workload with 1, 2, 4, and 8 threads. The results are summarized in Table~\ref{fig:pebbels-throughput}. 
-In all experiments, \sys\ is consistently better than PebblesDB, with its performance improvements ranging from \inred{1.5x} with a single thread
-on P, to \inred{4.5x} with eight threads on E10.  In all benchmarks, 
- \sys's advantage grows with the level of parallelism. 
-\inred{  
-We observed a similar trend with smaller datasets. 
-Idit: can we say more?
-}
-
-We note that in our experiments, RocksDB also consistently outperforms PebblesDB. 
-The gap with the results reported in~\cite{PebblesDB} 
-can be attributed, e.g., to RocksDB's evolution, resource constraints (running within a 
-container), different hardware, and increased benchmark parallelism.   
-
-\begin{table}
-\centering
-{\small{
-\begin{tabular}{ccccccc}
-%Workload & Zipf-simple & Zipf-composite \\
-P & A & B & C & D& E10--1000 & F \\
-\hline 
-1.5--2.9x & \inred{TBD} & \inred{TBD} & 2.1--3.2x &  \inred{TBD} & 2.2--4.5x &  \inred{TBD}  \\
-\end{tabular}
-}}
-\caption{{\sys\/ throughput improvement over PebblesDB, on a 32GB dataset with Zipf-simple keys, with 1 to 8 threads.}}
-\label{fig:pebbels-throughput}
-\end{table}
 
 
 
