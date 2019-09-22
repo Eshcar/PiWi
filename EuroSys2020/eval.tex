@@ -89,16 +89,23 @@ Two workloads are exercised.
 \paragraph{Put-only (data ingestion).} We load 64GB, 128GB and 256GB of data, in timestamp order. 
 Figure~\ref{fig:prod:ingestion:a} depicts the ingestion rates. \sys\/ is much faster in all cases; its advantage 
 gets more pronounced with the dataset's growth. For example, \sys\/ ingests 256GB of data within 1.1 hours, 
-whereas RocksDB requires 4.8 hours (4.4x speedup). Figure~\ref{fig:prod:ingestion:b} depicts the ingestion 
+whereas RocksDB requires 4.85 hours (4.5x speedup). Figure~\ref{fig:prod:ingestion:b} depicts the ingestion 
 rate dynamics with the 256GB dataset. Although RocksDB's throughput is stable overall, it suffers from long 
-periods (1min or longer) of degraded performance (10\% of the average rate), due to compactions. 
-\sys's throughput is much noisier, due to frequent munk rebalances; however, it prevails even at its slowest. 
-Figure~\ref{fig:prod:ingestion:c} presents the write amplification results. While \sys's write amplification is hardly affected by 
-the dataset size, RocksDB's deteriorates as the dataset (and consequently, the number of LSM levels) grows. For instance, 
-RocksDB's amplification factor for 256G is 11.4x, whereas \sys's is only 2.6x. 
+periods (1min or longer) of near-zero throughput, due to compactions. 
+%\sys's throughput is noisier, because munk rebalances are more frequent than munk compactions; 
+\sys's throughput never falls below 4x RocksDB's average.
 
-All in all, \sys\/ is CPU-bound, whereas RocksDB is IO-bound. With 256GB data, 
-e.g., \sys\/ utilizes 3x more CPU cycles, whereas RocksDB reads and writes 4x more bytes.
+Figure~\ref{fig:prod:ingestion:c} presents the write amplification results. While \sys's amplification is not 
+affected by the scale, RocksDB's deteriorates as the dataset (and consequently, the number of LSM levels) 
+grows. For example, for 256GB RocksDB's amplification factor is 10.7x, whereas \sys's is only 2.5x. 
+
+Table~\ref{fig:io_cpu_bound} zooms in on the system CPU and I/O metrics in a particular 256GB 
+experiment. We see that \sys\/ is clearly CPU-bound, whereas RocksDB is IO-bound. For example, 
+\sys's user time ratio is almost 10x higher. Most of it is spent in munk updates, including 
+rebalances. In contrast, RocksDB reads 10x more data from disk. Its read I/O solely serves background 
+compactions; their overhead is data-insensitive. \sys, on the contrary, hardly reads any data from disk. 
+Its read I/O stems from funk rebalances, which scarcely happen since the popular data is effectively 
+cached in munks. 
 
 \paragraph{Scan-dominated (analytics).} We run 40M operations on top of the KV-store produced by the 256GB 
 ingestion workload. 95\% of these operations are range queries, whereas the rest are puts that capture 
