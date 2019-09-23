@@ -90,10 +90,10 @@ Two workloads are exercised.
 Figure~\ref{fig:prod:ingestion:a} depicts the ingestion rates. \sys\/ is much faster in all cases; its advantage 
 gets more pronounced with the dataset's growth. For example, \sys\/ ingests 256GB of data within 1.1 hours, 
 whereas RocksDB requires 4.85 hours (4.5x speedup). Figure~\ref{fig:prod:ingestion:b} depicts the ingestion 
-rate dynamics with the 256GB dataset. Although RocksDB's throughput is stable overall, it suffers from long 
-periods (1min or longer) of near-zero throughput, due to compactions. 
+rate dynamics with the 256GB dataset. RocksDB's throughput, while stable overall, suffers from long (1min 
+and above) stalls, caused by compactions. 
 %\sys's throughput is noisier, because munk rebalances are more frequent than munk compactions; 
-\sys's throughput never falls below 4x RocksDB's average.
+\sys, in contrast, never falls below 4x RocksDB's average rate.
 
 Figure~\ref{fig:prod:ingestion:c} presents the write amplification results. While \sys's amplification is not 
 affected by the scale, RocksDB's deteriorates as the dataset (and consequently, the number of LSM levels) 
@@ -123,17 +123,17 @@ Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries tha
 \begin{figure*}[tb]
 \centering
 \begin{subfigure}{0.33\linewidth}
-%\includegraphics[width=\textwidth]{figs/Workload_P_line.pdf}
+\includegraphics[width=\textwidth]{figs/ingestion.pdf}
 \caption{Throughput}
 \label{fig:prod:ingestion:a}
 \end{subfigure}
 \begin{subfigure}{0.33\linewidth}
-%\includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
+\includegraphics[width=\textwidth]{figs/throughput_256_line.pdf}
 \caption{Throughput dynamics, 256GB}
 \label{fig:prod:ingestion:b}
 \end{subfigure}
 \begin{subfigure}{0.33\linewidth}
-%\includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
+\includegraphics[width=\textwidth]{figs/write_amp_256.pdf}
 \caption{Write amplification}
 \label{fig:prod:ingestion:c}
 \end{subfigure}
