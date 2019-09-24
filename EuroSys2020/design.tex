@@ -71,9 +71,9 @@ As KV pairs are added, overwritten, and removed, munks and funks need to undergo
 (3) \emph{splitting} overflowing chunks.
 Reorganization is performed by \sys's rebalance procedures. 
 Munk rebalance (creating a new compacted and sorted munk instead of an existing one) 
-happens in-memory, independently of munk replacement and disk flushes. 
-Funk rebalance (on-disk) happens much less freuquently. 
-Splits  create new chunks as well as new  funks (and possibly munks).
+happens in-memory, independently of disk flushes. 
+Funk rebalance (on-disk) happens much less frequently. 
+Splits  create new chunks as well as new  funks and munks.
 
 %\paragraph{Expediting reads.}
 
@@ -222,13 +222,10 @@ To minimize I/O, we allow at most one thread to rebalance a funk at a given time
 the  \emph{funkChangeLock}, which is held by the thread rebuilding the  chunk. 
 It is acquired using a try\_lock call, where threads that fail to acquire it do not retry but instead wait for the winning thread to complete the funk's creation.
 
-\subsection{Normal operation flow}
+\subsection{\sys\ operations}
 \label{ssec:ops}
 
-
-
-%Algorithm~
-\Cref{alg:ops}  presents pseudocode for the normal operation flow. %, without rebalance.
+\Cref{alg:ops}  presents pseudocode for the \sys's operations. 
 Both get and put begin by locating the target chunk using the \code{lookup} function. In principle, this can be done by traversing the chunk list, but that would result in linear search time. To expedite the search,   \code{lookup} first searches the index. But because index updates are lazy -- they occur after the new chunk is already
 in the linked list --  the index may return a stale chunk that had already been replaced by rebalance. To this end, the index search is repeated with a smaller key in case the index returns a stale chunk, and the index search is supplemented by a linked-list traversal. 
 %A similar approach was used in earlier works~\cite{kiwi,tdls}. 
@@ -385,11 +382,12 @@ Finally, the scan unregisters from \code{PO}.
 
 Munk (resp.\ funk) rebalance improves the data organization in a munk (funk) by removing old versions that are no longer needed 
 for scans, removing deleted items, and sorting all the keys. It is typically triggered when the munk (funk) exceeds a capacity threshold.   
+The threshold for funk rebalance is higher than for munk rebalance, causing most rebalances to occur in-memory.
 %It can be triggered either by a thread attempting to access the chunk or a dedicated background thread.
 %In case a chunk has a munk, rebalance reorganizes only the munk, since all searches are served by it. 
 %The respective funk is reorganized much less frequently, merely in order to bound the log's growth. 
 Rebalance creates  a new munk (funk) rather than reorganize it in-place 
-in order to reduce the impact on concurrent accesses. When done, \sys\/ flips the 
+in order to reduce the impact on concurrent accesses. When it is ready, \sys\/ flips the 
 chunk's reference to the new munk (funk).
 
 Munk rebalance acquires the chunk's \code{rebalanceLock} in shared mode to 
