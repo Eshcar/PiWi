@@ -76,6 +76,28 @@ is approximately 10x slower, trivializing the results of scenarios that include 
 
 \subsection{Production benchmarks}
 \label{ssec:prod}
+
+\begin{figure*}[tb]
+\centering
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/ingestion.pdf}
+\caption{Throughput, Kops}
+\label{fig:prod:ingestion:a}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/throughput_256_line.pdf}
+\caption{Throughput dynamics, 256GB}
+\label{fig:prod:ingestion:b}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/write_amp_256.pdf}
+\caption{Write amplification}
+\label{fig:prod:ingestion:c}
+\end{subfigure}
+\caption{\sys\/ vs RocksDB performance, under ingestion (100\% put) workload, with production datasets.}
+\label{fig:prod:ingestion}
+\end{figure*}
+
 \inred{
 We evaluate a prototype application that ingests and analyzes a time-series stream of mobile 
 app events. We use a log of production mobile analytics engine as data source. The log captures 
@@ -93,19 +115,19 @@ whereas RocksDB requires 4.85 hours (4.5x speedup). Figure~\ref{fig:prod:ingesti
 rate dynamics with the 256GB dataset. RocksDB's throughput, while stable overall, suffers from long (1min 
 and above) stalls, caused by compactions. 
 %\sys's throughput is noisier, because munk rebalances are more frequent than munk compactions; 
-\sys, in contrast, never falls below 4x RocksDB's average rate.
+\sys, in contrast, delivers predictable performance, and never falls below 4x RocksDB's average rate.
 
 Figure~\ref{fig:prod:ingestion:c} presents the write amplification results. While \sys's amplification is not 
 affected by the scale, RocksDB's deteriorates as the dataset (and consequently, the number of LSM levels) 
 grows. For example, for 256GB RocksDB's amplification factor is 10.7x, whereas \sys's is only 2.5x. 
 
 Table~\ref{fig:io_cpu_bound} zooms in on the system CPU and I/O metrics in a particular 256GB 
-experiment. We see that \sys\/ is clearly CPU-bound, whereas RocksDB is IO-bound. For example, 
-\sys's user time ratio is almost 10x higher. Most of it is spent in munk updates, including 
-rebalances. In contrast, RocksDB reads 10x more data from disk. Its read I/O solely serves background 
-compactions; their overhead is data-insensitive. \sys, on the contrary, hardly reads any data from disk. 
-Its read I/O stems from funk rebalances, which scarcely happen since the popular data is effectively 
-cached in munks. 
+experiment. It exhibits a clear dichotomy: (1) \sys\/ is CPU-intensive -- it exploits 40\% more CPU
+cycles than RocksDB, i.e., its average CPU rate is 6.3x higher; (2) RocksDB is IO-intensive -- e.g., 
+it reads 43.2x (!) more data than \sys (recall that the workload is write-only). Indeed, \sys\/ exploits 
+the workload's spatial locality, and spends most of its time handling RAM-resident data; it hardly 
+ever reads from disk (only upon funk rebalances, which are infrequent). RocksDB, on the other hand, spends a large fraction of its time in 
+compactions, which are insensitive to locality; it re-reads and re-writes the same data many times. 
 
 \paragraph{Scan-dominated (analytics).} We run 40M operations on top of the KV-store produced by the 256GB 
 ingestion workload. 95\% of these operations are range queries, whereas the rest are puts that capture 
@@ -120,26 +142,22 @@ In contrast, it takes RocksDB approximately 35 minutes (!) to reach the stable-s
 it goes through multiple compactions, which degrade its application-level throughput by 90\%. 
 Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-min history ranges.}
 
-\begin{figure*}[tb]
-\centering
-\begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{figs/ingestion.pdf}
-\caption{Throughput}
-\label{fig:prod:ingestion:a}
-\end{subfigure}
-\begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{figs/throughput_256_line.pdf}
-\caption{Throughput dynamics, 256GB}
-\label{fig:prod:ingestion:b}
-\end{subfigure}
-\begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{figs/write_amp_256.pdf}
-\caption{Write amplification}
-\label{fig:prod:ingestion:c}
-\end{subfigure}
-\caption{\sys\/ vs RocksDB throughput (Kops), under ingestion (100\% put) workload, with production datasets.}
-\label{fig:prod:ingestion}
-\end{figure*}
+\inred{
+\begin{table}[t]
+\centerline{
+{\small{
+\begin{tabular}{lcccc}
+\hline 
+ & Total CPU time, hr & Read I/O, GB & Write I/O, GB\\
+\hline 
+\sys & 14.6 & 	47.6 	&  645.2	\\
+RocksDB & 10.4 &  2053.5 & 2660.4	\\
+\hline 
+\end{tabular}
+}}}
+\caption{{\sys\/ vs RocksDB CPU and I/O utilization under ingestion (100\% put) workload, with a 256GB production dataset.}}
+\label{fig:io_cpu_bound}
+\end{table}}
 
 \begin{figure}[tb]
 %\includegraphics[width=0.4\textwidth]
