@@ -91,7 +91,7 @@ Second, for munk-less chunks, we employ \emph{Bloom filters} to limit excessive 
 
 {\bf Concurrency and multi-versioning.\ }
  \sys\ allows high parallelism among threads invoking its API calls. 
- Read operations are wait-free (never block) and puts use lightweight synchronization. 
+ Get operations are wait-free (never block) and puts use lightweight synchronization. 
  To support atomic scans, we  employ a light form of multi-versioning that uses 
 copy-on-write to keep old versions only if they may be required by ongoing scans. 
 In other words, if a put attempts to overwrite a key required by an active scan, then a new version is created alongside the 
