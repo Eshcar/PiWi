@@ -55,9 +55,10 @@ reverse  URL domains are used as keys for web  indexing~\cite{Cho:1998:ECT:29780
 % Overfitting for Zipf 
 The prevalence of skewed (e.g., Zipfian)  access  in real workloads is widely-recognized 
 and reflected in standard benchmarks (e.g., YCSB~\cite{YCSB}). %  feature heavy-tailed key-access distributions like Zipf.
-But these benchmarks fail to capture the spatial aspect of locality.
-This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys, % with no spatial locality,
-e.g., in partitioning data by  recent access time as opposed to by key range.
+But these benchmarks fail to capture the spatial aspect of locality, which has gotten far less attention.
+% Idit: removed below, too bold
+%This, in turn, leads to storage systems being optimized for a skewed distribution on individual keys, % with no spatial locality,
+%e.g., in partitioning data by  recent access time as opposed to by key range.
 In this work, we make spatial locality a first-class consideration in KV-store design.
 % which leads us to rethink the design principles underlying today's popular KV-stores.
 
@@ -143,7 +144,7 @@ The pillars of our design are large \emph{chunks} holding contiguous key ranges.
 are also the basic units for DRAM caching, I/O-batching, logging, and compaction. 
 This approach is unique:  typical KV-stores rely on OS-managed page caches (whereas chunks consist of many pages)  
 supplemented by application-level caches. In LSMs, these caches serve only the read-path. 
-Storage systems use system-level WALs for the write-path.
+Storage systems use global WALs for the write-path.
 
 Our novel chunk-based organization has several benefits. 
 First, chunk caching is effective for spatially-local workloads.
@@ -201,7 +202,7 @@ Our results underscore the advantage of \sys's spatially-organized chunks:
 (1) little fragmentation of key ranges  yields better  performance under spatial locality; 
 (2) keeping hot ranges in memory leads to better performance when most of the working set fits in RAM; and 
 (3) in-memory chunk compaction saves disk flushes and reduces write volume.  
-In addition, in-chunk WALs  allow quick recovery from crashes with no need to replay any WAL.
+In addition, in-chunk logging allows quick recovery from crashes with no need to replay a WAL.
 
 
 ~\cref{sec:related}  surveys related work and~\cref{sec:conclusions} concludes this paper. 
