@@ -514,6 +514,9 @@ if \code{k2} appears in the data store, then \code{k1} must appear in it as well
 %conversely, if the update of \code{k1}  is lost, \code{k2}  must be also excluded.
 Such recovery to a \emph{consistent snapshot} of the data store is important, since later updates may depend on earlier ones. 
 
+Note that the temporal organization in LSMs inherently guarantees such consistency, whereas with spatial data organization,
+extra measures need to be taken to ensure it.
+
 \paragraph{Checkpointing for consistent recovery.}
 
 We use \emph{checkpoints} to support recovery to a consistent snapshot in asynchronous mode.
