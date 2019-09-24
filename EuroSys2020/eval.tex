@@ -122,12 +122,12 @@ affected by the scale, RocksDB's deteriorates as the dataset (and consequently, 
 grows. For example, for 256GB RocksDB's amplification factor is 10.7x, whereas \sys's is only 2.5x. 
 
 Table~\ref{fig:io_cpu_bound} zooms in on the system CPU and I/O metrics in a particular 256GB 
-experiment. It exhibits a clear dichotomy: (1) \sys\/ is CPU-intensive -- e.g., its total and user CPU rates 
-exceed RocksDB's by 6.3x and 10x, respectively; (2) RocksDB is IO-intensive -- e.g., its disk read rate 
-is 10x \sys's (recall that the workload is write-only). Indeed, \sys\/ exploits the workload's spatial locality, 
-and spends most of its time handling RAM-resident data; it hardly ever reads from disk (only upon funk 
-rebalances, which are infrequent). RocksDB, on the other hand, spends a large fraction of its time in 
-compactions, which are insensitive to locality; hence, it re-reads and re-writes the same data many times. 
+experiment. It exhibits a clear dichotomy: (1) \sys\/ is CPU-intensive -- it exploits 40\% more CPU
+cycles than RocksDB, i.e., its average CPU rate is 6.3x higher; (2) RocksDB is IO-intensive -- e.g., 
+it reads 43.2x (!) more data than \sys (recall that the workload is write-only). Indeed, \sys\/ exploits 
+the workload's spatial locality, and spends most of its time handling RAM-resident data; it hardly 
+ever reads from disk (only upon funk rebalances, which are infrequent). RocksDB, on the other hand, spends a large fraction of its time in 
+compactions, which are insensitive to locality; it re-reads and re-writes the same data many times. 
 
 \paragraph{Scan-dominated (analytics).} We run 40M operations on top of the KV-store produced by the 256GB 
 ingestion workload. 95\% of these operations are range queries, whereas the rest are puts that capture 
@@ -141,6 +141,23 @@ almost instantly upon transition from ingestion to analytics because its working
 In contrast, it takes RocksDB approximately 35 minutes (!) to reach the stable-state performance. During this period, 
 it goes through multiple compactions, which degrade its application-level throughput by 90\%. 
 Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-min history ranges.}
+
+\inred{
+\begin{table}[t]
+\centerline{
+{\small{
+\begin{tabular}{lcccc}
+\hline 
+ & Total CPU time, hr & Read I/O, GB & Write I/O, GB\\
+\hline 
+\sys & 14.6 & 	47.6 	&  645.2	\\
+RocksDB & 10.4 &  2053.5 & 2660.4	\\
+\hline 
+\end{tabular}
+}}}
+\caption{{\sys\/ versus RocksDB CPU and I/O utilization under ingestion workload, with a 256GB production dataset.}}
+\label{fig:io_cpu_bound}
+\end{table}}
 
 \begin{figure}[tb]
 %\includegraphics[width=0.4\textwidth]
