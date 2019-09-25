@@ -47,6 +47,8 @@ line_color = {'Rocks Flurry': {'color': flurry_linecolor, 'linestyle': rocks_lin
 
 def renamings(label):
 
+    if label == 'RocksDB' or label == 'EvenDB':
+        return label
     # order is important
     rename = {'Zipfian': 'Zipf-simple', 'Zipf': 'Zipf-simple',
               'Flurry': 'Zipf-composite', 'Latest': 'Latest-simple', 'flurry': 'Zipf-composite', '95% ':''}
@@ -343,6 +345,123 @@ def draw_latency_breakdown(chart_name, latency):
     plt.savefig(chart_name.replace(' ', '_')+'.pdf', bbox_inches='tight')
 
 
+def draw_piwi_vs_rocks_bars(chart_name, data, xlabel, ylabel):
+
+    fig, ax = plt.subplots()
+    index = np.arange(len(data.keys()) - 1)
+    bar_width = 0.35
+
+    data_values = list(data.values())
+    ax.bar(index, [r[0] for r in data_values[1:]], bar_width, label=renamings(data_values[0][0]))
+    ax.bar(index + bar_width, [r[1] for r in data_values[1:]], bar_width, label=renamings(data_values[0][1]))
+
+    ax.legend(loc=2, fontsize=myfontsize, ncol=2)
+
+    ax.set_xticks(index + bar_width / 2)
+    ax.set_xticklabels(list(data.keys())[1:], rotation=0, fontsize=myfontsize + 5)
+
+    for label in ax.get_yticklabels():
+        label.set_fontsize(myfontsize + 5)
+
+    ax.set_xlabel(xlabel, fontsize=myfontsize + 5)
+    ax.set_ylabel(ylabel, fontsize=myfontsize + 5)
+
+    y_bottom = ax.get_ylim()[0]
+    y_top = ax.get_ylim()[1]
+    ax.set_ylim(y_bottom, y_top * 1.15) # make room for the legend
+
+    plt.savefig(chart_name.replace(' ', '_')+'.pdf', bbox_inches='tight')
+
+
+def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Execution time, minutes', legend=1,
+                    y_upper=None, x_bottom=None, fontsize=myfontsize, ncol=1, x_upper=None, bbox_to_anchor=None):
+    labels_row = list(data.values())[0]
+    values_rows = list(data.values())[1:]
+    lines = {}
+    for label in labels_row:
+        lines[label] = []
+    for row in values_rows:
+        for z in zip(labels_row, row):
+            lines[z[0]].append(z[1] / 1000 if z[1] is not None else None)  # turn to kops
+    timeline = list(data.keys())[1:]
+
+    fig, ax = plt.subplots()
+    for key, value in lines.items():
+        if len(value) < len(timeline):
+            value += [None] * (len(timeline) - len(value))
+        ax.plot(timeline, value, label=key, linewidth=linewidth * 0.6)
+
+    ax.set_xlabel(x_label, fontsize=fontsize)
+    ax.set_ylabel(y_label, fontsize=fontsize)
+    ax.grid()
+    ax.autoscale(enable=True, axis='x', tight=True)
+
+    y_top = ax.get_ylim()[1]
+    if y_upper is not None:
+        y_top = y_upper
+    ax.set_ylim(bottom=0, top=y_top)
+    ax.set_xticks(ax.get_xticks()[::30])  # tick every 30 seconds
+
+    for label in ax.get_yticklabels() + ax.get_xticklabels():
+        label.set_fontsize(fontsize)
+
+    if len(ax.get_xticklabels()) > 7:
+        for label in ax.get_xticklabels():
+            label.set_rotation(80)
+
+    if ax.get_yticks()[1] - ax.get_yticks()[0] == 0.25:
+        ax.set_yticks(ax.get_yticks()[::2])  # skip numbers with too many decimal digits...
+
+    if x_bottom is not None:
+        ax.set_xlim(x_bottom, ax.get_xlim()[1])
+    if x_upper is not None:
+        ax.set_xlim(ax.get_xlim()[0], x_upper)
+
+    h, l = ax.get_legend_handles_labels()
+    ax.legend(h, l, loc=legend, fontsize=fontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor)
+
+    fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
+
+
+def draw_dist_chart(file_name, data, x_label=None, y_label=None, x_scale='linear', y_scale='linear',
+                        y_upper=None, x_bottom=None, fontsize=myfontsize, ncol=1, x_upper=None, bbox_to_anchor=None):
+
+    fig, ax = plt.subplots()
+    values = list(data.values())
+    keys = list(data.keys())
+    ax.plot(values[0], values[1], label=keys[1])
+
+    ax.set_xlabel(x_label, fontsize=fontsize)
+    ax.set_ylabel(y_label, fontsize=fontsize)
+    ax.grid()
+    ax.autoscale(enable=True, axis='x', tight=True)
+
+    # y_top = ax.get_ylim()[1]
+    # if y_upper is not None:
+    #     y_top = y_upper
+    # ax.set_ylim(bottom=0, top=y_top)
+    ax.set_xticks(list(map(lambda t: round(t, 3), ax.get_xticks())))
+    ax.set_xscale(x_scale)
+    ax.set_yscale(y_scale)
+
+    for label in ax.get_yticklabels() + ax.get_xticklabels():
+        label.set_fontsize(fontsize)
+
+    if len(ax.get_xticklabels()) > 7:
+        for label in ax.get_xticklabels():
+            label.set_rotation(80)
+
+    if x_bottom is not None:
+        ax.set_xlim(x_bottom, ax.get_xlim()[1])
+    if x_upper is not None:
+        ax.set_xlim(ax.get_xlim()[0], x_upper)
+
+    # h, l = ax.get_legend_handles_labels()
+    # ax.legend(h, l, loc=legend, fontsize=fontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor)
+
+    fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
+
+
 def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
     experiments = dict()
@@ -364,7 +483,13 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     tail = {'flurry': {}, 'zipfian': {}}
     max_log = {}
     p_uniform = {}
-    
+    ingestion = {}
+    write_amp_256 = {}
+    throughput_256_ingestions = {}
+    throughput_256_scans = {}
+    app_names_loglog = {}
+    app_names_cdf = {}
+
     with open(path) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -451,9 +576,77 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             max_log[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
 
         for row in csv_reader:
+            if (row[0] == 'Ingestion Throughput comparison'):
+                break
             if (row[0] == ''):
                 continue
             p_uniform[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+
+        for row in csv_reader:
+            if (row[0] == 'Write amplification comparison'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(ingestion.keys()) == 0:
+                ingestion[row[0]] = row[1:]
+            else:
+                ingestion[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - ingestions'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(write_amp_256.keys()) == 0:
+                write_amp_256[row[0]] = row[1:]
+            else:
+                write_amp_256[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_256_ingestions.keys()) == 0:
+                throughput_256_ingestions[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_256_ingestions[row[0]])
+            else:
+                throughput_256_ingestions[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'app names distribution'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_256_scans.keys()) == 0:
+                throughput_256_scans[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_256_scans[row[0]])
+            else:
+                throughput_256_scans[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        for row in csv_reader:
+            if (row[0] == 'app names cdf'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(app_names_loglog.keys()) == 0:
+                for key in row:
+                    app_names_loglog[key] = []
+            else:
+                for key_val in zip(app_names_loglog.keys(), [i for i in row if i is not '']):
+                    app_names_loglog[key_val[0]].append(float(key_val[1]))
+
+        for row in csv_reader:
+            if (row[0] == ''):
+                continue
+            if len(app_names_cdf.keys()) == 0:
+                for key in row:
+                    app_names_cdf[key] = []
+            else:
+                for key_val in zip(app_names_cdf.keys(), [i for i in row if i is not '']):
+                    app_names_cdf[key_val[0]].append(float(key_val[1]))
 
 
     return {'experiments': experiments,
@@ -465,8 +658,13 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             'caching': caching,
             'tail': tail,
             'max_log': max_log,
-            'p_uniform': p_uniform}
-
+            'p_uniform': p_uniform,
+            'ingestion': ingestion,
+            'write_amp_256': write_amp_256,
+            'throughput_256_ingestions': throughput_256_ingestions,
+            'throughput_256_scans': throughput_256_scans,
+            'app_names_loglog': app_names_loglog,
+            'app_names_cdf': app_names_cdf}
 
 def draw_bloom_filter_partitions(chart_name, data):
 
@@ -606,17 +804,30 @@ def draw_95(data):
     draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['zipfian'].items()]
-    draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)    
+    draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', yaxis='Latency, [ms]', legend=2, x_bottom=0,fontsize=myfontsize+5)
 
 def draw_log_size_charts(data):
     line_color = {'E100 Flurry': {'color': tableau20[0], 'linestyle': '-', 'linewidth':linewidth, 'marker': rocks_marker},
                   'E100 Zipfian': {'color': tableau20[0], 'linestyle': ':', 'linewidth':linewidth, 'marker': rocks_marker},
                   'A Flurry': {'color': tableau20[2], 'linestyle': '-', 'linewidth':linewidth, 'marker': piwi_marker},
                   'A Zipfian': {'color': tableau20[2], 'linestyle': ':', 'linewidth':linewidth, 'marker': piwi_marker}}
-    lines = []
     lines = [{'label': renamings(k), 'data': [i/1000 for i in v], 'style': line_color[k]} for (k, v) in data['max_log'].items()]
     draw_line_chart(file_name='max_log_size', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=2, x=['128K','256K','512K','1M','2M','4M'], x_label='Maximum log size', x_bottom=0, y_upper=225)
-    
+
+def draw_real_data_bar_charts(data):
+    draw_piwi_vs_rocks_bars('ingestion', data['ingestion'], 'Dataset size', 'Throughput, Kops')
+    draw_piwi_vs_rocks_bars('write_amp_256', data['write_amp_256'], 'Dataset size', 'Write amplification')
+
+def draw_timeline_charts(data):
+    draw_timeline_chart('throughput_256_ingestions', data['throughput_256_ingestions'], fontsize=myfontsize+5, legend=1)
+    draw_timeline_chart('throughput_256_scans', data['throughput_256_scans'], fontsize=myfontsize+5, legend=4)
+
+def draw_dist_charts(data):
+    draw_dist_chart('app_names_loglog', data['app_names_loglog'], x_scale='log', y_scale='log',
+                    y_label='App popularity ranking', x_label='Probability density', fontsize=myfontsize+5)
+    draw_dist_chart('app_names_cdf', data['app_names_cdf'], y_label='CDF', x_label='App name percentile',
+                    fontsize=myfontsize+5)
+
 def main():
     data = read_csv()
 
@@ -629,6 +840,9 @@ def main():
     ###draw_caching_effect(data)
     draw_95(data)
     draw_log_size_charts(data)
+    draw_real_data_bar_charts(data)
+    draw_timeline_charts(data)
+    draw_dist_charts(data)
     plt.tight_layout()
     # plt.show()
 

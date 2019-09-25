@@ -85,7 +85,7 @@ is approximately 10x slower, trivializing the results of scenarios that include 
 \label{fig:prod:ingestion:a}
 \end{subfigure}
 \begin{subfigure}{0.33\linewidth}
-\includegraphics[width=\textwidth]{figs/throughput_256_line.pdf}
+\includegraphics[width=\textwidth]{figs/throughput_256_ingestions_line.pdf}
 \caption{Throughput dynamics, 256GB}
 \label{fig:prod:ingestion:b}
 \end{subfigure}
@@ -162,7 +162,7 @@ RocksDB & 10.4 &  2053.5 & 2660.4	\\
 \end{table}}
 
 \begin{figure}[tb]
-%\includegraphics[width=0.4\textwidth]
+\includegraphics[width=0.4\textwidth]{figs/throughput_256_scans_line.pdf}
 \caption{\sys\/ vs RocksDB throughput (Kops),  under scan-dominated (95\% scan/5\% put) workload, 
 with a 256GB production dataset.}
 \label{fig:prod:analytics}
