@@ -409,6 +409,9 @@ def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Ex
         for label in ax.get_xticklabels():
             label.set_rotation(80)
 
+    if ax.get_yticks()[1] - ax.get_yticks()[0] == 0.25:
+        ax.set_yticks(ax.get_yticks()[::2])  # skip numbers with too many decimal digits...
+
     if x_bottom is not None:
         ax.set_xlim(x_bottom, ax.get_xlim()[1])
     if x_upper is not None:
@@ -482,7 +485,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     p_uniform = {}
     ingestion = {}
     write_amp_256 = {}
-    throughput_256 = {}
+    throughput_256_ingestions = {}
+    throughput_256_scans = {}
     app_names_loglog = {}
     app_names_cdf = {}
 
@@ -589,7 +593,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                 ingestion[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
 
         for row in csv_reader:
-            if (row[0] == 'Throughput over time'):
+            if (row[0] == 'Throughput over time - ingestions'):
                 break
             if (row[0] == ''):
                 continue
@@ -600,15 +604,27 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
         columns_num = 0
         for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_256_ingestions.keys()) == 0:
+                throughput_256_ingestions[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_256_ingestions[row[0]])
+            else:
+                throughput_256_ingestions[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
             if (row[0] == 'app names distribution'):
                 break
             if (row[0] == ''):
                 continue
-            if len(throughput_256.keys()) == 0:
-                throughput_256[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_256[row[0]])
+            if len(throughput_256_scans.keys()) == 0:
+                throughput_256_scans[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_256_scans[row[0]])
             else:
-                throughput_256[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+                throughput_256_scans[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
 
         for row in csv_reader:
             if (row[0] == 'app names cdf'):
@@ -645,7 +661,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             'p_uniform': p_uniform,
             'ingestion': ingestion,
             'write_amp_256': write_amp_256,
-            'throughput_256': throughput_256,
+            'throughput_256_ingestions': throughput_256_ingestions,
+            'throughput_256_scans': throughput_256_scans,
             'app_names_loglog': app_names_loglog,
             'app_names_cdf': app_names_cdf}
 
@@ -802,7 +819,8 @@ def draw_real_data_bar_charts(data):
     draw_piwi_vs_rocks_bars('write_amp_256', data['write_amp_256'], 'Dataset size', 'Write amplification')
 
 def draw_timeline_charts(data):
-    draw_timeline_chart('throughput_256', data['throughput_256'], fontsize=myfontsize+5)
+    draw_timeline_chart('throughput_256_ingestions', data['throughput_256_ingestions'], fontsize=myfontsize+5, legend=1)
+    draw_timeline_chart('throughput_256_scans', data['throughput_256_scans'], fontsize=myfontsize+5, legend=4)
 
 def draw_dist_charts(data):
     draw_dist_chart('app_names_loglog', data['app_names_loglog'], x_scale='log', y_scale='log',
@@ -813,16 +831,16 @@ def draw_dist_charts(data):
 def main():
     data = read_csv()
 
-    # draw_line_charts(data)
-    # draw_speedup_charts(data)
-    # draw_latency_charts(data)
-    # draw_bloom_filter_charts(data)
-    # draw_ampl_charts(data)
-    # draw_scalability_charts(data)
-    # ###draw_caching_effect(data)
-    # draw_95(data)
-    # draw_log_size_charts(data)
-    # draw_real_data_bar_charts(data)
+    draw_line_charts(data)
+    draw_speedup_charts(data)
+    draw_latency_charts(data)
+    draw_bloom_filter_charts(data)
+    draw_ampl_charts(data)
+    draw_scalability_charts(data)
+    ###draw_caching_effect(data)
+    draw_95(data)
+    draw_log_size_charts(data)
+    draw_real_data_bar_charts(data)
     draw_timeline_charts(data)
     draw_dist_charts(data)
     plt.tight_layout()
