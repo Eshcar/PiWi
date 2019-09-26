@@ -383,7 +383,7 @@ def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Ex
     for row in values_rows:
         for z in zip(labels_row, row):
             lines[z[0]].append(z[1] / 1000 if z[1] is not None else None)  # turn to kops
-    timeline = list(data.keys())[1:]
+    timeline = [0] + list(data.keys())[1:]
 
     fig, ax = plt.subplots()
     for key, value in lines.items():
@@ -486,6 +486,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     ingestion = {}
     write_amp_256 = {}
     throughput_256_ingestions = {}
+    throughput_64_scans = {}
+    throughput_128_scans = {}
     throughput_256_scans = {}
     app_names_loglog = {}
     app_names_cdf = {}
@@ -604,7 +606,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
         columns_num = 0
         for row in csv_reader:
-            if (row[0] == 'Throughput over time - scans'):
+            if (row[0] == 'Throughput over time - scans 64'):
                 break
             if (row[0] == ''):
                 continue
@@ -613,6 +615,30 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
                 columns_num = len(throughput_256_ingestions[row[0]])
             else:
                 throughput_256_ingestions[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 128'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_64_scans.keys()) == 0:
+                throughput_64_scans[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_64_scans[row[0]])
+            else:
+                throughput_64_scans[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 256'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_128_scans.keys()) == 0:
+                throughput_128_scans[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_128_scans[row[0]])
+            else:
+                throughput_128_scans[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
 
         columns_num = 0
         for row in csv_reader:
@@ -662,6 +688,8 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             'ingestion': ingestion,
             'write_amp_256': write_amp_256,
             'throughput_256_ingestions': throughput_256_ingestions,
+            'throughput_64_scans': throughput_64_scans,
+            'throughput_128_scans': throughput_128_scans,
             'throughput_256_scans': throughput_256_scans,
             'app_names_loglog': app_names_loglog,
             'app_names_cdf': app_names_cdf}
@@ -820,6 +848,8 @@ def draw_real_data_bar_charts(data):
 
 def draw_timeline_charts(data):
     draw_timeline_chart('throughput_256_ingestions', data['throughput_256_ingestions'], fontsize=myfontsize+5, legend=1)
+    draw_timeline_chart('throughput_64_scans', data['throughput_64_scans'], fontsize=myfontsize+5, legend=4)
+    draw_timeline_chart('throughput_128_scans', data['throughput_128_scans'], fontsize=myfontsize+5, legend=4)
     draw_timeline_chart('throughput_256_scans', data['throughput_256_scans'], fontsize=myfontsize+5, legend=4)
 
 def draw_dist_charts(data):
