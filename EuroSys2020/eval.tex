@@ -99,6 +99,45 @@ is approximately 10x slower, trivializing the results of scenarios that include 
 \end{figure*}
 
 \inred{
+\begin{table}[t]
+\centerline{
+{\small{
+\begin{tabular}{lcccc}
+\hline 
+ & Total CPU time, hr & Read I/O, GB & Write I/O, GB\\
+\hline 
+\sys & 14.6 & 	47.6 	&  645.2	\\
+RocksDB & 10.4 &  2053.5 & 2660.4	\\
+\hline 
+\end{tabular}
+}}}
+\caption{{\sys\/ vs RocksDB CPU and I/O utilization under ingestion (100\% put) workload, with a 256GB production dataset.}}
+\label{fig:io_cpu_bound}
+\end{table}}
+
+\begin{figure*}[tb]
+\centering
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/throughput_64_scans_10s_line.pdf}
+\caption{64 GB}
+\label{fig:prod:analytics:a}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/throughput_128_scans_10s_line.pdf}
+\caption{128 GB}
+\label{fig:prod:analytics:b}
+\end{subfigure}
+\begin{subfigure}{0.33\linewidth}
+\includegraphics[width=\textwidth]{figs/throughput_256_scans_10s_line.pdf}
+\caption{256 GB}
+\label{fig:prod:analytics:c}
+\end{subfigure}
+\caption{\sys\/ vs RocksDB throughput,  under scan-dominated (95\% scan/5\% put) workload, 
+with production datasets.}
+\label{fig:prod:analytics}
+\end{figure*}
+
+\inred{
 We evaluate a prototype application that ingests and analyzes a time-series stream of mobile 
 app events. We use a log of production mobile analytics engine as data source. The log captures 
 a stream that generates approximately 80M events per minute. The average log record size is 
@@ -143,30 +182,6 @@ almost instantly upon transition from ingestion to analytics because its working
 In contrast, it takes RocksDB approximately 35 minutes (!) to reach the stable-state performance. During this period, 
 it goes through multiple compactions, which degrade its application-level throughput beyond 90\%. 
 Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-min history ranges.}
-
-\inred{
-\begin{table}[t]
-\centerline{
-{\small{
-\begin{tabular}{lcccc}
-\hline 
- & Total CPU time, hr & Read I/O, GB & Write I/O, GB\\
-\hline 
-\sys & 14.6 & 	47.6 	&  645.2	\\
-RocksDB & 10.4 &  2053.5 & 2660.4	\\
-\hline 
-\end{tabular}
-}}}
-\caption{{\sys\/ vs RocksDB CPU and I/O utilization under ingestion (100\% put) workload, with a 256GB production dataset.}}
-\label{fig:io_cpu_bound}
-\end{table}}
-
-\begin{figure}[tb]
-\includegraphics[width=0.4\textwidth]{figs/throughput_256_scans_10s_line.pdf}
-\caption{\sys\/ vs RocksDB throughput (Kops),  under scan-dominated (95\% scan/5\% put) workload, 
-with a 256GB production dataset.}
-\label{fig:prod:analytics}
-\end{figure}
 
 \subsection{Synthetic benchmarks}
 %\subsection{\sys\ versus \ RocksDB}
