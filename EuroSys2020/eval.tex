@@ -140,7 +140,7 @@ operations per second, respectively). However, the system dynamic are different.
 almost instantly upon transition from ingestion to analytics because its working set munks are already in memory. 
 In contrast, it takes RocksDB approximately 35 minutes (!) to reach the stable-state performance. During this period, 
 it goes through multiple compactions, which degrade its application-level throughput by 90\%. 
-Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-min history ranges.}
+Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 10 seconds history ranges.}
 
 \inred{
 \begin{table}[t]
@@ -160,7 +160,7 @@ RocksDB & 10.4 &  2053.5 & 2660.4	\\
 \end{table}}
 
 \begin{figure}[tb]
-\includegraphics[width=0.4\textwidth]{figs/throughput_256_scans_line.pdf}
+\includegraphics[width=0.4\textwidth]{figs/throughput_256_scans_10s_line.pdf}
 \caption{\sys\/ vs RocksDB throughput (Kops),  under scan-dominated (95\% scan/5\% put) workload, 
 with a 256GB production dataset.}
 \label{fig:prod:analytics}
