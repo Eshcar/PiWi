@@ -374,7 +374,8 @@ def draw_piwi_vs_rocks_bars(chart_name, data, xlabel, ylabel):
 
 
 def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Execution time, minutes', legend=1,
-                    y_upper=None, x_bottom=None, fontsize=myfontsize, ncol=1, x_upper=None, bbox_to_anchor=None):
+                    y_upper=None, x_bottom=None, fontsize=myfontsize, ncol=1, x_upper=None, bbox_to_anchor=None,
+                    tick_sec=30):
     labels_row = list(data.values())[0]
     values_rows = list(data.values())[1:]
     lines = {}
@@ -383,7 +384,7 @@ def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Ex
     for row in values_rows:
         for z in zip(labels_row, row):
             lines[z[0]].append(z[1] / 1000 if z[1] is not None else None)  # turn to kops
-    timeline = list(data.keys())[1:]
+    timeline = [0] + list(data.keys())[1:]
 
     fig, ax = plt.subplots()
     for key, value in lines.items():
@@ -400,7 +401,7 @@ def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Ex
     if y_upper is not None:
         y_top = y_upper
     ax.set_ylim(bottom=0, top=y_top)
-    ax.set_xticks(ax.get_xticks()[::30])  # tick every 30 seconds
+    ax.set_xticks(ax.get_xticks()[::tick_sec])  # tick every tick_sec seconds
 
     for label in ax.get_yticklabels() + ax.get_xticklabels():
         label.set_fontsize(fontsize)
@@ -486,7 +487,15 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     ingestion = {}
     write_amp_256 = {}
     throughput_256_ingestions = {}
-    throughput_256_scans = {}
+    throughput_64_scans_10s = {}
+    throughput_128_scans_10s = {}
+    throughput_256_scans_10s = {}
+    throughput_64_scans_1s = {}
+    throughput_128_scans_1s = {}
+    throughput_256_scans_1s = {}
+    throughput_64_scans_1m = {}
+    throughput_128_scans_1m = {}
+    throughput_256_scans_1m = {}
     app_names_loglog = {}
     app_names_cdf = {}
 
@@ -604,7 +613,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
         columns_num = 0
         for row in csv_reader:
-            if (row[0] == 'Throughput over time - scans'):
+            if (row[0] == 'Throughput over time - scans 64 10s'):
                 break
             if (row[0] == ''):
                 continue
@@ -616,15 +625,111 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
         columns_num = 0
         for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 128 10s'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_64_scans_10s.keys()) == 0:
+                throughput_64_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_64_scans_10s[row[0]])
+            else:
+                throughput_64_scans_10s[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 256 10s'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_128_scans_10s.keys()) == 0:
+                throughput_128_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_128_scans_10s[row[0]])
+            else:
+                throughput_128_scans_10s[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 64 1s'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_256_scans_10s.keys()) == 0:
+                throughput_256_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_256_scans_10s[row[0]])
+            else:
+                throughput_256_scans_10s[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 128 1s'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_64_scans_1s.keys()) == 0:
+                throughput_64_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_64_scans_1s[row[0]])
+            else:
+                throughput_64_scans_1s[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 256 1s'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_128_scans_1s.keys()) == 0:
+                throughput_128_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_128_scans_1s[row[0]])
+            else:
+                throughput_128_scans_1s[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 64 1m'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_256_scans_1s.keys()) == 0:
+                throughput_256_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_256_scans_1s[row[0]])
+            else:
+                throughput_256_scans_1s[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 128 1m'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_64_scans_1m.keys()) == 0:
+                throughput_64_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_64_scans_1m[row[0]])
+            else:
+                throughput_64_scans_1m[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
+            if (row[0] == 'Throughput over time - scans 256 1m'):
+                break
+            if (row[0] == ''):
+                continue
+            if len(throughput_128_scans_1m.keys()) == 0:
+                throughput_128_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_128_scans_1m[row[0]])
+            else:
+                throughput_128_scans_1m[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        columns_num = 0
+        for row in csv_reader:
             if (row[0] == 'app names distribution'):
                 break
             if (row[0] == ''):
                 continue
-            if len(throughput_256_scans.keys()) == 0:
-                throughput_256_scans[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_256_scans[row[0]])
+            if len(throughput_256_scans_1m.keys()) == 0:
+                throughput_256_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(throughput_256_scans_1m[row[0]])
             else:
-                throughput_256_scans[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+                throughput_256_scans_1m[row[0]] = list(map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
 
         for row in csv_reader:
             if (row[0] == 'app names cdf'):
@@ -662,7 +767,15 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             'ingestion': ingestion,
             'write_amp_256': write_amp_256,
             'throughput_256_ingestions': throughput_256_ingestions,
-            'throughput_256_scans': throughput_256_scans,
+            'throughput_64_scans_10s': throughput_64_scans_10s,
+            'throughput_128_scans_10s': throughput_128_scans_10s,
+            'throughput_256_scans_10s': throughput_256_scans_10s,
+            'throughput_64_scans_1s': throughput_64_scans_1s,
+            'throughput_128_scans_1s': throughput_128_scans_1s,
+            'throughput_256_scans_1s': throughput_256_scans_1s,
+            'throughput_64_scans_1m': throughput_64_scans_1m,
+            'throughput_128_scans_1m': throughput_128_scans_1m,
+            'throughput_256_scans_1m': throughput_256_scans_1m,
             'app_names_loglog': app_names_loglog,
             'app_names_cdf': app_names_cdf}
 
@@ -820,7 +933,15 @@ def draw_real_data_bar_charts(data):
 
 def draw_timeline_charts(data):
     draw_timeline_chart('throughput_256_ingestions', data['throughput_256_ingestions'], fontsize=myfontsize+5, legend=1)
-    draw_timeline_chart('throughput_256_scans', data['throughput_256_scans'], fontsize=myfontsize+5, legend=4)
+    draw_timeline_chart('throughput_64_scans_10s', data['throughput_64_scans_10s'], fontsize=myfontsize+5, legend=4, tick_sec=10)
+    draw_timeline_chart('throughput_128_scans_10s', data['throughput_128_scans_10s'], fontsize=myfontsize+5, legend=4, tick_sec=15)
+    draw_timeline_chart('throughput_256_scans_10s', data['throughput_256_scans_10s'], fontsize=myfontsize+5, legend=4, tick_sec=15)
+    draw_timeline_chart('throughput_64_scans_1s', data['throughput_64_scans_1s'], fontsize=myfontsize+5, legend=4, tick_sec=5)
+    draw_timeline_chart('throughput_128_scans_1s', data['throughput_128_scans_1s'], fontsize=myfontsize+5, legend=2, tick_sec=10)
+    draw_timeline_chart('throughput_256_scans_1s', data['throughput_256_scans_1s'], fontsize=myfontsize+5, legend=2, tick_sec=10)
+    draw_timeline_chart('throughput_64_scans_1m', data['throughput_64_scans_1m'], fontsize=myfontsize+5, legend=4, tick_sec=15)
+    draw_timeline_chart('throughput_128_scans_1m', data['throughput_128_scans_1m'], fontsize=myfontsize+5, legend=4)
+    draw_timeline_chart('throughput_256_scans_1m', data['throughput_256_scans_1m'], fontsize=myfontsize+5, legend=4)
 
 def draw_dist_charts(data):
     draw_dist_chart('app_names_loglog', data['app_names_loglog'], x_scale='log', y_scale='log',

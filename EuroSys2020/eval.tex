@@ -162,7 +162,7 @@ RocksDB & 10.4 &  2053.5 & 2660.4	\\
 \end{table}}
 
 \begin{figure}[tb]
-\includegraphics[width=0.4\textwidth]{figs/throughput_256_scans_line.pdf}
+\includegraphics[width=0.4\textwidth]{figs/throughput_256_scans_10s_line.pdf}
 \caption{\sys\/ vs RocksDB throughput (Kops),  under scan-dominated (95\% scan/5\% put) workload, 
 with a 256GB production dataset.}
 \label{fig:prod:analytics}
@@ -552,10 +552,9 @@ under a read-only workload C with Zipf-composite distribution.}}
 
 We compare \sys\ to PebblesDB, which was shown to significantly improve over RocksDB~\cite{PebblesDB},
 mostly in single-thread experiments, before RocksDB's recent version was released.  
-We compare \sys\ to PebbelesDB in a challenging  scenario for \sys, with a 32GB dataset and the Zipf-simple key 
-distribution. We run each YCSB workload with 1, 2, 4, and 8 threads. The results are summarized in Table~\ref{fig:pebbels-throughput}. 
-In all experiments, \sys\ is consistently better than PebblesDB, with its performance improvements ranging from \inred{1.5x} with a single thread
-on P, to \inred{4.5x} with eight threads on E10.  In all benchmarks, 
+We compare \sys\ to PebblesDB in a challenging  scenario for \sys, with a 32GB dataset and the Zipf-simple key 
+distribution. We run each YCSB workload with 1, 2, 4, 8 and 12 threads. The results are summarized in Table~\ref{fig:pebbels-throughput}. 
+In all experiments other than single-threaded P and A, \sys\ is consistently better than PebblesDB, with an average performance improvement of almost 2x.  In all benchmarks, 
  \sys's advantage grows with the level of parallelism. 
 \inred{  
 We observed a similar trend with smaller datasets. 
@@ -574,10 +573,10 @@ container), different hardware, and increased benchmark parallelism.
 %Workload & Zipf-simple & Zipf-composite \\
 P & A & B & C & D& E10--1000 & F \\
 \hline 
-1.5--2.9x & \inred{TBD} & \inred{TBD} & 2.1--3.2x &  \inred{TBD} & 2.2--4.5x &  \inred{TBD}  \\
+0.86--2.8x & 0.94--1.6x & 1.4--2.1x & 1.4--2.3x &  \inred{TBD} & 1.0--3.4x &  \inred{TBD}  \\
 \end{tabular}
 }}
-\caption{{\sys\/ throughput improvement over PebblesDB, on a 32GB dataset with Zipf-simple keys, with 1 to 8 threads.}}
+\caption{{\sys\/ throughput improvement over PebblesDB, on a 32GB dataset with Zipf-simple keys, with 1 to 12 threads.}}
 \label{fig:pebbels-throughput}
 \end{table}
 
