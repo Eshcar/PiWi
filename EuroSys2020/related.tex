@@ -7,10 +7,15 @@ et al.~\cite{DBLP:journals/acta/ONeilCGO96, Muth1998}.
 
 Due to LSM's design popularity, much effort has been invested into working around its bottlenecks.
 A variety of compaction strategies has been implemented in production systems~\cite{CallaghanCompaction, 
-ScyllaCompaction} and research prototypes~\cite{triad, PebblesDB, vttrees, slmdb}. Other suggestions include storage
-optimizations~\cite{WiscKey, PebblesDB, vttrees, slmdb,Papagiannis:2018:EMK:3267809.3267824}, boost of in-memory parallelism~\cite{scylladb, clsm2015}, and leveraging 
- workload redundancies to defer disk flushes~\cite{triad, accordion}. 
+ScyllaCompaction} and research prototypes~\cite{triad, PebblesDB, vttrees, slmdb}.  Improvements
+ include storage
+optimizations~\cite{WiscKey, PebblesDB, vttrees, slmdb,Papagiannis:2018:EMK:3267809.3267824}, 
+boosting  in-memory parallelism~\cite{scylladb, clsm2015}, and leveraging 
+ workload redundancies to defer disk flushes~\cite{triad, accordion} or avoid re-writing sorted data~\cite{vttrees}. 
+In contrast to these, \sys\/ eliminates the concept of temporally-organized levels altogether
+and employs a flat  layout with in-memory compaction.
 
+\remove{
 A number of systems focus on reducing write amplification.
 PebblesDB~\cite{PebblesDB} introduces fragmented LSM trees in which level files are 
 sliced into {\em guards\/} of increasing granularity and organized in a skiplist-like layout. 
@@ -19,9 +24,9 @@ In contrast, \sys\/ eliminates the concept of levels altogether,
 and employs a flat  layout. WiscKey~\cite{WiscKey} separates key and value storage 
 in SSTables, also in order to reduce amplification. This optimization is orthogonal to \sys's concepts,
 and could benefit our work as well. 
-
-VT-Trees~\cite{vttrees} are LSM-trees that apply stitching to avoid rewriting already sorted data. This improves performance and significantly reduces write amplification 
-in some scenarios (e.g., time-series ingestion).
+%
+VT-Trees~\cite{vttrees} apply stitching to avoid rewriting already sorted data. This improves performance and significantly reduces write amplification in some scenarios (e.g., time-series ingestion).
+}
 
 SLM-DB~\cite{slmdb} is an LSM design that relies on persistent memory for its mutable component and thus avoids WAL maintenance. It also re-designs the traditional LSM read path, utilizing a 
  B$^+$-tree index in persistent memory on top of a flat list of SSTables with LSM-like temporal data partitioning. In contrast, EvenDB does not rely on special hardware. 
@@ -32,15 +37,24 @@ HBase's in-memory write store  as an LSM tree, eliminating redundancies
 in RAM to reduce disk flushes. However, being incremental to the LSM design, 
 this approach fails to address spatial locality. 
 
-\sys's range-based data partitioning 
- resembles classic B-trees~\cite{Knuth:1998:ACP:280635}, which suffer from a write bottleneck in random updates to 
-leaf blocks (similar to chunks). \sys\/ overcomes this limitation through (1) transforming random I/O to sequential I/O at the chunk level, 
+Range-based  partitioning is also employed in  B-trees~\cite{Knuth:1998:ACP:280635} and variants like $B^{\epsilon}$-trees~\cite{Brodal:2003:LBE:644108.644201}.
+ \cref{ssec:B-tree-compare} discusses the key challenges faced by storage systems adopting these designs, which 
+ result in performance disadvantages compared to the LSM approach  (as shown, e.g., in~\cite{toku-rocks-inno}), 
+ and the difficulty to support consistency  -- in particular, atomic scans --   under multi-threaded access.
+ In contrast to B-tree nodes, \sys's chunks are not merely  a means to organize data on-disk -- they 
+are also the basic units for DRAM caching, I/O-batching, logging, and compaction. 
+This allows us to overcome the challenges of B- and $B^{\epsilon}$-trees via chunk-level logging with sequential I/O and 
+in-memory compaction.
+ 
+ \remove{
+ , which suffer from a write bottleneck in random updates to 
+leaf blocks. \sys\/ overcomes this limitation through (1) transforming random I/O to sequential I/O at the chunk level, 
 (2) managing a write-through chunk cache in memory (munks), and (3) reducing I/O  through in-memory (munk) compaction. 
 
-A $B^{\epsilon}$-tree ~\cite{Brodal:2003:LBE:644108.644201}is a B-tree variant that uses overflow write buffers in internal nodes. 
+A $B^{\epsilon}$-tree~\cite{Brodal:2003:LBE:644108.644201} is a B-tree variant that uses overflow write buffers in internal nodes. 
 This design speeds up writes and reduces write amplification, however lookups are slowed down by having to search in unordered 
 buffers. $B^{\epsilon}$-trees have been used in KV-stores (TokuDB~\cite{TokuDB}) and filesystems (BetrFS~\cite{BetrFS}).  
-~\cref{sec:design} compares $B^{\epsilon}$-tree concepts to \sys. 
+}
 
 Tucana~\cite{tucana} is an in-memory $B^{\epsilon}$-tree index over a persistent log of KV-pairs. It applies multiple system
 optimizations to speed up I/O (all orthogonal to our work): block-device storage access, memory-mapped files, and copy-on-write 
@@ -53,7 +67,8 @@ data storage, e.g., for web and application caches. Over time, many evolved to s
 yet still require the complete data set to reside in memory.
 %For example, Ignite~\cite{ignite} uses a B-tree index with in-place random updates. 
 %These systems resemble \sys\/ in their memory-centric approach. 
-We are unaware of  consistency guarantees or performance optimizations with regards to disk-resident data in such systems. 
+Although \sys\ is optimized for ``sliding-local'' scenarios where the entire active working set is in memory at any given time, 
+we do not expect all  the data to fit in memory. 
 
 %Their persistent storage support is based on either B-tree~\cite{ignite} or LSM-tree design~\cite{redis}. 
 %used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, , and in-place updates~\cite{ignite}  more than a KV LSM store.

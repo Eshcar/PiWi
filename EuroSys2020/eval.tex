@@ -303,8 +303,8 @@ the performance trends were similar, since performance is most affected by  the 
 %and other scenarios with spatial locality of keys, e.g.,  reverse URL domains.
 
 %\item [Latest-simple] 
-\emph{3. Latest-simple} -- a standard YCSB workload  reading  recently added simple keys
-(modeling, e.g., status updates).  
+\emph{3. Latest-simple} -- a standard YCSB workload  reading  recently added simple keys.
+%(modeling, e.g., status updates).  
 Keys are inserted in sequential  order; the read keys' distribution is skewed towards recently added ones. 
 Specifically, the sampled key's position wrt the most recent key is distributed Zipf. 
 %This is with medium spatial and temporal locality, modeling e.g., status updates.
@@ -324,9 +324,9 @@ as in~\cref{ssec:prod}).
 \subsubsection{Evaluation results}
 Figure~\ref{fig:throughput} presents throughput measurements of \sys\/ and RocksDB
 in all YCSB workloads. Except workload D, which exercises the Latest-simple pattern
-(depicted in green), all benchmarks are run with both  Zipf-simple (orange) 
+(depicted in red), all benchmarks are run with both  Zipf-simple (orange) 
 and Zipf-composite (blue). The P (put-only) workload 
-additionally exercises the Uniform access pattern (\inred{red}). \sys\/ results are depicted with solid
+additionally exercises the Uniform access pattern (green). \sys\/ results are depicted with solid
 lines, and RocksDB with dotted lines. 
 
 We now discuss the results for the different scenarios.
