@@ -26,7 +26,7 @@ piwi_marker = 'o'
 flurry_linecolor = tableau20[0]
 zip_linecolor = tableau20[2]
 latest_linecolor = tableau20[4]
-uniform_linecolor = tableau20[4]
+uniform_linecolor = tableau20[6]
 myfontsize = 15
 
 munks_label = 'Munk Cache'
@@ -1046,18 +1046,18 @@ def draw_rocks_block_cache_charts(data):
 def main():
     data = read_csv()
 
-    # draw_line_charts(data)
-    # draw_speedup_charts(data)
-    # draw_latency_charts(data)
-    # draw_bloom_filter_charts(data)
-    # draw_ampl_charts(data)
-    # draw_scalability_charts(data)
-    # ###draw_caching_effect(data)
-    # draw_95(data)
-    # draw_log_size_charts(data)
-    # draw_real_data_bar_charts(data)
-    # draw_timeline_charts(data)
-    # draw_dist_charts(data)
+    draw_line_charts(data)
+    draw_speedup_charts(data)
+    draw_latency_charts(data)
+    draw_bloom_filter_charts(data)
+    draw_ampl_charts(data)
+    draw_scalability_charts(data)
+    ###draw_caching_effect(data)
+    draw_95(data)
+    draw_log_size_charts(data)
+    draw_real_data_bar_charts(data)
+    draw_timeline_charts(data)
+    draw_dist_charts(data)
     draw_rocks_block_cache_charts(data)
     plt.tight_layout()
     # plt.show()
