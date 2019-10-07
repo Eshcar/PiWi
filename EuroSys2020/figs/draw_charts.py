@@ -25,8 +25,8 @@ piwi_linestyle = '-'
 piwi_marker = 'o'
 flurry_linecolor = tableau20[0]
 zip_linecolor = tableau20[2]
-latest_linecolor = tableau20[4]
-uniform_linecolor = tableau20[6]
+latest_linecolor = tableau20[6]
+uniform_linecolor = tableau20[4]
 myfontsize = 15
 
 munks_label = 'Munk Cache'
