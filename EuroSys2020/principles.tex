@@ -15,7 +15,7 @@ As in other systems~\cite{leveldb,RocksDB},  it supports
 if some put is lost, then no ensuing (and thus possibly dependent) puts are reflected.
 
 
-\noindent
+
 Our key optimization goals are the following:
 \begin{enumerate}
 %\itemsep0pt
@@ -62,7 +62,7 @@ For persistence, each chunk has a file representation called  \emph{funk} (file 
 Within funks, we adopt LSM's sequential I/O approach. To this end, the funk 
 is divided into two parts: (1) a sorted \emph{SSTable} (Sorted String Table~\cite{Bigtable2008}), and (2) an unsorted \emph{log}. 
 New updates are appended to the log; the log is  merged into the SSTable via an infrequent background compaction process. 
-Under spatial locality,  popular logs are targeted frequently, allowing effective batching. 
+Under spatial locality,  popular chunks are targeted frequently, allowing effective batching of their log updates. 
 Unlike LSMs, \sys\ logs writes exclusively within their funks and avoids duplicating the updates  in a separate WAL. This reduces write amplification and expedites recovery. 
 
 {\bf Chunk-level caching with in-memory compaction.\ }
@@ -70,14 +70,14 @@ DRAM caches are instrumental for read performance.
 To favor workloads with spatial locality, we cache entire chunks:
 a popular chunk is cached in a  memory data structure called \emph{munk} (memory chunk).
 Like their on-disk counterparts, munks have a compacted sorted prefix while new updates are appended at the end and remain unsorted until the next compaction. 
-Whereas LSM caches  only serve the read-path, the chunk granularity allows us to 
+Whereas LSM caches  only serve the read-path, caching at the chunk granularity allows us to 
 leverage munks also in the write-path, specifically, for in-memory compaction.  
 We observe that 
 %Whereas appending writes to the log is essential for persistence, 
-compacting a funk's log is only required for performance (to expedite on-disk lookup) and is redundant when the chunk is cached. Thus, when 
+compacting a funk's log is only required for performance (to expedite on-disk lookup) and is redundant whenever the chunk is cached. Thus, when 
 a chunk has a munk, we compact it almost exclusively in memory and allow the disk log to grow. 
 Note that if a chunk does not have a munk, it usually means that the chunk is ``cold'' 
-and hence there is little or no new data to compact. So either way, disk compaction is rare, and write amplification is low.
+and hence there is little or no new data to compact. So either way,  disk compaction is rare, and write amplification is low.
 
 {\bf Fast in-memory access.\ }
 Chunks are organized in a sorted linked list. To speed up lookups, they are indexed using a volatile index (a sorted array in our implementation).  
@@ -96,7 +96,7 @@ Second, for munk-less chunks, we employ \emph{Bloom filters} to limit excessive 
 copy-on-write to keep old versions only if they may be required by ongoing scans. 
 In other words, if a put attempts to overwrite a key required by an active scan, then a new version is created alongside the 
 existing one, whereas versions that are not needed by any scan are not retained. 
-Thus, version management incurs a low overhead (as it occurs only on scans). 
+Version management incurs a low overhead because it occurs only on scans. 
 %It also defines a simple rule for garbage collecting old versions.
 In addition, tagging each value with a version allows \sys\ to easily recover to a consistent point in time, namely a version below which all puts have been persisted to disk.
 

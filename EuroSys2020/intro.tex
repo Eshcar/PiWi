@@ -15,21 +15,23 @@ random reads, and range queries.
 
 A common design pattern is the use of \emph{composite} keys that represent an agglomerate of attributes.
 Typically, the first attribute -- called the \emph{primary key} -- has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
-popular primary keys result in popular \emph{key ranges}. 
+popular primary keys result in popular key ranges. 
 
 One example of this arises in mobile analytics platforms, e.g., AppsFlyer~\cite{appsflyer}, Flurry~\cite{flurry}, 
 and Google Firebase~\cite{firebase}. %~\cite{medium-mobile-analytics}.   
 Such platforms %help mobile developers collect user activity data, analyze it, and optimize their app experience. They 
 ingest massive streams of app event reports %(e.g., start, stop, or particular scenario within an app), 
-in  real-time and provide a variety of insight queries into the data. For example, Flurry provided insights for  
+in  real-time and provide a variety of insight queries into the data. For example, Flurry tracked events from  
 1M+ apps across 2.6B user devices  in 2017~\cite{FlurryReport2017}. In order to offer per-app analytics efficiently,
 such services aggregate data in KV-stores indexed by a composite key prefixed by a unique app 
 id,  followed by a variety of other attributes (time, user id, device model, location, event type, etc.).
 %
-We examine a trace of $200$ million events captured from a production mobile analytics engine over the course of four minutes.  
+We examine a trace of $200$ million events captured from a production mobile analytics engine over a couple of minutes.  
 \Cref{fig:cdf} shows the access frequency distribution over the  $40$K app ids occurring in this stream. It follows a marked
-heavy-tail pattern: $10$\% of the apps cover over $99.5$\% of the events; $1$\% of them  cover $94$\%; and fewer 
-than $0.1$\% cover $70$\% of the events. 
+heavy-tail pattern: 
+%$10$\% of the apps cover over $99.5$\% of the events; 
+$1$\% of the apps  cover $94$\% of the events, and fewer 
+than $0.1$\% cover $70$\% of them. 
 
 % This means the data is highly skewed and with a very long tail (not depicted in the figure).
 %Table~\ref {table:popular} shows the cumulative probability of the top-$20$ popular applications, covering more than $50$\% of the events. 
@@ -73,7 +75,7 @@ In this work, we make spatial locality a first-class consideration in KV-store d
 
 % LSM is the standard 
 The de facto standard design for high-throughput KV-stores today is \emph{LSM} (log-structured merge) trees~\cite{DBLP:journals/acta/ONeilCGO96}. 
-LSMs initially group writes  into files \emph{temporally}, and not by key-range. 
+LSMs initially group writes  into files \emph{temporally} rather than by key-range. 
 A background \emph{compaction} process later merge-sorts any number of files, grouping data by keys. 
 
 % LSM is  not ideal for spatial locality  because of  temporal grouping 
@@ -83,7 +85,7 @@ Second,  compaction  is costly in terms of  both performance
 (disk bandwidth) and \emph{write amplification}, namely the number of physical writes 
 associated with a single application write. The latter is  particularly important in SSDs as it increases disk wear. 
 The temporal grouping means that compaction is indiscriminate with respect to key popularity:  
-Since new (lower level) files are always merged with old (higher level) ones, 
+Since new  files are always merged with old ones, 
  ``cold'' key ranges  continue to be repeatedly re-located by  compactions.  
 
 % LSM is not the best when the entire working set fits in memory
@@ -141,9 +143,9 @@ spatial locality arising in today's  workloads, without forfeiting the benefits 
 We present \sys, a high-throughput persistent KV-store geared towards spatial locality. 
 \sys's  architecture (\cref{sec:principles}) combines a spatial data organization with LSM-like  batch I/O. 
 The pillars of our design are large \emph{chunks} holding contiguous key ranges. 
-\sys's chunks are not merely  a means to organize data on-disk (like nodes in a B-Tree); they 
+\sys's chunks are not merely  a means to organize data on-disk (like nodes in a B-tree); they 
 are also the basic units for DRAM caching, I/O-batching, logging, and compaction. 
-This approach is unique:  typical KV-stores rely on OS-managed page caches (whereas chunks consist of many pages)  
+This approach is unique:  Typical KV-stores rely on OS-managed page caches (whereas chunks consist of many pages)  
 supplemented by application-level caches. In LSMs, these caches serve only the read-path. 
 Storage systems use global WALs for the write-path.
 
@@ -156,8 +158,9 @@ Finally, using the same data structure for both the read-path (as a cache) and t
 
 % Downsides
 The downside of spatial partitioning is that if the data lacks spatial locality and the active working set is big, 
+chunk-level I/O batching is ineffective. Moreover, 
 caching an entire chunk for a single popular key is wasteful. 
-We mitigate this by adding a \emph{row cache} for read access to hot keys. Even so, 
+We mitigate the latter by adding a \emph{row cache} for read access to hot keys. Even so, 
 our design is less optimal for mixed read/write workloads lacking spatial locality, for which the LSM approach may yield better performance.  
 
 %To further expedite access in different scenarios, we incorporate a number of additional mechanisms: 
@@ -184,8 +187,8 @@ KV-store); both performed significantly worse than  RocksDB and \sys, so we focu
 Our main findings are: 
 \begin{enumerate} 
   %   \setlength{\itemindent}{-10pt}
-\item \sys\/ is dramatically better under high spatial  locality.  
-For instance, on a 256GB production dataset, \sys\ ingests data 3.7x faster than RocksDB %,  scans recent  data up to 27\% faster, 
+\item \sys\/ is  better than RocksDB under high spatial  locality.  
+For instance, on a 256GB production dataset, \sys\ ingests data 4.4x faster than RocksDB %,  scans recent  data up to 27\% faster, 
 and reduces write amplification by almost 4x. 
 %And in large synthetic composite-key workloads, \sys\  improves over RocksDB's throughput by $24\% - 75\%$. 
 \item \sys\/ significantly outperforms RocksDB whenever most of the working set fits in RAM, 
@@ -199,8 +202,8 @@ although \sys's write amplification remains $\sim$2x smaller than RocksDB's.
 \end{enumerate}
 
 % Benefits
-Our results underscore the advantage of \sys's spatially-organized chunks:
-(1) little fragmentation of key ranges  yields better  performance under spatial locality; 
+Our results underscore the advantages of \sys's spatially-organized chunks:
+(1) eliminating fragmentation of key ranges  yields better  performance under spatial locality; 
 (2) keeping hot ranges in memory leads to better performance when most of the working set fits in RAM; and 
 (3) in-memory chunk compaction saves disk flushes and reduces write volume.  
 In addition, in-chunk logging allows quick recovery from crashes with no need to replay a WAL.

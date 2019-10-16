@@ -10,7 +10,8 @@ We found this simple implementation to be fastest since splits are infrequent.
 %We note that 
 Using a single pending array to synchronize all
 operations can cause unnecessary contention.
-We mitigate this problem in our implementation by maintaining two data structures for coordinating different operations (similar to~\cite{kiwi}). The first is a per-chunk pending put array (\emph{PPA}) which 
+We mitigate this problem in our implementation by maintaining two data structures for coordinating different operations
+ (similar to~\cite{kiwi}). The first is a per-chunk pending put array (\emph{PPA}) which 
 either indicates the current update's key and version, or indicates that the thread is currently not performing a put.
 %maps each thread either to a cell in the chunk that the thread is currently attempting to put into and a corresponding version, or an indication that the thread is currently not performing a put. 
 The second is a global pending scan array (\emph{PSA}) which tracks versions used by pending scans for compaction purposes; each entry consists of a version \code{ver} and a sequence number \code{seq}, as well as the scan’s key range. Each entry in the \code{PPA}s and \code{PSA} includes, in addition to the operation metadata, an ABA sequence number. 
@@ -33,17 +34,17 @@ A munk rebalance iterates through the \code{PSA} to collect the maximum version 
 }
 
 %\paragraph{Adaptive mechanisms.} \sys\ applies two dynamic mechanisms that adapt to the workload. 
-The munk cache applies simple LFU eviction policy. %in which the score is a weighted average of the number of accesses per operation type. 
+The munk cache applies an LFU eviction policy. %in which the score is a weighted average of the number of accesses per operation type. 
 We use exponential decay to maintain the recent access counts, similar to~\cite{tinyLFU}: periodically, all counters are 
 sliced by a factor of two. 
 The row cache implements a coarse-grained LRU policy using a fixed-size queue of hash tables. 
 New entries are inserted into the head table. Once it overflows, a new empty table is added to the head,
 and the tail is discarded. Consequently, lookups for recently cached keys are usually served by the head 
-table, and unpopular keys are removed from the cache in a bulk, once the tail table is dropped.
+table, and unpopular keys are removed from the cache in a bulk once the tail table is dropped.
 
-The row cache must never serve stale values. %, yet need not contain each and every updated key. 
-Therefore, a put updates the cache  if a previous version of that key is already in the cache. 
-If the key is not present in the cache, the put does not update it, to avoid overpopulating the cache 
+The row cache  never holds stale values. %, yet need not contain each and every updated key. 
+Therefore, a put updates the cache  whenever a previous version of the updated key is already in the cache. 
+But if the key is not in the cache, put does not add it, to avoid overpopulating the cache 
 in write-dominated workloads. After a get, the up-to-date KV-pair is added to the head table unless it is already there.
 If the key's value already exists in another table, it is shared by the two tables, to avoid duplication.
 
