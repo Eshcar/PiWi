@@ -369,7 +369,7 @@ Finally, the scan unregisters from PO.
 
 Munk (resp.\ funk) rebalance improves the data organization in a munk (funk) by removing old versions that are no longer needed 
 for scans, removing deleted items, and sorting all the keys. It is typically triggered when the munk (funk) exceeds a capacity threshold.   
-The threshold for funk rebalance is higher than for munk rebalance, causing most rebalances to occur in-memory.
+The threshold for funk rebalance is higher when it has a munk, causing most rebalances to occur in-memory.
 %It can be triggered either by a thread attempting to access the chunk or a dedicated background thread.
 %In case a chunk has a munk, rebalance reorganizes only the munk, since all searches are served by it. 
 %The respective funk is reorganized much less frequently, merely in order to bound the log's growth. 
@@ -473,7 +473,11 @@ Our current \sys\/ prototype does not implement this feature.
 \subsection{Disk flushes and recovery}
 \label{ssec:flush-recovery}
 
-Recall that all puts write to the funk log, regardless of whether the chunk has a munk. Like most popular KV-stores, \sys\ supports 
+Recall that all puts write to the funk log, regardless of whether the chunk has a munk. 
+Funk logs are not replayed on recovery, and so recovery time is not impacted by 
+their length.
+
+Like most popular KV-stores, \sys\ supports 
 two modes of operation -- \emph{synchronous} and \emph{asynchronous}. In the former,  updates are persisted to disk (using an
 \code{fsync} call)
 before returning to the user. %, ensuring the written data will survive failures once the operation completes. 

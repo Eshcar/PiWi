@@ -1,5 +1,5 @@
 
-The experiment setup is described in~\S\ref{ssec:setup}. 
+The experiment setup is described in~\cref{ssec:setup}. 
 We present performance results with production data in~\cref{ssec:prod} and with standard synthetic workloads in~\cref{ssec:synthetic}. 
 
 The baseline for our evaluation is RocksDB -- a mature and widely-used industrial KV-store. 
@@ -27,17 +27,18 @@ Data is stored uncompressed.
 We run 5 experiments for each data point and present the median measurement to eliminate outliers. Since experiments are long, the results vary 
 little across runs. In all of our experiments, the STD was within $6.1\%$ of the mean, and in most of them below $3\%$. 
 
-We employ a C++ implementation~\cite{Cpp-YCSB} of YCSB~\cite{YCSB}, the  de facto standard  
+We employ a C++ implementation~\cite{Cpp-YCSB} of YCSB~\cite{YCSB}, the  standard  
 benchmarking platform for KV-stores. YCSB provides a set of APIs and a synthetic workload suite inspired 
 by real-life applications. In order to exercise production workloads, we extend YCSB to replay log files.
  
 % Most modern KV-stores implement  YCSB adapter API's. 
 %The platform decouples data access from workload generation, 
 %thereby providing common ground for backend comparison. 
-
-A typical YCSB experiment stress-tests the backend KV-store through a pool of concurrent worker threads that drive identical
-(synthetic or real) workloads. The YCSB driver  
-exercises 12 workers and the data store uses 4 additional background   threads for maintenance.
+In each experiment, a pool of concurrent worker threads running identical
+workloads stress-tests the KV-store. We exercise 12 YCSB workers 
+and allow the data store to use 4 additional background threads for maintenance.
+We also experimented with different numbers of worker threads, finding similar scalability trends in RocksDB and 
+\sys; these results are omitted for lack of space.
 
 
 \remove{
@@ -63,7 +64,7 @@ performance benchmarks~\cite{RocksDBPerf}.
 We also experimented with tuning RocksDB's memory resources based on its performance guide~\cite{RocksDBMemoryTuning}; 
 this had mixed results, improving performance by at most 25\% over the default configuration in some workloads but 
 deteriorating it by up to 25\% in others. Overall, the default configuration performed best. 
-The PebblesDB code was fixed to resolve a data race reported in the project's repository~\cite{pebbles-git-issue}. 
+We fixed the PebblesDB code to resolve a data race reported in the project's repository~\cite{pebbles-git-issue}. 
 
 \sys's default configuration 
 allocates 8GB to munks and 4GB to the row cache,
@@ -78,24 +79,24 @@ an order-of-magnitude slower, trivializing the results in all scenarios that inc
 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
 
-\subsection{Production benchmarks}
+\subsection{Production data}
 \label{ssec:prod}
 
 \begin{figure*}[tb]
 \centering
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.29\linewidth}
 \includegraphics[width=\textwidth]{figs/ingestion.pdf}
 \caption{Throughput, Kops}
 \label{fig:prod:ingestion:a}
 \end{subfigure}
-\hspace{0.01\linewidth} 
-\begin{subfigure}{0.3\linewidth}
+\hspace{0.03\linewidth} 
+\begin{subfigure}{0.29\linewidth}
 \includegraphics[width=\textwidth]{figs/throughput_256_ingestions_line.pdf}
 \caption{Throughput dynamics, 256GB}
 \label{fig:prod:ingestion:b}
 \end{subfigure}
-\hspace{0.01\linewidth} 
-\begin{subfigure}{0.3\linewidth}
+\hspace{0.03\linewidth} 
+\begin{subfigure}{0.29\linewidth}
 \includegraphics[width=\textwidth]{figs/write_amp_256.pdf}
 \caption{Write amplification}
 \label{fig:prod:ingestion:c}
@@ -121,19 +122,19 @@ RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
 
 \begin{figure*}[tb]
 \centering
-\begin{subfigure}{0.3\linewidth}
+\begin{subfigure}{0.29\linewidth}
 \includegraphics[width=\textwidth]{figs/throughput_64_scans_10s_line.pdf}
 \caption{64 GB dataset}
 \label{fig:prod:analytics:a}
 \end{subfigure}
-\hspace{0.01\linewidth} 
-\begin{subfigure}{0.3\linewidth}
+\hspace{0.03\linewidth} 
+\begin{subfigure}{0.29\linewidth}
 \includegraphics[width=\textwidth]{figs/throughput_128_scans_10s_line.pdf}
 \caption{128 GB dataset}
 \label{fig:prod:analytics:b}
 \end{subfigure}
-\hspace{0.01\linewidth} 
-\begin{subfigure}{0.3\linewidth}
+\hspace{0.03\linewidth} 
+\begin{subfigure}{0.29\linewidth}
 \includegraphics[width=\textwidth]{figs/throughput_256_scans_10s_line.pdf}
 \caption{256 GB dataset}
 \label{fig:prod:analytics:c}
@@ -144,7 +145,7 @@ RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
 
 Our first set of experiments is driven by a log collected by a production mobile analytics engine. The log captures 
 a stream consisting of $\sim$80M events per minute, with an average log record size of 800B, i.e., $\sim$64GB/min. 
-We load the logged events into a table ordered  lexicographically by app id and timestamp. 
+We load the logged events into a table indexed by app id and timestamp. 
 As noted in~\cref{sec:intro}, the app id distribution is heavy-tailed, i.e., the data exhibits spatial locality. 
 We use this log to drive two workloads -- \emph{data ingestion} (100\% put) and \emph{scan-dominated} (95\% scan, 5\% put).
 
@@ -153,7 +154,7 @@ We use this log to drive two workloads -- \emph{data ingestion} (100\% put) and 
 Here, we load 64GB, 128GB and 256GB of data, in timestamp order; note that this order is different from the KV-store's primary key. 
  \Cref{fig:prod:ingestion:a} depicts the throughput in each experiment. Clearly, \sys\/ is much faster than RocksDB and its advantage 
 becomes more pronounced as the dataset grows. For example, \sys\/ ingests 256GB  within 1.1 hours, 
-whereas RocksDB requires 4.85 hours (4.5x longer). Figure~\ref{fig:prod:ingestion:b} depicts the  
+whereas RocksDB requires 4.85 hours (4.4x slower). Figure~\ref{fig:prod:ingestion:b} depicts the  
 throughput dynamics for the 256GB dataset. RocksDB's throughput, while stable overall, suffers from stalls 
 (lasting a minute or longer) caused by compactions. 
 %\sys's throughput is noisier, because munk rebalances are more frequent than munk compactions; 
@@ -174,23 +175,25 @@ On the other hand, RocksDB is I/O-intensive -- it reads 43x (!) more data than \
 %ever reads from disk (only upon funk rebalances, which are infrequent). RocksDB, on the other hand, spends a large fraction of its time in 
 %compactions, which are insensitive to locality; it re-reads and re-writes the same data many times. 
 
-\paragraph{Scan-dominated (analytics).} We run 40M operations on top of the KV-store produced by the ingestion workloads.
-95\% of these operations are range queries, whereas the rest are puts that capture lagging updates. 
-Every range query scans a sequence of recent events within one app (where all the scanned rows 
+\paragraph{Scan-dominated.} We run 40M operations -- 95\% range queries, 5\% puts -- 
+on the KV-store produced by the ingestion tests.
+Every query scans a sequence of recent events within one app (all the scanned rows 
 share the  app id key prefix).  
 %We study short, medium, and long scans, covering 1 s, 10 s, and 1 min of the app's event history. 
 The app id is sampled from the data distribution (so popular apps are queried more frequently).  
-Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-min history ranges.
-We experimented also with shorter scans (1--10 seconds), with similar results, which are omitted for lack of space.
+Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-minute histories.
+We experimented also with shorter scans, with similar results, which are omitted for lack of space.
 
-In the long run, \sys\/ and RocksDB exhibit similar performance under this workload, with an advantage to RocksDB in long executions with a large data set. 
+In the long run, \sys\/ and RocksDB exhibit similar performance under this workload, with an eventual advantage to RocksDB in long executions with a large dataset. 
 However, the  dynamics are different. \sys's throughput stabilizes 
 almost instantly upon transition from ingestion to analytics because its working set munks are already in memory. 
-In contrast, it takes RocksDB approximately 35 minutes (!) to warm its caches in order to reach the steady-state performance. 
+In contrast, it takes RocksDB approximately 35 minutes (!) to reach the steady-state performance. 
 During this period, it goes through multiple compactions, which degrade its application-level throughput beyond 90\%. 
+After all compactions are done, RocksDB's improved organization gives it an advantage (in large datasets) over \sys, 
+which still has un-compacted logs in some funks. We note that this tradeoff between the maintenance cost (for compaction) 
+and the scan performance after maintenance is done can be controlled via \sys's log size limit parameter. 
 
 \subsection{Synthetic benchmarks}
-%\subsection{\sys\ versus \ RocksDB}
 \label{ssec:synthetic} 
 
 \begin{figure*}[tb]
@@ -251,27 +254,26 @@ During this period, it goes through multiple compactions, which degrade its appl
 }
 \end{subfigure}
 \caption{
-{\sys\/ vs RocksDB throughput (Kops), under YCSB workloads with various key distributions.}
+{\sys\/ vs RocksDB throughput under YCSB workloads with various key distributions.}
 }
 \label{fig:throughput}
 \end{figure*}
 
-In the next set of experiments, we closely follow the YCSB benchmarking methodology. 
-Each experiment first  populates an initially empty store with a sequence of KV-pairs, then  
-\remove{
-ordered by  primary key;
-Note that this generates a data distribution that is different from the production dataset in~\S\ref{ssec:prod} -- namely, 
-all data ranges are populated equally.
-} 
-runs read operations to warm the caches, and only then begins to exercise -- and measure --  the specific experiment scenario. 
-Experiments  perform 80M data accesses, or fewer if some of them are scans.
+In this section, we closely follow the YCSB benchmarking methodology. 
+Each experiment first  loads a sequence of KV-pairs to an initially empty store, then  
+runs read operations to warm the caches, and then exercises -- and measures --  the specific experiment scenario. 
+Experiments perform 80M data accesses (fewer if some of them are scans). Because the load is 
+in key order, the data stores are compact from the outset, eliminating the stabilization delay 
+%, eliminating the long stabilization time 
+observed in~\cref{ssec:prod}.  
+
 % Experiments with scans perform 4M to 16M accesses, depending on the scan size. 
 
 
 \subsubsection{Workloads}
 %\paragraph{Workloads.} 
 
-We vary the dataset size from 4GB to 64GB in order to exercise multiple locality 
+We vary the dataset size from 4GB to 64GB in order to test multiple locality 
 scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
 the keys are 32-bit integers in decimal encoding (10 bytes), which YCSB pads with a 4-byte prefix (so effectively, 
 the keys are 14 byte long). Values are 800-byte long. 
@@ -283,35 +285,33 @@ We study the following four key-access distributions:
 %\begin{description}
 %\item [Zipf-simple] 
 \emph{1. Zipf-simple} -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
-Key access frequencies are sampled from the heavy-tailed Zipf distribution 
-following the description in~\cite{Gray:1994:QGB:191839.191886}, with $\theta = 0.8$
-(the most popular key's frequency is approximately $0.7\%$). 
-The ranking is over a random permutation of the entire key range, so popular keys are uniformly dispersed (no spatial locality).
+Key access frequencies are sampled from a Zipf distribution 
+(following~\cite{Gray:1994:QGB:191839.191886}), with $\theta = 0.8$
+(the most popular key's frequency is  $\sim 0.7\%$). 
+The ranking is over a random permutation of the key range, so popular keys are uniformly dispersed. % (no spatial locality).
 % The key locations are sampled uniformly at random from the whole data range. 
 %This workload exhibits medium temporal locality (e.g., the most popular key's frequency is approximately $0.7\%$) and no spatial locality. 
 %This is a standard YCSB workload that captures a multitude of use cases  -- e.g., a web page cache distribution by URL. 
 
 %\item [Zipf-composite]  
-\emph{2. Zipf-composite} -- a Zipfian distribution over composite keys. 
-The key's $14$ most significant bits comprise the primary attribute. 
-The primary attribute is drawn from a Zipf ($\theta=0.8$) distribution over its range. The remainder of the key is drawn uniformally at random.
+\emph{2. Zipf-composite} -- a Zipfian distribution over composite keys.
+The key's $14$ most significant bits comprise the primary attribute, which  
+is drawn from a Zipf ($\theta=0.8$) distribution over its range. The remainder of the key is drawn uniformly at random.
 We also experimented with a Zipfian distribution of the key's suffix and 
-the performance trends were similar, since performance is most affected by  the primary dimension.
+the trends were similar. %, since performance is most affected by  the primary dimension.
 %'s distribution. %Zipf-composite exhibits high spatial locality.% it represents workloads 
 %with composite keys.%, such as message threads~\cite{Borthakur:2011:AHG:1989323.1989438},
 %social network associations~\cite{Armstrong:2013:LDB:2463676.2465296}, and analytics databases~\cite{flurry},
 %and other scenarios with spatial locality of keys, e.g.,  reverse URL domains.
 
 %\item [Latest-simple] 
-\emph{3. Latest-simple} -- a standard YCSB workload  reading  recently added simple keys.
-%(modeling, e.g., status updates).  
-Keys are inserted in sequential  order; the read keys' distribution is skewed towards recently added ones. 
+\emph{3. Latest-simple} -- a standard YCSB workload reading simple keys from a distribution skewed towards recently added ones. 
 Specifically, the sampled key's position wrt the most recent key is distributed Zipf. 
 %This is with medium spatial and temporal locality, modeling e.g., status updates.
 
 %\item [Uniform] 
 \emph{4. Uniform} -- ingestion of keys sampled uniformly at random. RocksDB
-reports a similar benchmark~\cite{rocksdb-benchmarks}; we present it for completeness.
+reports a similar benchmark~\cite{rocksdb-benchmarks}. %; we present it for completeness.
 %\end{description}
 
 The workloads exercise different mixes of puts, gets, and scans. We use standard YCSB scenarios 
@@ -322,8 +322,8 @@ as in~\cref{ssec:prod}).
 %non-sequential data load scenario (e.g., an ETL from an external data pipeline~\cite{flurry}). 
 
 \subsubsection{Evaluation results}
-Figure~\ref{fig:throughput} presents throughput measurements of \sys\/ and RocksDB
-in all YCSB workloads. Except workload D, which exercises the Latest-simple pattern
+Figure~\ref{fig:throughput} presents the throughput measurements in all YCSB workloads. 
+Except for workload D, which exercises the Latest-simple pattern
 (depicted in red), all benchmarks are run with both  Zipf-simple (orange) 
 and Zipf-composite (blue). The P (put-only) workload 
 additionally exercises the Uniform access pattern (green). \sys\/ results are depicted with solid
@@ -342,14 +342,13 @@ and 0.9x to 1.6x with Zipf-simple keys. This scenario's bottleneck is the reorga
 all puts in munks, and so funk rebalances are rare. In big datasets, funk rebalances do occur, but mostly in 
 munk-less chunks, which are accessed infrequently. This is thanks to \sys\/'s high log size limit for chunks 
 with munks. Hence, in both cases, funk rebalances incur less I/O than RocksDB's compactions, 
-which do not distinguish between hot and cold data. Note that \sys's recovery time is not impacted by 
-long funk logs since they are not replayed upon recovery.
+which do not distinguish between hot and cold data. 
 
- Under the Zipf-simple workload, the gains are moderate due to the low spatial locality. They are most pronounced 
- for small datasets that fit into RAM.
+% Under the Zipf-simple workload, the gains are moderate due to the low spatial locality. They are most pronounced 
+% for small datasets that fit into RAM.
  
 The Uniform workload exhibits no locality of any kind. 
- \sys\/ benefits from this because the keys get dispersed evenly across all chunks, hence all funk logs grow 
+ \sys\/ benefits from this because keys are dispersed evenly across chunks, hence all funk logs grow 
  slowly, and funk rebalances are infrequent. The throughput is therefore insensitive to the dataset 
  size. In contrast, RocksDB performs compactions frequently albeit they are not effective (since there are few redundancies). Its throughput 
  degrades  with the data size since when compactions cover more keys they engage more files.
@@ -426,7 +425,7 @@ we break down the get latency in  Figure~\ref{fig:readstat}.
 Figure~\ref{fig:readstat:dist} classifies gets by the storage  component 
 that fulfills the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
 We see that with large datasets, disk access dominates the latency.
-For example, in the 64GB dataset, $3.3\%$ of gets are served from logs under Zipf-composite, vs $4.0\%$ under Zipf-simple,
+For example, in the 64GB dataset, $3.3\%$ of gets are served from logs under Zipf-composite vs $4\%$ under Zipf-simple,
 and the respective log search latencies are $2.6$ ms vs $4.2$ ms. This is presumably because in the latter, puts are more dispersed, 
 hence the funks are cached less effectively by the OS, and the disk becomes a bottleneck due to the higher I/O rate.
 %and (2) rebalanced less frequently so their logs grow longer.
@@ -606,7 +605,8 @@ P & A & B, C & D& E10--1000 & F \\
 0.86--2.8x & 0.94--1.6x & 1.4--2.3x &  \inred{TBD} & 1.0--3.4x &  \inred{TBD}  \\
 \end{tabular}
 }}
-\caption{{\sys\/ throughput improvement over PebblesDB on a 32GB dataset with Zipf-simple keys, with 1 to 12 threads.}}
+\caption{{\sys\/ throughput improvement over PebblesDB, 32GB dataset, Zipf-simple keys, 1--12 worker threads.
+\sys's advantage grows with the number of threads.}}
 \label{fig:pebbels-throughput}
 \end{table}
 
