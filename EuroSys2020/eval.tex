@@ -585,7 +585,8 @@ We next compare \sys\ to PebblesDB, which was shown to significantly improve ove
 mostly in single-thread experiments, before RocksDB's recent version was released.  
 We compare \sys\ to PebblesDB in a challenging  scenario for \sys, with a 32GB dataset and the Zipf-simple key 
 distribution. We run each YCSB workload with 1, 2, 4, 8 and 12 threads. The results are summarized in Table~\ref{fig:pebbels-throughput}. 
-In all experiments other than single-threaded P and A, \sys\ is consistently better than PebblesDB, with an average performance improvement of almost 2x.  In all benchmarks, 
+While PebblesDB is slightly faster on some single-threaded benchmarks, from 2 threads and onward \sys\ is consistently better in all experiments, 
+with an average performance improvement of almost 1.8x.  In all benchmarks, 
  \sys's advantage grows with the level of parallelism. 
 We observed a similar trend with smaller datasets. 
 
@@ -602,7 +603,7 @@ container), different hardware, and increased  parallelism.
 %Workload & Zipf-simple & Zipf-composite \\
 P & A & B, C & D& E10--1000 & F \\
 \hline 
-0.86--2.8x & 0.94--1.6x & 1.4--2.3x &  \inred{TBD} & 1.0--3.4x &  \inred{TBD}  \\
+0.86--2.8x & 0.94--1.6x & 1.4--2.3x &  0.98-2x & 1.0--3.4x &  0.84-1.23x  \\
 \end{tabular}
 }}
 \caption{{\sys\/ throughput improvement over PebblesDB, 32GB dataset, Zipf-simple keys, 1--12 worker threads.
