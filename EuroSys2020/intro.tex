@@ -26,8 +26,8 @@ in  real-time and provide a variety of insight queries into the data. For exampl
 such services aggregate data in KV-stores indexed by a composite key prefixed by a unique app 
 id,  followed by a variety of other attributes (time, user id, device model, location, event type, etc.).
 %
-We examine a trace of $200$ million events captured from a production mobile analytics engine over a couple of minutes.  
-\Cref{fig:cdf} shows the access frequency distribution over the  $40$K app ids occurring in this stream. It follows a marked
+We examine a trace of almost $2$ billion events captured from a production mobile analytics engine over 35 minutes.  
+\Cref{fig:cdf} shows the access frequency distribution over the  $60$K app ids occurring in this stream. It follows a marked
 heavy-tail pattern: 
 %$10$\% of the apps cover over $99.5$\% of the events; 
 $1$\% of the apps  cover $94$\% of the events, and fewer 
@@ -41,7 +41,7 @@ than $0.1$\% cover $70$\% of them.
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.6\columnwidth]{figs/app_names_loglog_line.pdf}
-\caption{{Distribution of mobile app events by app id (log-log scale) in a production analytics feed (200M events).}}
+\caption{{Distribution of mobile app events by app id (log-log scale) in a production analytics feed (2B events).}}
 \label{fig:cdf}
 \end{figure}
 

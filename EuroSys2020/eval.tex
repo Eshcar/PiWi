@@ -144,7 +144,7 @@ RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
 \end{figure*}
 
 Our first set of experiments is driven by a log collected by a production mobile analytics engine. The log captures 
-a stream consisting of $\sim$80M events per minute, with an average log record size of 800B, i.e., $\sim$64GB/min. 
+a stream consisting of $\sim$13M unique events per minute, with an average log record size of 800B, i.e., $\sim$10GB/min. 
 We load the logged events into a table indexed by app id and timestamp. 
 As noted in~\cref{sec:intro}, the app id distribution is heavy-tailed, i.e., the data exhibits spatial locality. 
 We use this log to drive two workloads -- \emph{data ingestion} (100\% put) and \emph{scan-dominated} (95\% scan, 5\% put).
