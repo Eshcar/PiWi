@@ -79,8 +79,8 @@ def draw_line_chart(file_name, lines, chart_name='', yaxis='', legend=1,
                 marker=line['style']['marker'],
                 markersize=marksize)
 
-    ax.set_xlabel(x_label, fontsize=fontsize)
-    ax.set_ylabel(yaxis, fontsize=fontsize)
+    ax.set_xlabel(x_label, fontsize=fontsize + 5)
+    ax.set_ylabel(yaxis, fontsize=fontsize + 5)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
 
@@ -243,20 +243,20 @@ def draw_percentage_breakdown(chart_name, latency):
                                        wb_percentage_zipf)],
            color=ks_color, edgecolor='black', hatch=zipf_hatch)
 
-    ax.legend(loc=3, fontsize=myfontsize)
+    ax.legend(loc=3, fontsize=myfontsize + 5)
 
     ax.set_xticks(flurry_indices + zipf_indices)
     ax.set_xticklabels([renamings('Flurry') for i in range(5)]
                        + [renamings('Zipf') for i in range(5)], rotation=80, fontsize=myfontsize + 5)
 
-    ax.set_xlabel('Distribution', fontsize=myfontsize + 5)
-    ax.set_ylabel('% Accesses', fontsize=myfontsize + 5)
+    ax.set_xlabel('Distribution', fontsize=myfontsize + 10)
+    ax.set_ylabel('% Accesses', fontsize=myfontsize + 10)
 
     for label in ax.get_yticklabels() + ax.get_xticklabels():
         label.set_fontsize(myfontsize + 5)
 
     ax2 = ax.twiny()
-    ax2.set_xlabel('Dataset Size', fontsize=myfontsize + 5)
+    ax2.set_xlabel('Dataset Size', fontsize=myfontsize + 10)
     ax2.bar(flurry_indices, [0, 0, 0, 0, 0], bar_width)
     ax2.bar(zipf_indices, [0, 0, 0, 0, 0], bar_width)
     ax2.set_xticks([v + bar_width / 2 for v in flurry_indices], False)
@@ -328,7 +328,7 @@ def draw_latency_breakdown(chart_name, latency):
     ax.bar([index + bar_width for index in zipf_indices], keystore_percentage_zipf, bar_width,
            color=ks_color, edgecolor='black', hatch=zipf_hatch)
 
-    ax.legend(loc=2, fontsize=myfontsize)
+    ax.legend(loc=2, fontsize=myfontsize + 5)
 
     ax.set_xticks([v + bar_width / 2 for v in flurry_indices] + [v + bar_width / 2 for v in zipf_indices])
     ax.set_xticklabels([renamings('Flurry') for i in range(3)]
@@ -337,11 +337,11 @@ def draw_latency_breakdown(chart_name, latency):
     for label in ax.get_yticklabels():
         label.set_fontsize(myfontsize + 5)
 
-    ax.set_xlabel('Distribution', fontsize=myfontsize + 5)
+    ax.set_xlabel('Distribution', fontsize=myfontsize + 10)
 
-    ax.set_ylabel('Latency, [ms]', fontsize=myfontsize + 5)
+    ax.set_ylabel('Latency, [ms]', fontsize=myfontsize + 10)
     ax2 = ax.twiny()
-    ax2.set_xlabel('Dataset Size', fontsize=myfontsize + 5)
+    ax2.set_xlabel('Dataset Size', fontsize=myfontsize + 10)
     ax2.bar(flurry_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
     ax2.bar(zipf_indices, [0.00001, 0.00001, 0.00001, 0.00001, 0.00001][2:], bar_width)
 
@@ -359,7 +359,7 @@ def draw_piwi_vs_rocks_bars(chart_name, data, xlabel, ylabel):
     ax.bar(index, [r[0] for r in data_values[1:]], bar_width, label=renamings(data_values[0][0]))
     ax.bar(index + bar_width, [r[1] for r in data_values[1:]], bar_width, label=renamings(data_values[0][1]))
 
-    ax.legend(loc=2, fontsize=myfontsize, ncol=2)
+    ax.legend(loc=2, fontsize=myfontsize + 3, ncol=2)
 
     ax.set_xticks(index + bar_width / 2)
     ax.set_xticklabels(list(data.keys())[1:], rotation=0, fontsize=myfontsize + 5)
@@ -367,8 +367,8 @@ def draw_piwi_vs_rocks_bars(chart_name, data, xlabel, ylabel):
     for label in ax.get_yticklabels():
         label.set_fontsize(myfontsize + 5)
 
-    ax.set_xlabel(xlabel, fontsize=myfontsize + 5)
-    ax.set_ylabel(ylabel, fontsize=myfontsize + 5)
+    ax.set_xlabel(xlabel, fontsize=myfontsize + 10)
+    ax.set_ylabel(ylabel, fontsize=myfontsize + 10)
 
     y_bottom = ax.get_ylim()[0]
     y_top = ax.get_ylim()[1]
@@ -436,8 +436,8 @@ def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Ex
             value += [None] * (len(timeline) - len(value))
         ax.plot(timeline, value, label=key, linewidth=linewidth * 0.6)
 
-    ax.set_xlabel(x_label, fontsize=fontsize)
-    ax.set_ylabel(y_label, fontsize=fontsize)
+    ax.set_xlabel(x_label, fontsize=fontsize + 5)
+    ax.set_ylabel(y_label, fontsize=fontsize + 5)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
 
@@ -473,10 +473,12 @@ def draw_dist_chart(file_name, data, x_label=None, y_label=None, x_scale='linear
     fig, ax = plt.subplots()
     values = list(data.values())
     keys = list(data.keys())
-    ax.plot(values[0], values[1], label=keys[1])
+    ax.plot(values[0], values[1], label=keys[1],
+            linestyle=piwi_linestyle,
+            linewidth=linewidth)
 
-    ax.set_xlabel(x_label, fontsize=fontsize)
-    ax.set_ylabel(y_label, fontsize=fontsize)
+    ax.set_xlabel(x_label, fontsize=fontsize + 5)
+    ax.set_ylabel(y_label, fontsize=fontsize + 5)
     ax.grid()
     ax.autoscale(enable=True, axis='x', tight=True)
 
@@ -484,7 +486,7 @@ def draw_dist_chart(file_name, data, x_label=None, y_label=None, x_scale='linear
     # if y_upper is not None:
     #     y_top = y_upper
     # ax.set_ylim(bottom=0, top=y_top)
-    ax.set_xticks(list(map(lambda t: round(t, 3), ax.get_xticks())))
+    # ax.set_xticks(list(map(lambda t: round(t, 3), ax.get_xticks())))
     ax.set_xscale(x_scale)
     ax.set_yscale(y_scale)
 
@@ -783,7 +785,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
 
         columns_num = 0
         for row in csv_reader:
-            if row[0] == 'app names distribution':
+            if row[0] == 'apps freq dist':
                 break
             if row[0] == '':
                 continue
@@ -987,11 +989,11 @@ def draw_95(data):
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['flurry'].items()]
     draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='',
-                    yaxis='Latency, [ms]', legend=2, x_bottom=0, fontsize=myfontsize + 5)
+                    yaxis='Latency, [ms]', legend=2, x_bottom=0, fontsize=myfontsize + 10)
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['zipfian'].items()]
     draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='',
-                    yaxis='Latency, [ms]', legend=2, x_bottom=0, fontsize=myfontsize + 5)
+                    yaxis='Latency, [ms]', legend=2, x_bottom=0, fontsize=myfontsize + 10)
 
 
 def draw_log_size_charts(data):
@@ -1034,7 +1036,7 @@ def draw_timeline_charts(data):
 
 def draw_dist_charts(data):
     draw_dist_chart('app_names_loglog', data['app_names_loglog'], x_scale='log', y_scale='log',
-                    y_label='App popularity ranking', x_label='Probability density', fontsize=myfontsize + 5)
+                    y_label='Probability density', x_label='App popularity ranking', fontsize=myfontsize + 5)
     draw_dist_chart('app_names_cdf', data['app_names_cdf'], y_label='CDF', x_label='App name percentile',
                     fontsize=myfontsize + 5)
 
