@@ -14,8 +14,9 @@ Data is an ordered collection of key-value pairs, and the API supports random wr
 random reads, and range queries. 
 
 A common design pattern is the use of \emph{composite} keys that represent an agglomerate of attributes.
-Typically, the first attribute -- called the \emph{primary key} -- has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
-popular primary keys result in popular key ranges. 
+Typically, the first attribute %-- called the \emph{primary key} -- 
+has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
+popular \inred{key prefixes} result in popular key ranges. 
 
 One example of this arises in mobile analytics platforms, e.g., AppsFlyer~\cite{appsflyer}, Flurry~\cite{flurry}, 
 and Google Firebase~\cite{firebase}. %~\cite{medium-mobile-analytics}.   
@@ -26,7 +27,8 @@ in  real-time and provide a variety of insight queries into the data. For exampl
 such services aggregate data in KV-stores indexed by a composite key prefixed by a unique app 
 id,  followed by a variety of other attributes (time, user id, device model, location, event type, etc.).
 %
-We examine a trace of almost $2$ billion events captured from a production mobile analytics engine over 35 minutes.  
+We examine a trace of almost $2$ billion events captured from a production mobile analytics engine 
+\inred{over half an hour of collected data}.  
 \Cref{fig:cdf} shows the access frequency distribution over the  $60$K app ids occurring in this stream. It follows a marked
 heavy-tail pattern: 
 %$10$\% of the apps cover over $99.5$\% of the events; 
@@ -107,7 +109,7 @@ LSMs, in contrast, achieve high write throughput by absorbing  writes in memory 
 sequential files to disk; they expedite reads by caching data in DRAM.
 
 The resounding performance advantage of the LSM approach over B- and B$^{\epsilon}$-trees has been repeatedly demonstrated, 
-e.g., in a recent  study of the Percona mySQL server using three storage engines -- RocksDB, TokuDB, and InnoDB --
+e.g., in a recent  study of the Percona MySQL server using three storage engines -- RocksDB, TokuDB, and InnoDB --
 based on LSM, a B$^{\epsilon}$-tree, and a B-tree, respectively~\cite{toku-rocks-inno}.
 %
 Another advantage of LSMs is that they readily ensure consistency under multi-threaded access -- in particular, atomic scans --   
@@ -143,11 +145,17 @@ spatial locality arising in today's  workloads, without forfeiting the benefits 
 We present \sys, a high-throughput persistent KV-store geared towards spatial locality. 
 \sys's  architecture (\cref{sec:principles}) combines a spatial data organization with LSM-like  batch I/O. 
 The pillars of our design are large \emph{chunks} holding contiguous key ranges. 
-\sys's chunks are not merely  a means to organize data on-disk (like nodes in a B-tree); they 
-are also the basic units for DRAM caching, I/O-batching, logging, and compaction. 
-This approach is unique:  Typical KV-stores rely on OS-managed page caches (whereas chunks consist of many pages)  
-supplemented by application-level caches. In LSMs, these caches serve only the read-path. 
-Storage systems use global WALs for the write-path.
+\sys's chunks are not merely  a means to organize data on-disk (like nodes in a B-tree). They 
+are also the basic units for DRAM \inred{read-write} caching, I/O-batching, logging, and compaction. 
+This approach is unique.
+%Typical KV-stores rely on OS-managed page caches (whereas chunks consist of many pages)  
+%supplemented by application-level caches. 
+\inred{Typical KV-stores rely on OS- and application-level page caches, and employ a global WAL. 
+B-trees, e.g., InnoDB, use read-write page caches~\cite{InnoDB-Buffer-Pool}, however they fail to capture spatial locality 
+because their cache granularity is too high, which results in poor-performing near-random writes.  
+LSM's, e.g., RocksDB, use caches for the read path only. Their temporal structure optimizes write
+performance in the short term but degrades it in the long term, due to compactions. Here too, 
+spatial locality remains unexploited.}
 
 Our novel chunk-based organization has several benefits. 
 First, chunk caching is effective for spatially-local workloads.
