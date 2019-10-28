@@ -9,9 +9,9 @@ For example, its compaction scheduling policies are highly tuned to minimize imp
 We use the recent RocksDB release 5.17.2, available Oct 24, 2018.  It is worth noting that RocksDB's performance 
 is significantly improved  in this release~\cite{CallaghanCompaction}.   
 %over the last two years, primarily through optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   
-In~\cref{ssec:pebbles} we compare \sys\ against PebblesDB~\cite{PebblesDB}, a research LSM prototype, and TokuDB~\cite{TokuDB} -- the only publicly 
-available KV-store whose design is inspired by B$^\epsilon$-trees;  both  perform significantly worse than RocksDB and \sys, motivating our 
-focus on RocksDB.
+In~\cref{ssec:pebbles} we compare \sys\ against PebblesDB~\cite{PebblesDB}, a research LSM prototype, and TokuDB~\cite{TokuDB} 
+-- the only publicly available KV-store whose design is inspired by B$^\epsilon$-trees. Both  perform significantly worse than RocksDB and \sys, 
+motivating our focus on RocksDB.
 
 % Finally, we study  \sys's scalability and sensitivity to configuration settings in~\S\ref{ssec:drill}. 
 %\cref{ssec:recover} evaluates its recovery mechanism. 
@@ -325,7 +325,7 @@ as in~\cref{ssec:prod}).
 %non-sequential data load scenario (e.g., an ETL from an external data pipeline~\cite{flurry}). 
 
 \inred{The YCSB workloads are different from the production workloads in~\cref{ssec:prod}, in two 
-aspects: (1) the key-ordered dataset produced by YCSB load is not spatially-local, and (2) only the 
+aspects: (1) the key-ordered dataset produced by YCSB initialization is not spatially-local, and (2) only the 
 Zipf-composite synthetic workload is statistically close to production data. For this reason, our 
 experiments demonstrate some phenomena that are different from~\cref{ssec:prod}.}
 
@@ -401,7 +401,7 @@ the amplification factors are $1.3$ vs $3.1$ under Zipf-composite, and $1.1$ vs 
 
 \begin{figure}[t]
 	\centering
-	\includegraphics[width=0.35\textwidth]{figs/write_amp_p_line.pdf}
+	\includegraphics[width=0.3\textwidth]{figs/write_amp_p_line.pdf}
 	\caption{{\sys\/ vs RocksDB write amplification under the put-only workload P.}}
 	\label{fig:writeamp}
 \end{figure}
@@ -588,6 +588,9 @@ under a read-only workload C with Zipf-composite distribution.}}
 We experimented with Percona TokuDB~\cite{TokuDBgit}; although deprecated, no newer version is available. 
 The results were at least an order-of-magnitude slower than RocksDB across the board, and therefore we do not present them. 
 Note that this is in line with previously published comparisons~\cite{DBLP:conf/cidr/DongCGBSS17,tucana,toku-rocks-inno}.
+\inred{We did not compare \sys\/ directly against the MySQL default KV-store, InnoDB, because the latter is not easily separable 
+from the database code. However, previous evaluations showed that InnoDB is inferior to both RocksDB and TokuDB under 
+write-abundant workloads~\cite{toku-rocks-inno}.}
 
 We next compare \sys\ to PebblesDB, which was shown to significantly improve over RocksDB~\cite{PebblesDB},
 mostly in single-thread experiments, before RocksDB's recent version was released.  
@@ -595,9 +598,7 @@ We compare \sys\ to PebblesDB in a challenging  scenario for \sys, with a 32GB d
 distribution. We run each YCSB workload with 1, 2, 4, 8 and 12 threads. The results are summarized in Table~\ref{fig:pebbels-throughput}. 
 While PebblesDB is slightly faster on some single-threaded benchmarks, from 2 threads and onward \sys\ is consistently better in all experiments, 
 with an average performance improvement of almost 1.8x.  In all benchmarks, 
- \sys's advantage grows with the level of parallelism. 
-We observed a similar trend with smaller datasets. 
-
+ \sys's advantage grows with the level of parallelism. We observed a similar trend with smaller datasets. 
 
 We note that in our experiments, RocksDB also consistently outperforms PebblesDB. 
 The gap with the results reported in~\cite{PebblesDB} 
