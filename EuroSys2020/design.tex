@@ -477,9 +477,8 @@ Recall that all puts write to the funk log, regardless of whether the chunk has 
 Funk logs are not replayed on recovery, and so recovery time is not impacted by 
 their length.
 
-Like most popular KV-stores, \sys\ supports 
-two modes of operation -- \emph{synchronous} and \emph{asynchronous}. In the former,  updates are persisted to disk (using an
-\code{fsync} call)
+Like most popular KV-stores, \sys\ supports two modes of persistence -- \emph{synchronous} and \emph{asynchronous}. 
+In the former,  updates are persisted to disk (using an \code{fsync} call)
 before returning to the user. %, ensuring the written data will survive failures once the operation completes. 
 The drawback of this approach is that it is roughly an order-of-magnitude slower than the asynchronous mode.
 % in existing KV-stores like RocksDB~\cite{RocksDB} as well as in \sys. 

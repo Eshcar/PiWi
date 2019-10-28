@@ -73,9 +73,9 @@ The row cache consists of three hash tables.
 The Bloom filters for funks are partitioned 16-way.  
 We set the \sys\/ maximum chunk size limit to 10MB, the rebalance size trigger to 7MB, 
 the funk log size limit to 2MB for munk-less chunks, and to 20MB for chunks with munks. 
-We focus on  asynchronous persistence; (with synchronous I/O, performance is
-an order-of-magnitude slower, trivializing the results in all scenarios that include puts). 
-
+We focus on asynchronous persistence -- \inred{i.e., flushes to disk happen in the background}
+(with synchronous I/O, performance is an order-of-magnitude slower, trivializing the results 
+in all scenarios that include puts). 
 
 % \inred{for write intensive workloads, and 512KB for other workloads.}
 
@@ -105,21 +105,6 @@ an order-of-magnitude slower, trivializing the results in all scenarios that inc
 \label{fig:prod:ingestion}
 \end{figure*}
 
-\begin{table}[t]
-\small
-\begin{tabular}{lllll}
-%\hline 
-& Duration
- &  CPU time  & Read I/O & Write I/O\\
-\hline 
-\sys &  1.1 hr & 14.6 hr & 	47.6 GB 	&  645.2	GB \\
-RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
-%\hline 
-\end{tabular}
-\caption{\sys\/ vs RocksDB resource consumption during ingestion (100\% put) of a 256GB production dataset.}
-\label{fig:io_cpu_bound}
-\end{table}
-
 \begin{figure*}[tb]
 \centering
 \begin{subfigure}{0.29\linewidth}
@@ -147,9 +132,10 @@ Our first set of experiments is driven by a log collected by a production mobile
 a stream consisting of $\sim$13M unique events per minute, with an average log record size of 800B, i.e., $\sim$10GB/min. 
 We load the logged events into a table indexed by app id and timestamp. 
 As noted in~\cref{sec:intro}, the app id distribution is heavy-tailed, i.e., the data exhibits spatial locality. 
-We use this log to drive two workloads -- \emph{data ingestion} (100\% put) and \emph{scan-dominated} (95\% scan, 5\% put).
+We use this log to drive \emph{put-only} (100\% put) and \emph{scan-dominated} 
+(95\% scan, 5\% put).
 
-\paragraph{Data ingestion.} 
+\paragraph{Put-only (data ingestion).} 
 \Cref{fig:prod:ingestion} presents our  data ingestion results. 
 Here, we load 64GB, 128GB and 256GB of data, in timestamp order; note that this order is different from the KV-store's primary key. 
  \Cref{fig:prod:ingestion:a} depicts the throughput in each experiment. Clearly, \sys\/ is much faster than RocksDB and its advantage 
@@ -175,7 +161,7 @@ On the other hand, RocksDB is I/O-intensive -- it reads 43x (!) more data than \
 %ever reads from disk (only upon funk rebalances, which are infrequent). RocksDB, on the other hand, spends a large fraction of its time in 
 %compactions, which are insensitive to locality; it re-reads and re-writes the same data many times. 
 
-\paragraph{Scan-dominated.} We run 40M operations -- 95\% range queries, 5\% puts -- 
+\paragraph{Scan-dominated (analytics).} We run 40M operations -- 95\% range queries, 5\% puts -- 
 on the KV-store produced by the ingestion tests.
 Every query scans a sequence of recent events within one app (all the scanned rows 
 share the  app id key prefix).  
@@ -184,14 +170,37 @@ The app id is sampled from the data distribution (so popular apps are queried mo
 Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-minute histories.
 We experimented also with shorter scans, with similar results, which are omitted for lack of space.
 
-In the long run, \sys\/ and RocksDB exhibit similar performance under this workload, with an eventual advantage to RocksDB in long executions with a large dataset. 
-However, the  dynamics are different. \sys's throughput stabilizes 
-almost instantly upon transition from ingestion to analytics because its working set munks are already in memory. 
-In contrast, it takes RocksDB approximately 35 minutes (!) to reach the steady-state performance. 
-During this period, it goes through multiple compactions, which degrade its application-level throughput beyond 90\%. 
-After all compactions are done, RocksDB's improved organization gives it an advantage (in large datasets) over \sys, 
-which still has un-compacted logs in some funks. We note that this tradeoff between the maintenance cost (for compaction) 
-and the scan performance after maintenance is done can be controlled via \sys's log size limit parameter. 
+\inred{In all experiments, \sys\/ completes the experiment 20\% to 30\% faster than RocksDB. 
+We see that the two systems' executions are very different. \sys's throughput stabilizes 
+almost instantly upon transition from ingestion to analytics because its working set munks are already 
+in memory. In contrast, it takes RocksDB 10 to 35 minutes (!) to reach the steady-state performance. 
+During this period, it goes through multiple compactions, which degrade its application-level throughput 
+beyond 90\%. After all compactions are done, RocksDB's improved organization gives it an advantage 
+(in large datasets) over \sys\/ by up to 23\%, because the latter permanently drains performance in searching
+within logs of non-popular funks. We note that this tradeoff between the maintenance cost (for compaction) 
+and the scan performance after maintenance is done can be controlled via \sys's log size limit parameter.}
+
+
+%In the long run, %\sys\/ and RocksDB exhibit similar performance under this workload, 
+%\inred{RocksDB's performance exceeds \sys's with the large 
+%with an eventual advantage to RocksDB in long executions with a large dataset. 
+%However, the  dynamics are different.
+
+
+\begin{table}[t]
+\small
+\begin{tabular}{lllll}
+%\hline 
+& Duration
+ &  CPU time  & Read I/O & Write I/O\\
+\hline 
+\sys &  1.1 hr & 14.6 hr & 	47.6 GB 	&  645.2	GB \\
+RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
+%\hline 
+\end{tabular}
+\caption{\sys\/ vs RocksDB resource consumption during ingestion (100\% put) of a 256GB production dataset.}
+\label{fig:io_cpu_bound}
+\end{table}
 
 \subsection{Synthetic benchmarks}
 \label{ssec:synthetic} 
@@ -260,15 +269,9 @@ and the scan performance after maintenance is done can be controlled via \sys's 
 \end{figure*}
 
 In this section, we closely follow the YCSB benchmarking methodology. 
-Each experiment first  loads a sequence of KV-pairs to an initially empty store, then  
-runs read operations to warm the caches, and then exercises -- and measures --  the specific experiment scenario. 
-Experiments perform 80M data accesses (fewer if some of them are scans). Because the load is 
-in key order, the data stores are compact from the outset, eliminating the stabilization delay 
-%, eliminating the long stabilization time 
-observed in~\cref{ssec:prod}.  
-
-% Experiments with scans perform 4M to 16M accesses, depending on the scan size. 
-
+Each experiment first  loads a sequence of KV-pairs, \inred{ordered by key,} to an initially empty store, then  
+runs read operations to warm the caches, and then exercises -- and measures --  the specific experiment 
+scenario. Experiments perform 80M data accesses (fewer if some of them are scans). 
 
 \subsubsection{Workloads}
 %\paragraph{Workloads.} 
@@ -320,6 +323,11 @@ The workloads exercise different mixes of puts, gets, and scans. We use standard
 We also introduce a new workload, P, comprised of $100\%$ puts (a data ingestion scenario
 as in~\cref{ssec:prod}).
 %non-sequential data load scenario (e.g., an ETL from an external data pipeline~\cite{flurry}). 
+
+\inred{The YCSB workloads are different from the production workloads in~\cref{ssec:prod}, in two 
+aspects: (1) the key-ordered dataset produced by YCSB load is not spatially-local, and (2) only the 
+Zipf-composite synthetic workload is statistically close to production data. For this reason, our 
+experiments demonstrate some phenomena that are different from~\cref{ssec:prod}.}
 
 \subsubsection{Evaluation results}
 Figure~\ref{fig:throughput} presents the throughput measurements in all YCSB workloads. 

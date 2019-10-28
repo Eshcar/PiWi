@@ -14,7 +14,7 @@ Data is an ordered collection of key-value pairs, and the API supports random wr
 random reads, and range queries. 
 
 A common design pattern is the use of \emph{composite} keys that represent an agglomerate of attributes.
-Typically, the first attribute %-- called the \emph{primary key} -- 
+Typically, the primary attribute %-- called the \emph{primary key} -- 
 has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
 popular \inred{key prefixes} result in popular key ranges. 
 
@@ -152,8 +152,8 @@ This approach is unique.
 %supplemented by application-level caches. 
 \inred{Typical KV-stores rely on OS- and application-level page caches, and employ a global WAL. 
 B-trees, e.g., InnoDB, use read-write page caches~\cite{InnoDB-Buffer-Pool}, however they fail to capture spatial locality 
-because their cache granularity is too high, which results in poor-performing near-random writes.  
-LSM's, e.g., RocksDB, use caches for the read path only. Their temporal structure optimizes write
+because their cache granularity is too high, which results in poor-performing near-random writes~\cite{toku-rocks-inno}.  
+LSM's, e.g., RocksDB, use caches for the read path only~\cite{RocksDB-blockcache}. Their temporal structure optimizes write
 performance in the short term but degrades it in the long term, due to compactions. Here too, 
 spatial locality remains unexploited.}
 
