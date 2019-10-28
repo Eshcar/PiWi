@@ -354,10 +354,17 @@ def draw_piwi_vs_rocks_bars(chart_name, data, xlabel, ylabel):
     fig, ax = plt.subplots()
     index = np.arange(len(data.keys()) - 1)
     bar_width = 0.35
+    piwi_hatch = ''
+    rocks_hatch = '/'
+    import matplotlib as mpl
+    org_width = mpl.rcParams['hatch.linewidth']
+    mpl.rcParams['hatch.linewidth'] = 3
 
     data_values = list(data.values())
-    ax.bar(index, [r[0] for r in data_values[1:]], bar_width, label=renamings(data_values[0][0]))
-    ax.bar(index + bar_width, [r[1] for r in data_values[1:]], bar_width, label=renamings(data_values[0][1]))
+    ax.bar(index, [r[0] for r in data_values[1:]], bar_width, label=renamings(data_values[0][0]),
+           color=flurry_linecolor, edgecolor='black', hatch=piwi_hatch)
+    ax.bar(index + bar_width, [r[1] for r in data_values[1:]], bar_width, label=renamings(data_values[0][1]),
+           color=flurry_linecolor, edgecolor='black', hatch=rocks_hatch)
 
     ax.legend(loc=2, fontsize=myfontsize + 3, ncol=2)
 
@@ -375,6 +382,7 @@ def draw_piwi_vs_rocks_bars(chart_name, data, xlabel, ylabel):
     ax.set_ylim(y_bottom, y_top * 1.15)  # make room for the legend
 
     plt.savefig(chart_name.replace(' ', '_') + '.pdf', bbox_inches='tight')
+    mpl.rcParams['hatch.linewidth'] = org_width
 
 
 def draw_rocks_block_cache_chart(chart_name, data, xlabel, ylabel):
@@ -434,7 +442,8 @@ def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Ex
     for key, value in lines.items():
         if len(value) < len(timeline):
             value += [None] * (len(timeline) - len(value))
-        ax.plot(timeline, value, label=key, linewidth=linewidth * 0.6)
+        style = piwi_linestyle if key == 'EvenDB' else rocks_linestyle
+        ax.plot(timeline, value, label=key, linewidth=linewidth * 0.6, color=flurry_linecolor, linestyle=style)
 
     ax.set_xlabel(x_label, fontsize=fontsize + 5)
     ax.set_ylabel(y_label, fontsize=fontsize + 5)
