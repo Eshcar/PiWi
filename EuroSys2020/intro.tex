@@ -14,9 +14,9 @@ Data is an ordered collection of key-value pairs, and the API supports random wr
 random reads, and range queries. 
 
 A common design pattern is the use of \emph{composite} keys that represent an agglomerate of attributes.
-Typically, the primary attribute %-- called the \emph{primary key} -- 
+Typically, the primary attribute (key prefix) %-- called the \emph{primary key} -- 
 has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
-popular \inred{key prefixes} result in popular key ranges. 
+popular key prefixes result in popular key ranges. 
 
 One example of this arises in mobile analytics platforms, e.g., AppsFlyer~\cite{appsflyer}, Flurry~\cite{flurry}, 
 and Google Firebase~\cite{firebase}. %~\cite{medium-mobile-analytics}.   
@@ -27,8 +27,8 @@ in  real-time and provide a variety of insight queries into the data. For exampl
 such services aggregate data in KV-stores indexed by a composite key prefixed by a unique app 
 id,  followed by a variety of other attributes (time, user id, device model, location, event type, etc.).
 %
-We examine a trace of almost $2$ billion events captured from a production mobile analytics engine 
-\inred{over half an hour of collected data}.  
+We examine a trace of almost $2$B  events captured from a production mobile analytics engine 
+over half an hour.  
 \Cref{fig:cdf} shows the access frequency distribution over the  $60$K app ids occurring in this stream. It follows a marked
 heavy-tail pattern: 
 %$10$\% of the apps cover over $99.5$\% of the events; 
@@ -146,13 +146,15 @@ We present \sys, a high-throughput persistent KV-store geared towards spatial lo
 \sys's  architecture (\cref{sec:principles}) combines a spatial data organization with LSM-like  batch I/O. 
 The pillars of our design are large \emph{chunks} holding contiguous key ranges. 
 \sys's chunks are not merely  a means to organize data on-disk (like nodes in a B-tree). They 
-are also the basic units for DRAM \inred{read-write} caching, I/O-batching, logging, and compaction. 
+are also the basic units for read-write DRAM caching, I/O-batching, logging, and compaction. 
 This approach is unique.
 %Typical KV-stores rely on OS-managed page caches (whereas chunks consist of many pages)  
 %supplemented by application-level caches. 
-\inred{Typical KV-stores rely on OS- and application-level page caches, and employ a global WAL. 
+Typical KV-stores rely on finer-grain OS- and application-level page caches (whereas chunks consist of many pages) and employ a global WAL. 
+
+\remove{
 B-trees, e.g., InnoDB, use read-write page caches~\cite{InnoDB-Buffer-Pool}, however they fail to capture spatial locality 
-because their cache granularity is too high, which results in poor-performing near-random writes~\cite{toku-rocks-inno}.  
+because their cache granularity is too fine, which results in poor-performing near-random writes~\cite{toku-rocks-inno}.  
 LSM's, e.g., RocksDB, use caches for the read path only~\cite{RocksDB-blockcache}. Their temporal structure optimizes write
 performance in the short term but degrades it in the long term, due to compactions. Here too, 
 spatial locality remains unexploited.}

@@ -73,7 +73,9 @@ The row cache consists of three hash tables.
 The Bloom filters for funks are partitioned 16-way.  
 We set the \sys\/ maximum chunk size limit to 10MB, the rebalance size trigger to 7MB, 
 the funk log size limit to 2MB for munk-less chunks, and to 20MB for chunks with munks. 
-We focus on asynchronous persistence -- \inred{i.e., flushes to disk happen in the background}
+The results of the experiments we ran in order to tune these parameters are omitted due to lack of space.
+
+We focus on asynchronous persistence,  i.e., flushes to disk happen in the background; 
 (with synchronous I/O, performance is an order-of-magnitude slower, trivializing the results 
 in all scenarios that include puts). 
 
@@ -129,11 +131,11 @@ in all scenarios that include puts).
 \end{figure*}
 
 Our first set of experiments is driven by a log collected by a production mobile analytics engine. The log captures 
-a stream consisting of $\sim$13M unique events per minute, with an average log record size of 800B, i.e., $\sim$10GB/min. 
+a stream  of $\sim$13M unique events per minute, with an average log record size of 800B, i.e., $\sim$10GB/min. 
 We load the logged events into a table indexed by app id and timestamp. 
 As noted in~\cref{sec:intro}, the app id distribution is heavy-tailed, i.e., the data exhibits spatial locality. 
 We use this log to drive \emph{put-only} (100\% put) and \emph{scan-dominated} 
-(95\% scan, 5\% put).
+(95\% scan, 5\% put) tests.
 
 \paragraph{Put-only (data ingestion).} 
 \Cref{fig:prod:ingestion} presents our  data ingestion results. 
@@ -170,16 +172,19 @@ The app id is sampled from the data distribution (so popular apps are queried mo
 Figure~\ref{fig:prod:analytics} depicts the performance dynamics for queries that scan 1-minute histories.
 We experimented also with shorter scans, with similar results, which are omitted for lack of space.
 
-\inred{In all experiments, \sys\/ completes the experiment 20\% to 30\% faster than RocksDB. 
-We see that the two systems' executions are very different. \sys's throughput stabilizes 
+\sys\/ completes all experiments 20\% to 30\% faster than RocksDB. 
+Yet the two systems' executions are very different. \sys's throughput stabilizes 
 almost instantly upon transition from ingestion to analytics because its working set munks are already 
 in memory. In contrast, it takes RocksDB 10 to 35 minutes (!) to reach the steady-state performance. 
 During this period, it goes through multiple compactions, which degrade its application-level throughput 
-beyond 90\%. After all compactions are done, RocksDB's improved organization gives it an advantage 
-(in large datasets) over \sys\/ by up to 23\%, because the latter permanently drains performance in searching
-within logs of non-popular funks. We note that this tradeoff between the maintenance cost (for compaction) 
-and the scan performance after maintenance is done can be controlled via \sys's log size limit parameter.}
+beyond 90\%. 
 
+After all compactions are done, RocksDB's improved organization gives it an advantage  over \sys\
+(in large datasets) by up to 23\%, because \sys\ searches
+in  logs of unpopular funks. We note that this tradeoff between the maintenance cost (for compaction) 
+and the scan performance after maintenance  can be controlled via \sys's log size limit parameter.
+(E.g., we saw that scan throughput can  grow by up to 20\%  by tuning the system to use 512KB logs instead of
+the default 2MB; this experiment is omitted for lack of space.)
 
 %In the long run, %\sys\/ and RocksDB exhibit similar performance under this workload, 
 %\inred{RocksDB's performance exceeds \sys's with the large 
@@ -269,9 +274,12 @@ RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
 \end{figure*}
 
 In this section, we closely follow the YCSB benchmarking methodology. 
-Each experiment first  loads a sequence of KV-pairs, \inred{ordered by key,} to an initially empty store, then  
+Each experiment first  loads a sequence of KV-pairs, ordered by key, to an initially empty store, then  
 runs read operations to warm the caches, and then exercises -- and measures --  the specific experiment 
 scenario. Experiments perform 80M data accesses (fewer if some of them are scans). 
+Because the load is in key order, the data stores are sorted from the outset, and RocksDB's files cover disjoint key ranges. 
+This reduces the overhead of compaction and mitigates the stabilization delay observed in~\cref{ssec:prod}.  Thus, 
+performance remains stable throughout the measurement period.
 
 \subsubsection{Workloads}
 %\paragraph{Workloads.} 
@@ -280,6 +288,7 @@ We vary the dataset size from 4GB to 64GB in order to test multiple locality
 scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
 the keys are 32-bit integers in decimal encoding (10 bytes), which YCSB pads with a 4-byte prefix (so effectively, 
 the keys are 14 byte long). Values are 800-byte long. 
+
 
 % A synthetic workload is defined by  (1)  ratios of get, put, and scan accesses, and (2) a distribution of key access frequencies. 
 \noindent
@@ -324,10 +333,12 @@ We also introduce a new workload, P, comprised of $100\%$ puts (a data ingestion
 as in~\cref{ssec:prod}).
 %non-sequential data load scenario (e.g., an ETL from an external data pipeline~\cite{flurry}). 
 
-\inred{The YCSB workloads are different from the production workloads in~\cref{ssec:prod}, in two 
-aspects: (1) the key-ordered dataset produced by YCSB initialization is not spatially-local, and (2) only the 
+\remove{
+The YCSB workloads are different from the production workloads in~\cref{ssec:prod}, in two 
+aspects: (1) \inred{the key-ordered dataset produced by YCSB's initialization is compact}, and (2) only the 
 Zipf-composite synthetic workload is statistically close to production data. For this reason, our 
-experiments demonstrate some phenomena that are different from~\cref{ssec:prod}.}
+experiments demonstrate some phenomena that are different from~\cref{ssec:prod}.
+}
 
 \subsubsection{Evaluation results}
 Figure~\ref{fig:throughput} presents the throughput measurements in all YCSB workloads. 
@@ -582,15 +593,17 @@ under a read-only workload C with Zipf-composite distribution.}}
 \end{figure}
 }
 
-\subsection{PebblesDB and TokuDB}
+\subsection{Additional KV-Stores}
 \label{ssec:pebbles} 
 
 We experimented with Percona TokuDB~\cite{TokuDBgit}; although deprecated, no newer version is available. 
 The results were at least an order-of-magnitude slower than RocksDB across the board, and therefore we do not present them. 
 Note that this is in line with previously published comparisons~\cite{DBLP:conf/cidr/DongCGBSS17,tucana,toku-rocks-inno}.
-\inred{We did not compare \sys\/ directly against the MySQL default KV-store, InnoDB, because the latter is not easily separable 
-from the database code. However, previous evaluations showed that InnoDB is inferior to both RocksDB and TokuDB under 
-write-abundant workloads~\cite{toku-rocks-inno}.}
+We did not compare \sys\/  against
+% the MySQL default KV-store, 
+InnoDB because the latter is not easily separable 
+from the MySQL code. Yet previous evaluations have found  InnoDB to be inferior to both RocksDB and TokuDB under 
+write-abundant workloads~\cite{toku-rocks-inno}.
 
 We next compare \sys\ to PebblesDB, which was shown to significantly improve over RocksDB~\cite{PebblesDB},
 mostly in single-thread experiments, before RocksDB's recent version was released.  
@@ -601,9 +614,9 @@ with an average performance improvement of almost 1.8x.  In all benchmarks,
  \sys's advantage grows with the level of parallelism. We observed a similar trend with smaller datasets. 
 
 We note that in our experiments, RocksDB also consistently outperforms PebblesDB. 
-The gap with the results reported in~\cite{PebblesDB} 
+The discrepancy with the results reported in~\cite{PebblesDB} 
 can be attributed, e.g., to RocksDB's evolution, resource constraints (running within a 
-container), different hardware, and increased  parallelism.   
+container), a different hardware setting, and increased  parallelism.   
 
 \begin{table}
 \centering
