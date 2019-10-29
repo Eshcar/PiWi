@@ -277,7 +277,7 @@ In this section, we closely follow the YCSB benchmarking methodology.
 Each experiment first  loads a sequence of KV-pairs, ordered by key, to an initially empty store, then  
 runs read operations to warm the caches, and then exercises -- and measures --  the specific experiment 
 scenario. Experiments perform 80M data accesses (fewer if some of them are scans). 
-Because the load is in key order, the data stores are sorted from the outset, and RocksDB's files cover disjoint key ranges. 
+Since the load is in key order, the data stores are sorted from the outset, and RocksDB's files cover disjoint key ranges. 
 This reduces the overhead of compaction and mitigates the stabilization delay observed in~\cref{ssec:prod}.  Thus, 
 performance remains stable throughout the measurement period.
 
