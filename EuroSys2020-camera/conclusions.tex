@@ -1,0 +1,9 @@
+We presented \sys\/ -- a novel persistent KV-store optimized for workloads with high spatial locality, as prevalent in modern %data-driven 
+applications. \sys\/ provides strong (atomic) consistency guarantees for random updates, random lookups, and range queries. 
+\sys\/ outperforms the state-of-the-art RocksDB LSM store  in the  majority of YCSB benchmarks, with both 
+standard and spatially-local key distributions, in which it excels in particular. \sys\/ further reduces write amplification to near-optimal under write-intensive 
+workloads. Finally, it provides near-instant recovery from failures.
+%, in contrast to traditional data stores based on centralized write-ahead logs.
+
+Beyond building a particular system prototype, this paper puts forth a novel KV-store design alternative that emphasizes spatial locality. We hope to see future realizations of this approach with various improvements, through novel ideas or ones borrowed from other existing solutions. 
+%It can also benefit from new hardware trends, in particular, non-volatile memory technologies.  
