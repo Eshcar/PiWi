@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
-x_axis = ["4GB", "8GB", "16GB", "32GB", "64GB"]
+x_axis = ["4GB", "8GB", "16GB", "32GB", "64GB", "128GB", "256GB"]
 workloads = ['S', 'P', 'A', 'B', 'C', 'E-', 'E', 'E+', 'F', 'D']
 
 # These are the "Tableau 20" colors as RGB.
@@ -477,6 +477,62 @@ def draw_timeline_chart(file_name, data, y_label='Throughput, Kops', x_label='Ex
     fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
 
+def draw_space_timeline_chart(file_name, data, y_label='Disk space (GB)', x_label='Execution percent', legend=1,
+                        y_upper=None, x_bottom=None, fontsize=myfontsize, ncol=1, x_upper=None, bbox_to_anchor=None,
+                        tick_percent=30):
+    labels_row = list(data.values())[0]
+    values_rows = list(data.values())[1:]
+    lines = {}
+    for label in labels_row:
+        lines[label] = []
+    for row in values_rows:
+        for z in zip(labels_row, row):
+            lines[z[0]].append(z[1] / 2**30)
+    timeline = [0] + list(data.keys())[1:]
+
+    fig, ax = plt.subplots()
+    for key, value in lines.items():
+        if len(value) < len(timeline):
+            value += [None] * (len(timeline) - len(value))
+        style, color = ('-.', flurry_linecolor) if key == 'EvenDB' \
+            else ('--', uniform_linecolor) if key == 'RocksDB' \
+                else (':', tableau20[1]) if key == 'Log space' \
+                    else ('-', zip_linecolor) if key == 'Input size' \
+                        else (None, None)
+        ax.plot(timeline, value, label=key, linewidth=linewidth * 0.6, color=color, linestyle=style)
+
+    ax.set_xlabel(x_label, fontsize=fontsize + 5)
+    ax.set_ylabel(y_label, fontsize=fontsize + 5)
+    ax.grid()
+    ax.autoscale(enable=True, axis='x', tight=True)
+
+    y_top = ax.get_ylim()[1]
+    if y_upper is not None:
+        y_top = y_upper
+    ax.set_ylim(bottom=0, top=y_top)
+    ax.set_xticks(ax.get_xticks()[::tick_percent])  # tick every tick_percent
+
+    for label in ax.get_yticklabels() + ax.get_xticklabels():
+        label.set_fontsize(fontsize)
+
+    if len(ax.get_xticklabels()) > 7:
+        for label in ax.get_xticklabels():
+            label.set_rotation(80)
+
+    if ax.get_yticks()[1] - ax.get_yticks()[0] == 0.25:
+        ax.set_yticks(ax.get_yticks()[::2])  # skip numbers with too many decimal digits...
+
+    if x_bottom is not None:
+        ax.set_xlim(x_bottom, ax.get_xlim()[1])
+    if x_upper is not None:
+        ax.set_xlim(ax.get_xlim()[0], x_upper)
+
+    h, l = ax.get_legend_handles_labels()
+    ax.legend(h, l, loc=legend, fontsize=fontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor)
+
+    fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
+
+
 def draw_dist_chart(file_name, data, x_label=None, y_label=None, x_scale='linear', y_scale='linear',
                     y_upper=None, x_bottom=None, fontsize=myfontsize, ncol=1, x_upper=None, bbox_to_anchor=None):
     fig, ax = plt.subplots()
@@ -517,7 +573,7 @@ def draw_dist_chart(file_name, data, x_label=None, y_label=None, x_scale='linear
     fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
 
-def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
+def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs - EuroSys.csv"):
     experiments = dict()
 
     for workload in workloads:
@@ -538,9 +594,12 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
     max_log = {}
     p_uniform = {}
     rocks_block_cache = {}
+    space_timeline_real = {}
     ingestion = {}
     write_amp_256 = {}
     throughput_256_ingestions = {}
+    puts_only_skew = {}
+    gets_only_skew = {}
     throughput_64_scans_10s = {}
     throughput_128_scans_10s = {}
     throughput_256_scans_10s = {}
@@ -646,7 +705,7 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             p_uniform[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
 
         for row in csv_reader:
-            if row[0] == 'Ingestion Throughput comparison':
+            if row[0] == '256GB real DB ingestion':
                 break
             if row[0] == '':
                 continue
@@ -655,177 +714,210 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             else:
                 rocks_block_cache[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
 
-        for row in csv_reader:
-            if row[0] == 'Write amplification comparison':
-                break
-            if row[0] == '':
-                continue
-            if len(ingestion.keys()) == 0:
-                ingestion[row[0]] = row[1:]
-            else:
-                ingestion[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
-
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - ingestions':
-                break
-            if row[0] == '':
-                continue
-            if len(write_amp_256.keys()) == 0:
-                write_amp_256[row[0]] = row[1:]
-            else:
-                write_amp_256[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
-
         columns_num = 0
         for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 64 10s':
+            if row[0] == 'Puts only':
                 break
             if row[0] == '':
                 continue
-            if len(throughput_256_ingestions.keys()) == 0:
-                throughput_256_ingestions[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_256_ingestions[row[0]])
+            if len(space_timeline_real.keys()) == 0:
+                space_timeline_real[row[0]] = [i for i in row[1:] if i is not '']
+                columns_num = len(space_timeline_real[row[0]])
             else:
-                throughput_256_ingestions[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 128 10s':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_64_scans_10s.keys()) == 0:
-                throughput_64_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_64_scans_10s[row[0]])
-            else:
-                throughput_64_scans_10s[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 256 10s':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_128_scans_10s.keys()) == 0:
-                throughput_128_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_128_scans_10s[row[0]])
-            else:
-                throughput_128_scans_10s[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 64 1s':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_256_scans_10s.keys()) == 0:
-                throughput_256_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_256_scans_10s[row[0]])
-            else:
-                throughput_256_scans_10s[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 128 1s':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_64_scans_1s.keys()) == 0:
-                throughput_64_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_64_scans_1s[row[0]])
-            else:
-                throughput_64_scans_1s[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 256 1s':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_128_scans_1s.keys()) == 0:
-                throughput_128_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_128_scans_1s[row[0]])
-            else:
-                throughput_128_scans_1s[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 64 1m':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_256_scans_1s.keys()) == 0:
-                throughput_256_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_256_scans_1s[row[0]])
-            else:
-                throughput_256_scans_1s[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 128 1m':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_64_scans_1m.keys()) == 0:
-                throughput_64_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_64_scans_1m[row[0]])
-            else:
-                throughput_64_scans_1m[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'Throughput over time - scans 256 1m':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_128_scans_1m.keys()) == 0:
-                throughput_128_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_128_scans_1m[row[0]])
-            else:
-                throughput_128_scans_1m[row[0]] = list(
-                    map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
-
-        columns_num = 0
-        for row in csv_reader:
-            if row[0] == 'apps freq dist':
-                break
-            if row[0] == '':
-                continue
-            if len(throughput_256_scans_1m.keys()) == 0:
-                throughput_256_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
-                columns_num = len(throughput_256_scans_1m[row[0]])
-            else:
-                throughput_256_scans_1m[row[0]] = list(
+                space_timeline_real[row[0]] = list(
                     map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
 
         for row in csv_reader:
-            if row[0] == 'app names cdf':
+            if row[0] == 'Workload C':
                 break
             if row[0] == '':
                 continue
-            if len(app_names_loglog.keys()) == 0:
-                for key in row:
-                    app_names_loglog[key] = []
-            else:
-                for key_val in zip(app_names_loglog.keys(), [i for i in row if i is not '']):
-                    app_names_loglog[key_val[0]].append(float(key_val[1]))
+            # if len(puts_only_skew.keys()) == 0:
+            #     puts_only_skew[row[0]] = row[1:]
+            # else:
+            puts_only_skew[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
 
         for row in csv_reader:
             if row[0] == '':
                 continue
-            if len(app_names_cdf.keys()) == 0:
-                for key in row:
-                    app_names_cdf[key] = []
-            else:
-                for key_val in zip(app_names_cdf.keys(), [i for i in row if i is not '']):
-                    app_names_cdf[key_val[0]].append(float(key_val[1]))
+            # if len(gets_only_skew.keys()) == 0:
+            #     gets_only_skew[row[0]] = row[1:]
+            # else:
+            gets_only_skew[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+
+        # no need to redraw real workload graphs, disabled to avoid having to merge input files
+
+        # for row in csv_reader:
+        #     if row[0] == 'Write amplification comparison':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(ingestion.keys()) == 0:
+        #         ingestion[row[0]] = row[1:]
+        #     else:
+        #         ingestion[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - ingestions':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(write_amp_256.keys()) == 0:
+        #         write_amp_256[row[0]] = row[1:]
+        #     else:
+        #         write_amp_256[row[0]] = list(map(float, [i for i in row[1:] if i is not '']))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 64 10s':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_256_ingestions.keys()) == 0:
+        #         throughput_256_ingestions[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_256_ingestions[row[0]])
+        #     else:
+        #         throughput_256_ingestions[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 128 10s':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_64_scans_10s.keys()) == 0:
+        #         throughput_64_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_64_scans_10s[row[0]])
+        #     else:
+        #         throughput_64_scans_10s[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 256 10s':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_128_scans_10s.keys()) == 0:
+        #         throughput_128_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_128_scans_10s[row[0]])
+        #     else:
+        #         throughput_128_scans_10s[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 64 1s':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_256_scans_10s.keys()) == 0:
+        #         throughput_256_scans_10s[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_256_scans_10s[row[0]])
+        #     else:
+        #         throughput_256_scans_10s[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 128 1s':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_64_scans_1s.keys()) == 0:
+        #         throughput_64_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_64_scans_1s[row[0]])
+        #     else:
+        #         throughput_64_scans_1s[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 256 1s':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_128_scans_1s.keys()) == 0:
+        #         throughput_128_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_128_scans_1s[row[0]])
+        #     else:
+        #         throughput_128_scans_1s[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 64 1m':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_256_scans_1s.keys()) == 0:
+        #         throughput_256_scans_1s[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_256_scans_1s[row[0]])
+        #     else:
+        #         throughput_256_scans_1s[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 128 1m':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_64_scans_1m.keys()) == 0:
+        #         throughput_64_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_64_scans_1m[row[0]])
+        #     else:
+        #         throughput_64_scans_1m[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'Throughput over time - scans 256 1m':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_128_scans_1m.keys()) == 0:
+        #         throughput_128_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_128_scans_1m[row[0]])
+        #     else:
+        #         throughput_128_scans_1m[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # columns_num = 0
+        # for row in csv_reader:
+        #     if row[0] == 'apps freq dist':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(throughput_256_scans_1m.keys()) == 0:
+        #         throughput_256_scans_1m[row[0]] = [i for i in row[1:] if i is not '']
+        #         columns_num = len(throughput_256_scans_1m[row[0]])
+        #     else:
+        #         throughput_256_scans_1m[row[0]] = list(
+        #             map(lambda v: float(v) if v != '' else None, [i for i in row[1:columns_num + 1]]))
+
+        # for row in csv_reader:
+        #     if row[0] == 'app names cdf':
+        #         break
+        #     if row[0] == '':
+        #         continue
+        #     if len(app_names_loglog.keys()) == 0:
+        #         for key in row:
+        #             app_names_loglog[key] = []
+        #     else:
+        #         for key_val in zip(app_names_loglog.keys(), [i for i in row if i is not '']):
+        #             app_names_loglog[key_val[0]].append(float(key_val[1]))
+
+        # for row in csv_reader:
+        #     if row[0] == '':
+        #         continue
+        #     if len(app_names_cdf.keys()) == 0:
+        #         for key in row:
+        #             app_names_cdf[key] = []
+        #     else:
+        #         for key_val in zip(app_names_cdf.keys(), [i for i in row if i is not '']):
+        #             app_names_cdf[key_val[0]].append(float(key_val[1]))
 
     return {'experiments': experiments,
             'latency': latency_breakdown,
@@ -838,6 +930,9 @@ def read_csv(path="./Pewee - _golden_ benchmark set - csv_for_figs.csv"):
             'max_log': max_log,
             'p_uniform': p_uniform,
             'rocks_block_cache': rocks_block_cache,
+            'space_timeline_real': space_timeline_real,
+            'puts_only_skew': puts_only_skew,
+            'gets_only_skew': gets_only_skew,
             'ingestion': ingestion,
             'write_amp_256': write_amp_256,
             'throughput_256_ingestions': throughput_256_ingestions,
@@ -936,27 +1031,26 @@ def draw_ampl_charts(data):
     write_amp_p = data['write_amp_p']
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]}
              for (k, v) in write_amp_p.items()]
-    draw_line_chart('write_amp_p',
-                    lines,
-                    yaxis='Write amplification', legend_image=False, legend='upper left', y_upper=10)
+    draw_line_chart('write_amp_p', lines,
+                    yaxis='Write amplification', legend_image=False, legend='upper left', y_upper=12)
 
-    amplifications = data['amplifications']
-    # P write amplification disk:
-    draw_line_chart('P_write_amplification_disk',
-                    [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
-                     for (k, v) in amplifications['P'].items() if 'disk' in k],
-                    yaxis='Amplification', legend=3)
+    # amplifications = data['amplifications']
+    # # P write amplification disk:
+    # draw_line_chart('P_write_amplification_disk',
+    #                 [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
+    #                  for (k, v) in amplifications['P'].items() if 'disk' in k],
+    #                 yaxis='Amplification', legend=3)
 
-    # C read amplification disk:
-    draw_line_chart('C_read_amplification_disk',
-                    [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
-                     for (k, v) in amplifications['C'].items() if 'disk' in k],
-                    yaxis='Amplification', legend=3)
+    # # C read amplification disk:
+    # draw_line_chart('C_read_amplification_disk',
+    #                 [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
+    #                  for (k, v) in amplifications['C'].items() if 'disk' in k],
+    #                 yaxis='Amplification', legend=3)
 
-    draw_line_chart('C_read_amplification_kernel',
-                    [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
-                     for (k, v) in amplifications['C'].items() if 'kernel' in k],
-                    yaxis='Amplification', legend=3)
+    # draw_line_chart('C_read_amplification_kernel',
+    #                 [{'label': ' '.join(k.split()[0:2]), 'data': v, 'style': line_color[' '.join(k.split()[0:2])]}
+    #                  for (k, v) in amplifications['C'].items() if 'kernel' in k],
+    #                 yaxis='Amplification', legend=3)
 
 
 def draw_scalability_charts(data):
@@ -996,13 +1090,14 @@ def draw_95(data):
         'Piwi 95% Get': {'color': tableau20[0], 'linestyle': '-', 'linewidth': linewidth, 'marker': piwi_marker},
         'Piwi 95% Put': {'color': tableau20[2], 'linestyle': '-', 'linewidth': linewidth, 'marker': piwi_marker}}
 
+    x = [l[0:-2] for l in x_axis] # remove the GB
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['flurry'].items()]
-    draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='',
-                    yaxis='Latency, [ms]', legend=2, x_bottom=0, fontsize=myfontsize + 10)
+    draw_line_chart(file_name='tail_flurry', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', y_upper=1.5,
+                    yaxis='Latency, [ms]', x_label='Dataset size (GB)', x=x, legend=2, x_bottom=0, fontsize=myfontsize + 5)
 
     lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in data['tail']['zipfian'].items()]
-    draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='',
-                    yaxis='Latency, [ms]', legend=2, x_bottom=0, fontsize=myfontsize + 10)
+    draw_line_chart(file_name='tail_zipf', lines=[lines[0], lines[2], lines[1], lines[3]], chart_name='', y_upper=2.5,
+                    yaxis='Latency, [ms]', x_label='Dataset size (GB)', x=x, legend=2, x_bottom=0, fontsize=myfontsize + 5)
 
 
 def draw_log_size_charts(data):
@@ -1043,6 +1138,23 @@ def draw_timeline_charts(data):
     draw_timeline_chart('throughput_256_scans_1m', data['throughput_256_scans_1m'], fontsize=myfontsize + 5, legend=4)
 
 
+def draw_space_timeline_charts(data):
+    draw_space_timeline_chart('space_timeline_real', data['space_timeline_real'], fontsize=myfontsize + 5,
+                        legend=2, y_upper=400, tick_percent=25)
+
+
+def draw_skew_charts(data):
+    puts_only_skew = data['puts_only_skew']
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in puts_only_skew.items()]
+    draw_line_chart(file_name='puts_only_skew', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=1,
+                    y_upper=250, x=['0.99', '0.95', '0.90', '0.85', '0.80'], x_label='Zipf Theta', x_bottom=0)
+
+    gets_only_skew = data['gets_only_skew']
+    lines = [{'label': renamings(k), 'data': v, 'style': line_color[k]} for (k, v) in gets_only_skew.items()]
+    draw_line_chart(file_name='gets_only_skew', lines=lines, chart_name='', yaxis='Throughput, Kops', legend=1,
+                    y_upper=250, x=['0.99', '0.95', '0.90', '0.85', '0.80'], x_label='Zipf Theta', x_bottom=0)
+
+
 def draw_dist_charts(data):
     draw_dist_chart('app_names_loglog', data['app_names_loglog'], x_scale='log', y_scale='log',
                     y_label='Probability density', x_label='App popularity ranking', fontsize=myfontsize + 5)
@@ -1057,19 +1169,21 @@ def draw_rocks_block_cache_charts(data):
 def main():
     data = read_csv()
 
-    draw_line_charts(data)
-    draw_speedup_charts(data)
-    draw_latency_charts(data)
-    draw_bloom_filter_charts(data)
+    # draw_line_charts(data)
+    # draw_speedup_charts(data)
+    # draw_latency_charts(data)
+    # draw_bloom_filter_charts(data)
     draw_ampl_charts(data)
-    draw_scalability_charts(data)
+    # draw_scalability_charts(data)
     ###draw_caching_effect(data)
-    draw_95(data)
-    draw_log_size_charts(data)
-    draw_real_data_bar_charts(data)
-    draw_timeline_charts(data)
-    draw_dist_charts(data)
-    draw_rocks_block_cache_charts(data)
+    # draw_95(data)
+    # draw_space_timeline_charts(data)
+    draw_skew_charts(data)
+    # draw_log_size_charts(data)
+    # draw_real_data_bar_charts(data)
+    # draw_timeline_charts(data)
+    # draw_dist_charts(data)
+    # draw_rocks_block_cache_charts(data)
     plt.tight_layout()
     # plt.show()
 

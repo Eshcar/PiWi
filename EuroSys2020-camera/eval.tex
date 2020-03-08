@@ -755,8 +755,46 @@ We therefore used this configuration  in~\S\ref{ssec:synthetic} above.
 \end{figure}
 }
 
+\subsection{Additional graphs}
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=0.45\textwidth]{figs/space_timeline_real_line.pdf}
+	\caption{{Space used by \sys\/ and RocksDB during the creation of a 256GB DB using real data.}}
+	\label{fig:space_timeline}
+\end{figure}
 
+Figure~\ref{fig:space_timeline} shows the disk space used during the creation of a 256GB using real data. In \sys\, the space occupied by logs keeps growing, and part of the data is only in logs during this run (namely, never rebalanced into an SST). The bend at the last 10\% of \sys\ run is the result of the decrease in number of application threads, which allows the worker threads to complete the backlog of pending rebalances. RocksDB's space keeps jumping around as it struggles to rebalance.
 
+\begin{figure}[t]
+	\centering
+	\begin{subfigure}{0.49\linewidth}
+		\includegraphics[width=\textwidth]{figs/puts_only_skew_line.pdf}
+		\caption{Puts only (64GB DB)}
+		\label{fig:puts_only_skew}
+	\end{subfigure}
+	\begin{subfigure}{0.49\linewidth}
+		\includegraphics[width=\textwidth]{figs/gets_only_skew_line.pdf}
+		\caption{Gets only (64GB DB)}
+		\label{fig:gets_only_skew}
+	\end{subfigure}
+	\caption{{Impact of Zipf $\theta$ value (namely distribution) on \sys\/ and RocksDB throughput.}}
+	\label{fig:skew_impact}
+\end{figure}
 
+\begin{table}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+	\hline 
+	& 0.99 & 0.95 & 0.90 & 0.85 & 0.80 \\ 
+	\hline 
+	Zipf-simple & 4.87 & 3.30 & 1.91 & 1.04 & 0.54 \\ 
+	\hline 
+	Zipf-composite & 0.013 & 0.012 & 0.010 & 0.009 & 0.008 \\ 
+	\hline 
+\end{tabular} 
+\end{center}
+\caption{Probability of most popular key under different $theta$ values used for zipf input generation.}
+\label{table:theta}
+\end{table} 
 
-  
+Figure~\ref{fig:skew_impact} shows the impact of skew on performance. Table~\ref{table:theta} shows the probability of the most popular key under each distribution. Note that on the Zipf-composite distribution, Zipf is only used on the most significant bits of the key; the least significant ones are chosen using a uniform distribution hence the much lower probability.
