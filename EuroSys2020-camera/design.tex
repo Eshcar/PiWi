@@ -44,6 +44,8 @@ As a funk's {log}  grows, however, searching becomes inefficient   and
 the funk is no longer compact, i.e., it may contain redundant (over-written) values.
 Therefore, once the {log}  exceeds a certain threshold, we reorganize the funk
 via a process we call \emph{rebalance}, as explained below.
+The rebalance threshold controls the system's \emph{write amplification}, namely, the additional space consumed on top of the raw data.
+Note that the additional space amplification induced by fragmentation is negligible, because chunks typically consist of $\sim$1000 pages.
 
 % Thus, multiple \emph{generations} of munks may exist for a chunk throughout its life time.
 %Chunks that are not cached are denoted \emph{munk-less}.
@@ -94,6 +96,8 @@ which eliminates most of the redundant log searches.
 The Bloom filter is partitioned into a  handful of filters, each summarizing the 
 content of part of the {log}, limiting  sequential  searches to a small section of the log.
  
+ 
+
  \subsection{Concurrency and atomic scans}
 \label{ssec:scans}
  

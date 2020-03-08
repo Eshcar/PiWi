@@ -16,7 +16,7 @@ random reads, and range queries.
 A common design pattern is the use of \emph{composite} keys that represent an agglomerate of attributes.
 Typically, the primary attribute (key prefix) %-- called the \emph{primary key} -- 
 has a skewed distribution, and so   access via the composite key exhibits \emph{spatial locality}, as 
-popular key prefixes result in popular key ranges. 
+popular key prefixes result in popular key ranges~\cite{facebook-workloads}. 
 
 One example of this arises in mobile analytics platforms, e.g., AppsFlyer~\cite{appsflyer}, Flurry~\cite{flurry}, 
 and Google Firebase~\cite{firebase}. %~\cite{medium-mobile-analytics}.   
@@ -47,7 +47,7 @@ than $0.1$\% cover $70$\% of them.
 \label{fig:cdf}
 \end{figure}
 
-Composite keys arise in many additional domains, including messaging and social networks. 
+Composite keys arise in many additional domains, including messaging and social networks~\cite{facebook-workloads}. 
 For example, a backend Facebook Messenger query may retrieve the last 100 messages for a 
 given user~\cite{Borthakur:2011:AHG:1989323.1989438}; %, where the primary key is user id. 
 in Facebook's social network, a graph edge is indexed by a key consisting of two 

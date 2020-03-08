@@ -86,49 +86,33 @@ in all scenarios that include puts).
 
 \begin{figure*}[tb]
 \centering
-\begin{subfigure}{0.29\linewidth}
+\begin{subfigure}{0.32\linewidth}
 \includegraphics[width=\textwidth]{figs/ingestion.pdf}
 \caption{Throughput, Kops}
 \label{fig:prod:ingestion:a}
 \end{subfigure}
 \hspace{0.03\linewidth} 
-\begin{subfigure}{0.29\linewidth}
+\begin{subfigure}{0.32\linewidth}
 \includegraphics[width=\textwidth]{figs/throughput_256_ingestions_line.pdf}
 \caption{Throughput dynamics, 256GB}
 \label{fig:prod:ingestion:b}
 \end{subfigure}
-\hspace{0.03\linewidth} 
-\begin{subfigure}{0.29\linewidth}
+\begin{subfigure}{0.32\linewidth}
 \includegraphics[width=\textwidth]{figs/write_amp_256.pdf}
 \caption{Write amplification}
 \label{fig:prod:ingestion:c}
+\end{subfigure}
+\hspace{0.03\linewidth} 
+\begin{subfigure}{0.32\linewidth}
+	\includegraphics[width=\textwidth]{figs/space_timeline_real_line.pdf}
+	\caption{{Space consumption, 256GB}}
+	\label{fig:space_timeline}
 \end{subfigure}
 \caption{\sys\/ vs RocksDB performance under ingestion (100\% put) workload with production datasets.}
 \label{fig:prod:ingestion}
 \end{figure*}
 
-\begin{figure*}[tb]
-\centering
-\begin{subfigure}{0.29\linewidth}
-\includegraphics[width=\textwidth]{figs/throughput_64_scans_10s_line.pdf}
-\caption{64 GB dataset}
-\label{fig:prod:analytics:a}
-\end{subfigure}
-\hspace{0.03\linewidth} 
-\begin{subfigure}{0.29\linewidth}
-\includegraphics[width=\textwidth]{figs/throughput_128_scans_10s_line.pdf}
-\caption{128 GB dataset}
-\label{fig:prod:analytics:b}
-\end{subfigure}
-\hspace{0.03\linewidth} 
-\begin{subfigure}{0.29\linewidth}
-\includegraphics[width=\textwidth]{figs/throughput_256_scans_10s_line.pdf}
-\caption{256 GB dataset}
-\label{fig:prod:analytics:c}
-\end{subfigure}
-\caption{\sys\/ vs RocksDB throughput dynamics,  scan-dominated (95\% scans/5\% put) workload with production data.}
-\label{fig:prod:analytics}
-\end{figure*}
+
 
 Our first set of experiments is driven by a log collected by a production mobile analytics engine. The log captures 
 a stream  of $\sim$13M unique events per minute, with an average log record size of 800B, i.e., $\sim$10GB/min. 
@@ -159,9 +143,50 @@ Table~\ref{fig:io_cpu_bound}, which summarizes  the overall resource consumption
 experiment. We see that \sys\/ is CPU-intensive -- it exploits 40\% more CPU cycles than RocksDB, which means that its average CPU rate is $6.3\times$ higher. 
 On the other hand, RocksDB is I/O-intensive -- it reads $43\times$ (!) more data than \sys\/ (recall that the workload is write-only; reading is for compaction purposes). 
 
+\begin{table}[t]
+\small
+\begin{tabular}{lllll}
+%\hline 
+& Duration
+ &  CPU time  & Read I/O & Write I/O\\
+\hline 
+\sys &  1.1 hr & 14.6 hr & 	47.6 GB 	&  645.2	GB \\
+RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
+%\hline 
+\end{tabular}
+\caption{\sys\/ vs RocksDB resource consumption during ingestion (100\% put) of a 256GB production dataset.}
+\label{fig:io_cpu_bound}
+\end{table}
+
+Figure~\ref{fig:space_timeline} shows the disk space used during the ingestion. In \sys\, the space occupied by logs (dotted line) grows linearly with the data size, and is the main reason for space amplification (namely the gap between space consumption and input size). We see the log sizes level out at the end of the run. This occurs because as threads ``run out'' of data to ingest, they can complete a backlog of pending rebalances. 
+RocksDB's space consumption increases sharply between compactions and then drops whenever compaction occurs. 
+
 %Indeed, \sys\/ exploits  the workload's spatial locality, and spends most of its time handling RAM-resident data; it hardly 
 %ever reads from disk (only upon funk rebalances, which are infrequent). RocksDB, on the other hand, spends a large fraction of its time in 
 %compactions, which are insensitive to locality; it re-reads and re-writes the same data many times. 
+
+\begin{figure*}[tb]
+\centering
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/throughput_64_scans_10s_line.pdf}
+\caption{64 GB dataset}
+\label{fig:prod:analytics:a}
+\end{subfigure}
+%\hspace{0.03\linewidth} 
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/throughput_128_scans_10s_line.pdf}
+\caption{128 GB dataset}
+\label{fig:prod:analytics:b}
+\end{subfigure}
+%\hspace{0.03\linewidth} 
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/throughput_256_scans_10s_line.pdf}
+\caption{256 GB dataset}
+\label{fig:prod:analytics:c}
+\end{subfigure}
+\caption{\sys\/ vs RocksDB throughput dynamics,  scan-dominated (95\% scans/5\% put) workload with production data.}
+\label{fig:prod:analytics}
+\end{figure*}
 
 \paragraph{Scan-dominated (analytics).} We run 40M operations -- 95\% range queries, 5\% puts -- 
 on the KV-store produced by the ingestion tests.
@@ -192,86 +217,11 @@ the default 2MB; this experiment is omitted for lack of space.)
 %However, the  dynamics are different.
 
 
-\begin{table}[t]
-\small
-\begin{tabular}{lllll}
-%\hline 
-& Duration
- &  CPU time  & Read I/O & Write I/O\\
-\hline 
-\sys &  1.1 hr & 14.6 hr & 	47.6 GB 	&  645.2	GB \\
-RocksDB & 4.85 hr & 10.4 hr &  2053.5 GB & 2660.4	GB\\
-%\hline 
-\end{tabular}
-\caption{\sys\/ vs RocksDB resource consumption during ingestion (100\% put) of a 256GB production dataset.}
-\label{fig:io_cpu_bound}
-\end{table}
+
 
 \subsection{Synthetic benchmarks}
 \label{ssec:synthetic} 
 
-\begin{figure*}[tb]
-\centering
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_P_line.pdf}
-\caption{P -- 100\% put}
-\label{fig:throughput:p}
-\end{subfigure}
-\hspace{0.01\linewidth} 
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
-\caption{A -- 50\% put, 50\% get}
-\label{fig:throughput:a}
-\end{subfigure}
-\hspace{0.01\linewidth} 
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
-\caption{B -- 5\% put, 95\% get}
-\label{fig:throughput:b}
-\end{subfigure}
-\hspace{70pt}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_C_line.pdf}
-\caption{C -- 100\% get}
-\label{fig:throughput:c}
-\end{subfigure}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
-\caption{D -- Latest-simple, 5\% put, 95\% get}
-\label{fig:throughput:d}
-\end{subfigure}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_F_line.pdf}
-\caption{F -- 100\% get-modify-put}
-\label{fig:throughput:f}
-\end{subfigure}
-\hspace{70pt}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_E-_line.pdf}
-\caption{E10 \\ 5\% put, 95\% scan (10 rows)}
-\label{fig:throughput:e10}
-\end{subfigure}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_E_line.pdf}
-\caption{E100 \\ 5\% put, 95\% scan (100 rows)}
-\label{fig:throughput:e100}
-\end{subfigure}
-\begin{subfigure}{0.3\linewidth}
-\includegraphics[width=\textwidth]{figs/Workload_E+_line.pdf}
-\caption{E1000 \\5\% put, 95\% scan (1000 rows)}
-\label{fig:throughput:e1000}
-\end{subfigure}
-\begin{subfigure}{\linewidth}
-\centerline{
-\includegraphics[width=0.9\textwidth]{figs/legend.pdf}
-\vspace{-5mm}
-}
-\end{subfigure}
-\caption{
-{\sys\/ vs RocksDB throughput under YCSB workloads with various key distributions.}
-}
-\label{fig:throughput}
-\end{figure*}
 
 In this section, we closely follow the YCSB benchmarking methodology. 
 Each experiment first  loads a sequence of KV-pairs, ordered by key, to an initially empty store, then  
@@ -284,7 +234,7 @@ performance remains stable throughout the measurement period.
 \subsubsection{Workloads}
 %\paragraph{Workloads.} 
 
-We vary the dataset size from 4GB to 64GB in order to test multiple locality 
+We vary the dataset size from 4GB to 256GB in order to test multiple locality 
 scenarios with respect to the available 16GB of RAM. Similarly to the published RocksDB benchmarks~\cite{RocksDBPerf}, 
 the keys are 32-bit integers in decimal encoding (10 bytes), which YCSB pads with a 4-byte prefix (so effectively, 
 the keys are 14 byte long). Values are 800-byte long. 
@@ -297,9 +247,11 @@ We study the following four key-access distributions:
 %\begin{description}
 %\item [Zipf-simple] 
 \emph{1. Zipf-simple} -- the standard YCSB Zipfian distribution over simple (non-composite) keys. 
-Key access frequencies are sampled from a Zipf distribution 
-(following~\cite{Gray:1994:QGB:191839.191886}), with $\theta = 0.99$
-(the most popular key's frequency is  $\sim 0.7\%$). 
+Key access frequencies are sampled from a Zipf distribution. 
+For most of the experiments, we use the YCSB standard $\ = 0.99$,
+(where the most frequent key occurs 4.87\% of the time).
+We then study the impact of using a smaller $\theta$, i.e., a less skewed distribution.
+%(following~\cite{Gray:1994:QGB:191839.191886}), with 
 The ranking is over a random permutation of the key range, so popular keys are uniformly dispersed. % (no spatial locality).
 % The key locations are sampled uniformly at random from the whole data range. 
 %This workload exhibits medium temporal locality (e.g., the most popular key's frequency is approximately $0.7\%$) and no spatial locality. 
@@ -308,7 +260,7 @@ The ranking is over a random permutation of the key range, so popular keys are u
 %\item [Zipf-composite]  
 \emph{2. Zipf-composite} -- a Zipfian distribution over composite keys.
 The key's $14$ most significant bits comprise the primary attribute, which  
-is drawn from a Zipf ($\theta=0.8$) distribution over its range. The remainder of the key is drawn uniformly at random.
+is drawn from a Zipf (with the same $\theta$) distribution over its range. The remainder of the key is drawn uniformly at random.
 We also experimented with a Zipfian distribution of the key's suffix and 
 the trends were similar. %, since performance is most affected by  the primary dimension.
 %'s distribution. %Zipf-composite exhibits high spatial locality.% it represents workloads 
@@ -341,6 +293,70 @@ experiments demonstrate some phenomena that are different from~\cref{ssec:prod}.
 }
 
 \subsubsection{Evaluation results}
+
+\begin{figure*}[tb]
+\centering
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_P_line.pdf}
+\caption{P -- 100\% put}
+\label{fig:throughput:p}
+\end{subfigure}
+%\hspace{0.01\linewidth} 
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_A_line.pdf}
+\caption{A -- 50\% put, 50\% get}
+\label{fig:throughput:a}
+\end{subfigure}
+%\hspace{0.01\linewidth} 
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_B_line.pdf}
+\caption{B -- 5\% put, 95\% get}
+\label{fig:throughput:b}
+\end{subfigure}
+%\hspace{70pt}
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_C_line.pdf}
+\caption{C -- 100\% get}
+\label{fig:throughput:c}
+\end{subfigure}
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_D_line.pdf}
+\caption{D -- Latest-simple, 5\% put, 95\% get}
+\label{fig:throughput:d}
+\end{subfigure}
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_F_line.pdf}
+\caption{F -- 100\% get-modify-put}
+\label{fig:throughput:f}
+\end{subfigure}
+%\hspace{70pt}
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_E-_line.pdf}
+\caption{E10 \\ 5\% put, 95\% scan (10 rows)}
+\label{fig:throughput:e10}
+\end{subfigure}
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_E_line.pdf}
+\caption{E100 \\ 5\% put, 95\% scan (100 rows)}
+\label{fig:throughput:e100}
+\end{subfigure}
+\begin{subfigure}{0.32\linewidth}
+\includegraphics[width=\textwidth]{figs/Workload_E+_line.pdf}
+\caption{E1000 \\5\% put, 95\% scan (1000 rows)}
+\label{fig:throughput:e1000}
+\end{subfigure}
+\begin{subfigure}{\linewidth}
+\centerline{
+\includegraphics[width=0.9\textwidth]{figs/legend.pdf}
+\vspace{-5mm}
+}
+\end{subfigure}
+\caption{
+{\sys\/ vs RocksDB throughput under YCSB workloads with various key distributions.}
+}
+\label{fig:throughput}
+\end{figure*}
+
 Figure~\ref{fig:throughput} presents the throughput measurements in all YCSB workloads. 
 Except for workload D, which exercises the Latest-simple pattern
 (depicted in red), all benchmarks are run with both  Zipf-simple (orange) 
@@ -350,8 +366,7 @@ lines, and RocksDB with dotted lines.
 
 We now discuss the results for the different scenarios.
   
-\paragraph{ Put-only (data ingestion)} is tested in workload
-{P} (100\% put, Figure~\ref{fig:throughput:p}). 
+\paragraph{Put-only (data ingestion).} In workload {P} (100\% put, Figure~\ref{fig:throughput:p}), 
 \sys's throughput is $1.8\times$ to $6.4\times$ that of RocksDB's with uniform keys, $1.3\times$ to $2.3\times$ with Zipf-composite keys, 
 and $0.9\times$ to $1.6\times$ with Zipf-simple keys. This scenario's bottleneck is the reorganization of persistent data  
 (funk rebalances in \sys, compactions in RocksDB), which causes write amplification and hampers performance. 
@@ -381,8 +396,9 @@ The write amplification in this experiment is summarized in
 Figure~\ref{fig:writeamp}. We see that \sys\/ reduces the disk write rate dramatically, 
 with the largest gain observed for big datasets (e.g.,  for the 64GB dataset 
 the amplification factors are $1.3$ vs $3.1$ under Zipf-composite, and $1.1$ vs $7.6$ under Uniform). 
-%Thus, \sys\/ also reduces disk wear in multiple scenarios. 
-%\inred{It should be noted that \sys\/'s low write amplification on the Uniform distribution would have increased on longer runs, as logs fill up and invoke funk rebalances. However, longer runs would have also caused larger RocksDB rebalances.}
+
+We further measured space amplification at the end of the run, and found that both \sys\ and RocksDB have roughly $17\%$ 
+space amplification. Note that in \sys, the space amplification is controlled by the log size threshold parameter.
 
 %\begin{table}[t]
 %\centerline{
@@ -412,7 +428,7 @@ the amplification factors are $1.3$ vs $3.1$ under Zipf-composite, and $1.1$ vs 
 
 \begin{figure}[t]
 	\centering
-	\includegraphics[width=0.3\textwidth]{figs/write_amp_p_line.pdf}
+	\includegraphics[width=0.4\textwidth]{figs/write_amp_p_line.pdf}
 	\caption{{\sys\/ vs RocksDB write amplification under the put-only workload P.}}
 	\label{fig:writeamp}
 \end{figure}
@@ -422,15 +438,16 @@ the amplification factors are $1.3$ vs $3.1$ under Zipf-composite, and $1.1$ vs 
 \sys\/ advantages are also evident when puts are uniformly distributed (green lines in Figure~\ref{fig:throughput:p}). Since funk rebalances are local, the distribution of rebalances (dictated by the distribution of puts) has little effect. In RocksDB, however, each L0 SST contains keys covering a wide range of keys, causing L0 to L1 compactions to include a large number of SSTs.
 }}
 
-\paragraph{ Mixed put-get} is represented in workloads A (50\% put, 50\% get, Figure~\ref{fig:throughput:a}) and 
-F (100\% get-modify-put, Figure~\ref{fig:throughput:f}). Note that the latter exercises the usual get and put API (i.e., does not provide atomicity). 
-In this scenario, \sys\ works well with composite keys, e.g., in workload A it  achieves $1.4\times$ to $3.5\times$ the throughput of RocksDB due to better exploitation of spatial locality. 
-With simple keys, on the other hand, the get-put mix is particularly challenging for \sys, which serves many gets from disk due to the
-low spatial locality. The bottleneck is the linear search in funk logs, which  fill
-up due to the high put rate.
+\paragraph{Mixed put-get.} Workloads A (50\% put, 50\% get, Figure~\ref{fig:throughput:a}) and 
+F (100\% get-modify-put, Figure~\ref{fig:throughput:f}) invoke puts and gets at the same rate. Note that the latter exercises the usual get and put API (i.e., does not provide atomicity). 
+%In this scenario, \sys\ works well with composite keys, e.g., in workload A it  achieves $1.4\times$ to $3.5\times$ the throughput of RocksDB due to better exploitation of spatial locality. With simple keys, on the other hand, 
+The get-put mix is particularly challenging for \sys, especially with simple keys, where it serves many gets from disk due to the
+low spatial locality. The bottleneck is the linear search in funk logs, which  fill up due to the high put rate.
 RocksDB's caching is more effective in this scenario, so its disk-access rate in get operations is lower,  resulting in faster gets. 
-Note that \sys\/ is still reasonably close to RocksDB in the worst case 
-($0.75\times$ and $0.7\times$ throughput for the 64GB dataset in A and F, respectively).
+While \sys\ continues to outperform RocksDB in small data sets or when spatial locality is high, its performance deteriorates in 
+large data sets with no such locality, where RocksDB is almost $2\times$ faster.
+
+%Note that \sys\/ is still reasonably close to RocksDB in the worst case ($0.75\times$ and $0.7\times$ throughput for the 64GB dataset in A and F, respectively).
 %(In-memory searches are three orders of magnitude faster.)
 
 Figure~\ref{fig:tail_latency}, which depicts tail (95\%) put and get latencies in this scenario, 
@@ -439,8 +456,7 @@ corroborates our analysis. \sys\/ has faster puts and faster or similar get tail
 the tail put latencies are similar in the two data stores, but the tail get latency of \sys\ 
 in large datasets surges.
 
- To understand this spike, 
-we break down the get latency in  Figure~\ref{fig:readstat}. 
+To understand this spike, we break down the get latency in  Figure~\ref{fig:readstat}. 
 Figure~\ref{fig:readstat:dist} classifies gets by the storage  component 
 that fulfills the request, and Figure~\ref{fig:readstat:lat} presents the disk search latencies by component. 
 We see that with large datasets, disk access dominates the latency.
@@ -449,30 +465,7 @@ and the respective log search latencies are $2.6$ ms vs $4.2$ ms. This is presum
 hence the funks are cached less effectively by the OS, and the disk becomes a bottleneck due to the higher I/O rate.
 %and (2) rebalanced less frequently so their logs grow longer.
 
-\remove{
-\begin{figure*}[tb]
-\centering
-\begin{subfigure}{0.36\linewidth}
-\vskip .15in
-\includegraphics[width=\textwidth]{figs/tail_line.pdf}
-\vskip .55in
-\caption{95-percentile latency, put and get}
-\label{fig:tail_latency:lat}
-\end{subfigure}
-\begin{subfigure}{0.32\linewidth}
-\includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
-\caption{Fraction of get accesses, by component}
-\label{fig:tail_latency:dist}
-\end{subfigure}
-\begin{subfigure}{0.31\linewidth}
-\includegraphics[width=\textwidth]{figs/Latency_A.pdf}
-\caption{On-disk get latency, by component}
-\label{fig:tail_latency:disk}
-\end{subfigure}
-\label{fig:tail_latency}
-\caption{{\sys\/ tail latency analysis, under a mixed get-put workload A.}}
-\end{figure*}
-}
+
 
 \begin{figure}[htb]
 \centering
@@ -493,14 +486,15 @@ hence the funks are cached less effectively by the OS, and the disk becomes a bo
 \begin{figure}[htb]
 \centering
 %\hspace{0.05\linewidth}
-\begin{subfigure}{0.5\linewidth}
+\begin{subfigure}{0.6\linewidth}
 \includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
 \vskip .1in
 \caption{Fraction of get accesses}
 \label{fig:readstat:dist}
 \end{subfigure}
+
 %\hspace{0.05\linewidth}
-\begin{subfigure}{0.49\linewidth}
+\begin{subfigure}{0.6\linewidth}
 \includegraphics[width=\textwidth]{figs/Latency_A.pdf}
 \caption{On-disk get access latency}
 \label{fig:readstat:lat}
@@ -514,32 +508,79 @@ hence the funks are cached less effectively by the OS, and the disk becomes a bo
 The figure also shows that the row cache becomes instrumental as spatial locality drops -- it serves $32.8\%$ of gets with Zipf-simple 
 vs $4.5\%$ with Zipf-composite. 
 
-\paragraph{ Get-dominated} 
-workloads (B--D, Figures~\ref{fig:throughput:b}--\ref{fig:throughput:d}) are 
-favorable to 
-\sys, which has a marked advantage in all key distributions with small datasets (up to the available RAM size) 
-and also with Zipf-composite keys in large datasets. 
-For example, in workload C (100\% get, Figure~\ref{fig:throughput:c}), 
-\sys\/ performs $1.2\times$ to $2\times$ better than RocksDB with composite keys,
-and up to $1.9\times$  with simple ones (for small datasets). 
+Workloads B and D (Figures~\ref{fig:throughput:b} and~\ref{fig:throughput:d}) also mix gets and puts, but with a lower put rate. 
+Here, the funk logs don't grow as quickly as under an even put-get mix, and 
+\sys\  has a marked advantage in all key distributions with small datasets (up to the available RAM size) 
+and also with Zipf-composite and Latest-simple keys in large datasets. But here, too, its advantage diminishes with the data set size,
+especially under the Zipf-simple key distribution.  
+
+\paragraph{Read-only.} 
+In workload C (100\% get, Figure~\ref{fig:throughput:c}), 
+\sys\/ performs $1.1\times$ to $2\times$ better than RocksDB with composite keys, and up to $1.9\times$  with simple ones (for small datasets). 
 In these scenarios, \sys\  manages to satisfy most gets from munks, resulting in good performance.
 RocksDB relies mostly on the OS cache to serve these requests and so it pays the overhead for invoking system calls. 
 %As we discuss in~\S\ref{ssec:drill} below, 
-RocksDB's performance in this scenario can be improved by 
-using a larger application-level block cache,
-but this hurts performance for bigger datasets as well as in other benchmarks.
-(These results are not elaborated due to space limitations). 
+RocksDB's performance in this scenario can be improved by using a larger application-level block cache,
+but our experiments (not presented in this paper) have shown that this hurts performance for bigger datasets as well as in other benchmarks.
+%(These results are not elaborated due to space limitations). 
 
-\paragraph{ Scan-dominated} benchmarks (E10--1000,  5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000})
-iterate through a number of items 
-sampled uniformly in the range [1,S], where S is  10, 100, or 1000. 
-This workload (except with short scans on  large datasets) is favorable to \sys, 
-since it exhibits the spatial locality the system has been designed for. 
-Under Zipf-composite, \sys\/ achieves $1.4\times$ to $3.2\times$ throughput vs RocksDB.   
-With simple keys, \sys\ improves over RocksDB when scans are long or the dataset is small. 
-%In \S\ref{ssec:drill} we show that 
-\sys's scan performance on big datasets can be improved by adapting the funk log size limit to this workload. 
+\paragraph{Scan-dominated.} Benchmarks E10--1000  (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000})
+iterate through a number of items sampled uniformly in the range [1,S], where S is  10, 100, or 1000. 
+Under Zipf-composite, this workload exhibits the spatial locality the system has been designed for, and indeed 
+\sys\/ outperforms RocksDB in this workload for all data set sizes and all lengths of scans.  Its biggest 
+advantage -- $3.2\times$ -- is achieved with long scans over a small dataset. 
+With simple keys on a large data set, in particular when scans are short, \sys\ begins to suffer from long search times in logs
+(as this data set also includes puts), and RocksDB has better performance.
+In \S\ref{ssec:drill} we show that \sys's scan performance on big datasets can be improved by adapting the funk log size limit to this workload. 
 %(The experiments reported herein all use the default configuration).
+ 
+ \paragraph{Impact of skew.}
+ 
+ We now vary the distribution skew controlled by the parameter $\theta$ in the Zipf distribution. 
+Figure~\ref{fig:skew_impact} shows the impact of skew on performance. 
+Table~\ref{table:theta} shows the frequency of the most popular key under each distribution. Note that in the Zipf-composite distribution, 
+only the most significant bits are drawn from a Zipf distribution, hence the much lower frequency.
+As expected, the performance of both \sys\ and RocksDB deteriorates when the skew is smaller,  because
+both exploit locality. While put performance is impacted similarly in the two data stores, \sys's reads are
+ more sensitive than RockDB's reads to the lack of locality. This is because \sys's fall-back in case of 
+ munk/row cache misses is more costly. 
+
+\begin{figure}[t]
+	\centering
+	\begin{subfigure}{0.48\linewidth}
+		\includegraphics[width=\textwidth]{figs/puts_only_skew_line.pdf}
+		\caption{Put only}
+		\label{fig:puts_only_skew}
+	\end{subfigure}
+	\begin{subfigure}{0.48\linewidth}
+		\includegraphics[width=\textwidth]{figs/gets_only_skew_line.pdf}
+		\caption{Get only}
+		\label{fig:gets_only_skew}
+	\end{subfigure}
+	\caption{{The impact of the Zipf distribution's $\theta$ parameter (skew) on throughput, 64GB dataset.}}
+	\label{fig:skew_impact}
+\end{figure}
+
+
+\begin{table}
+\begin{center}
+\begin{tabular}{rccccc}
+%\begin{tabular}{|c|c|c|c|c|c|}
+%	\hline 
+$\theta=$	& 0.99 & 0.95 & 0.90 & 0.85 & 0.80 \\ 
+	\hline 
+	Zipf-simple & 4.87 & 3.30 & 1.91 & 1.04 & 0.54 \\ 
+%	\hline 
+	Zipf-composite & 0.013 & 0.012 & 0.010 & 0.009 & 0.008 \\ 
+%	\hline 
+\end{tabular} 
+\end{center}
+\caption{Frequency ($\%$ of occurrences) of the most popular key under different $\theta$ values used for Zipf key generation.}
+\label{table:theta}
+\end{table} 
+
+
+ 
  
 \remove{
 Note that the scan speed is  higher for the 8GB dataset vs the 4GB dataset. 
@@ -697,13 +738,13 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 
 \begin{figure}[htb]
 \centering
-\begin{subfigure}{0.49\linewidth}
+\begin{subfigure}{0.48\linewidth}
 \includegraphics[width=\textwidth]{figs/max_log_size_line.pdf}
 \caption{Maximum log size,\\  workloads A and E100}
 \label{fig:params:log}
 \end{subfigure}
 %\hspace{0.05\linewidth}
-\begin{subfigure}{0.49\linewidth}
+\begin{subfigure}{0.48\linewidth}
 \includegraphics[width=\textwidth]{figs/Bloom_filter_line.pdf}
 \caption{Bloom filter split factor,\\ workload A}
 \label{fig:params:bf}
@@ -732,7 +773,7 @@ Partitioning to 16 mini-filters gives the best result. %; \inred{Idit: the follo
 The impact of Bloom filter partitioning on \sys's %end-to-end get latency as well as the 
 memory footprint is negligible.
 
-\paragraph{RocksDB memory tuning.} In RocksDB's out-of-the-box default configuration, the block cache is 8MB. 
+\paragraph{RocksDB configuration tuning.} In RocksDB's out-of-the-box default configuration, the block cache is 8MB. 
 We further experimented with block cache sizes of 1GB, 2GB, 5GB, and 8GB. We note that 
 RocksDB's performance manual recommends allocating 1/3 of the available RAM 
 ($\sim$5GB) to the block cache~\cite{RocksDBMemoryTuning}.
@@ -755,46 +796,6 @@ We therefore used this configuration  in~\S\ref{ssec:synthetic} above.
 \end{figure}
 }
 
-\subsection{Additional graphs}
-\begin{figure}[t]
-	\centering
-	\includegraphics[width=0.45\textwidth]{figs/space_timeline_real_line.pdf}
-	\caption{{Space used by \sys\/ and RocksDB during the creation of a 256GB DB using real data.}}
-	\label{fig:space_timeline}
-\end{figure}
 
-Figure~\ref{fig:space_timeline} shows the disk space used during the creation of a 256GB using real data. In \sys\, the space occupied by logs keeps growing, and part of the data is only in logs during this run (namely, never rebalanced into an SST). The bend at the last 10\% of \sys\ run is the result of the decrease in number of application threads, which allows the worker threads to complete the backlog of pending rebalances. RocksDB's space keeps jumping around as it struggles to rebalance.
 
-\begin{figure}[t]
-	\centering
-	\begin{subfigure}{0.49\linewidth}
-		\includegraphics[width=\textwidth]{figs/puts_only_skew_line.pdf}
-		\caption{Puts only (64GB DB)}
-		\label{fig:puts_only_skew}
-	\end{subfigure}
-	\begin{subfigure}{0.49\linewidth}
-		\includegraphics[width=\textwidth]{figs/gets_only_skew_line.pdf}
-		\caption{Gets only (64GB DB)}
-		\label{fig:gets_only_skew}
-	\end{subfigure}
-	\caption{{Impact of Zipf $\theta$ value (namely distribution) on \sys\/ and RocksDB throughput.}}
-	\label{fig:skew_impact}
-\end{figure}
 
-\begin{table}
-\begin{center}
-\begin{tabular}{|c|c|c|c|c|c|}
-	\hline 
-	& 0.99 & 0.95 & 0.90 & 0.85 & 0.80 \\ 
-	\hline 
-	Zipf-simple & 4.87 & 3.30 & 1.91 & 1.04 & 0.54 \\ 
-	\hline 
-	Zipf-composite & 0.013 & 0.012 & 0.010 & 0.009 & 0.008 \\ 
-	\hline 
-\end{tabular} 
-\end{center}
-\caption{Probability of most popular key under different $theta$ values used for zipf input generation.}
-\label{table:theta}
-\end{table} 
-
-Figure~\ref{fig:skew_impact} shows the impact of skew on performance. Table~\ref{table:theta} shows the probability of the most popular key under each distribution. Note that on the Zipf-composite distribution, Zipf is only used on the most significant bits of the key; the least significant ones are chosen using a uniform distribution hence the much lower probability.
