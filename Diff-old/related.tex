@@ -1,0 +1,76 @@
+
+
+%common LSM stores RocksDB, scylladb, HyperLevelDB, LevelDB, hbase, cassandra
+The vast majority of industrial mainstream NoSQL KV-stores are  implemented as LSM trees~\cite{hbase, 
+RocksDB, scylladb, Bigtable2008, cassandra2010}, building on the foundations set by O'Neil 
+et al.~\cite{DBLP:journals/acta/ONeilCGO96, Muth1998}. 
+
+Due to LSM's design popularity, much effort has been invested into working around its bottlenecks.
+A variety of compaction strategies has been implemented in production systems~\cite{CallaghanCompaction, 
+ScyllaCompaction} and research prototypes~\cite{triad, PebblesDB, vttrees, slmdb}.  Improvements
+ include storage
+optimizations~\cite{WiscKey, PebblesDB, vttrees, slmdb,Papagiannis:2018:EMK:3267809.3267824}, 
+boosting  in-memory parallelism~\cite{scylladb, clsm2015}, and leveraging 
+ workload redundancies to defer disk flushes~\cite{triad, accordion} or avoid re-writing sorted data~\cite{vttrees}. 
+In contrast to these, \sys\/ eliminates the concept of temporally-organized levels altogether
+and employs a flat  layout with in-memory compaction.
+
+\remove{
+A number of systems focus on reducing write amplification.
+PebblesDB~\cite{PebblesDB} introduces fragmented LSM trees in which level files are 
+sliced into {\em guards\/} of increasing granularity and organized in a skiplist-like layout. 
+%This structure reduces write amplification. 
+In contrast, \sys\/ eliminates the concept of levels altogether, 
+and employs a flat  layout. WiscKey~\cite{WiscKey} separates key and value storage 
+in SSTables, also in order to reduce amplification. This optimization is orthogonal to \sys's concepts,
+and could benefit our work as well. 
+%
+VT-Trees~\cite{vttrees} apply stitching to avoid rewriting already sorted data. This improves performance and significantly reduces write amplification in some scenarios (e.g., time-series ingestion).
+}
+
+SLM-DB~\cite{slmdb} is an LSM design that relies on persistent memory and thus eliminates the need for a WAL. It  
+%re-designs the traditional LSM read path, 
+utilizes a B$^+$-tree index in persistent memory on top of a flat list of temporally-partitioned SSTables. 
+In contrast, \sys\ does not rely on special hardware. 
+Moreover, to the best of our knowledge, SLM-DB does not support concurrent operations.
+
+In-memory compaction has been recently implemented in HBase~\cite{accordion} by organizing
+HBase's in-memory write store  as an LSM tree, eliminating redundancies 
+in RAM to reduce disk flushes. However, being incremental to the LSM design, 
+this approach fails to address spatial locality. 
+
+Range-based  partitioning is also employed in  B-trees~\cite{Knuth:1998:ACP:280635} and their variants~\cite{Brodal:2003:LBE:644108.644201}. In
+ \cref{ssec:B-tree-compare} we discussed the key challenges faced by storage systems adopting these designs, which 
+ result in performance disadvantages compared to the LSM approach  (as shown, e.g., in~\cite{toku-rocks-inno}), 
+ and the difficulty to support consistency  -- in particular, atomic scans --   under multi-threaded access.
+ In contrast to B-tree nodes, \sys's chunks are not merely  a means to organize data on-disk; they 
+are also the basic units for DRAM caching, I/O-batching, logging, and compaction. 
+This allows us to apply chunk-level logging with sequential I/O and in-memory compaction.
+ 
+ \remove{
+ , which suffer from a write bottleneck in random updates to 
+leaf blocks. \sys\/ overcomes this limitation through (1) transforming random I/O to sequential I/O at the chunk level, 
+(2) managing a write-through chunk cache in memory (munks), and (3) reducing I/O  through in-memory (munk) compaction. 
+
+A $B^{\epsilon}$-tree~\cite{Brodal:2003:LBE:644108.644201} is a B-tree variant that uses overflow write buffers in internal nodes. 
+This design speeds up writes and reduces write amplification, however lookups are slowed down by having to search in unordered 
+buffers. $B^{\epsilon}$-trees have been used in KV-stores (TokuDB~\cite{TokuDB}) and filesystems (BetrFS~\cite{BetrFS}).  
+}
+
+Tucana~\cite{tucana} is an in-memory $B^{\epsilon}$-tree index over a persistent log of KV-pairs. To speed up I/O, it
+applies  system optimizations that are largely orthogonal to our work: block-device  access, copy-on-write on internal nodes, etc. However, Tucana provides neither strong scan semantics nor consistent recovery, and does not support concurrent puts.
+
+A different line of work develops fast
+in-memory (volatile) KV-stores~\cite{ignite, redis, memcached, Srinivasan:2016:AAR:3007263.3007276}, 
+e.g., for web and application caches. Over time, many evolved to support durability,
+yet still require the complete data set to reside in memory.
+%For example, Ignite~\cite{ignite} uses a B-tree index with in-place random updates. 
+%These systems resemble \sys\/ in their memory-centric approach. 
+Although \sys\ is optimized for ``sliding-local'' scenarios where most of the active working set is in memory at any given time, it does not expect \emph{all} the data to fit in memory. 
+
+Finally, \sys's in-munk data management leverages techniques used in concurrent in-memory KV-maps, e.g., partially-sorted 
+key lists~\cite{Wu:2019:WFO:3302424.3303955,kiwi}, lazy index updates~\cite{kiwi,tdls}, 
+and synchronizing scans with puts via a PO array~\cite{kiwi}. These aspects are important, but since they do not involve I/O, they do not have a major impact on overall performance.
+
+%Their persistent storage support is based on either B-tree~\cite{ignite} or LSM-tree design~\cite{redis}. 
+%used for application data caching, but also as building blocks for distributed database with optional durability~\cite{ignite,redis}. These are not comparable with \sys\ as they are either not persistent~\cite{memcached}, do not support atomic scans~\cite{redis} or resemble  relational DBMS with a centralized WAL, , and in-place updates~\cite{ignite}  more than a KV LSM store.

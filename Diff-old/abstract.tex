@@ -1,0 +1,22 @@
+Applications of key-value (KV-)storage often exhibit high \emph{spatial locality}, such as  
+when many data items have identical composite key prefixes.  
+This prevalent access pattern is underused by the ubiquitous LSM  design underlying 
+high-throughput KV-stores today.
+
+We present \sys, a general-purpose persistent KV-store optimized for spatially-local %write-intensive
+workloads. 
+\sys\ combines spatial data partitioning with LSM-like  batch I/O. 
+%forgoes the temporal data organization of LSM trees and instead partitions data by key to exploit locality. 
+It achieves high throughput, 
+ensures consistency under multi-threaded access,   
+%offers much faster in-memory access than existing KV-stores, 
+and reduces write amplification. 
+
+In experiments with real-world data from a large analytics platform,  \sys\  
+%consistently 
+outperforms the state-of-the-art. E.g., on a 256GB production dataset, 
+\sys\ ingests data $4.4\times$ faster than RocksDB  %scans recently ingested data up to \inred{1.7x} faster, 
+and reduces write amplification by nearly $4\times$. 
+%\sys\ further outperforms existing solutions whenever the system has sufficient DRAM to hold most of the active working set. 
+In traditional YCSB workloads lacking spatial locality, %with working sets that are larger than the available DRAM size, 
+\sys\ is on par with RocksDB and significantly better than other open-source solutions we explored.

@@ -1,0 +1,141 @@
+
+
+\documentclass[sigplan,10pt]{acmart}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+%========================
+%  Packages
+%========================
+%\usepackage{datetime}
+\usepackage{epsfig,subcaption}
+\usepackage{url}
+%\usepackage{hyperref}
+\usepackage{color}
+%\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{enumitem}
+
+%========================
+%  Macros
+%========================
+
+\newcommand{\code}[1]{\textsf{\fontsize{9}{11}\selectfont #1}}
+
+\newcommand{\inred}[1]{{\color{red}{#1}}}
+%\newcommand{\inred}[1]{ {#1} } % reddening macro commented out
+\newcommand{\remove}[1]{}
+\newcommand{\Idit}[1]{\inred{[Idit: #1]}}
+\newcommand{\idit}[1]{\inred{[Idit: #1]}}
+
+\newcommand{\sys}{EvenDB}
+
+\newcommand{\tuple}[1]{\ensuremath{\langle \mbox{#1} \rangle}}
+
+\usepackage{cleveref}
+
+
+\crefformat{section}{\S#2#1#3}
+
+
+% No date in title area
+\date{}
+
+\setlength{\abovecaptionskip}{5pt}
+%\setlength{\belowcaptionskip}{0pt}
+\setlength{\textfloatsep}{7pt}
+
+% Actual document begins below.
+\begin{document}
+
+\title[\sys: Key-Value Storage for Spatial Locality]{\sys: Optimizing Key-Value Storage\\ for Spatial Locality} 
+
+\author{Eran Gilad}
+\affiliation{
+\institution{Yahoo Research, Israel} 
+}
+
+
+\author{Edward Bortnikov}
+\affiliation{
+\institution{Yahoo Research, Israel} 
+}
+
+\author{Anastasia Braginsky}
+\affiliation{
+\institution{Yahoo Research, Israel} 
+}
+
+
+\author{Yonatan Gottesman}
+\affiliation{
+\institution{Yahoo Research, Israel} 
+}
+
+
+\author{Eshcar Hillel}
+\affiliation{
+\institution{Yahoo Research, Israel} 
+}
+
+\author{Idit Keidar}
+\affiliation{
+\institution{Technion and Yahoo Research, Israel} 
+}
+
+\author{Nurit Moscovici}
+\affiliation{
+\institution{Outbrain, Israel} 
+}
+
+\author{Rana Shahout}
+\affiliation{
+\institution{Technion, Israel} 
+}
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+\settopmatter{printfolios=true}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+\input{intro}
+
+\section{Design Principles}
+\label{sec:principles}
+\input{principles}
+\section{\sys's Design}
+\label{sec:design}
+\input{design}
+
+\section{Implementation}
+\label{sec:impl}
+\input{impl}
+
+\section{Evaluation}
+\label{sec:eval}
+\input{eval}
+
+\section{Related Work}
+\label{sec:related}
+\input{related}
+
+\section{Conclusions}
+\label{sec:conclusions}
+\input{conclusions}
+
+\bibliographystyle{acm}
+ %\bibliography{ref}
+
+\clearpage
+%{\normalsize \bibliographystyle{acm}
+\bibliography{ref}
+%}
+
+%\theendnotes
+
+\end{document}

@@ -1,0 +1,57 @@
+We implement \sys\ in C++. We borrow the \code{SSTable} implementation from the RocksDB open source~\cite{RocksDB}.
+Similarly to RocksDB, we use \code{jemalloc} for memory allocation.  
+
+The chunk index is implemented as a sorted array holding the minimal keys of all chunks.  
+Whenever a new chunk is created (upon split), the index is rebuilt and the reference to the index is atomically flipped. 
+We found this simple implementation to be fastest since splits are infrequent. 
+
+\remove{
+\paragraph{Synchronization data structures.}
+%We note that 
+Using a single pending array to synchronize all
+operations can cause unnecessary contention.
+We mitigate this problem in our implementation by maintaining two data structures for coordinating different operations
+ (similar to~\cite{kiwi}). The first is a per-chunk pending put array (\emph{PPA}) which 
+either indicates the current update's key and version, or indicates that the thread is currently not performing a put.
+%maps each thread either to a cell in the chunk that the thread is currently attempting to put into and a corresponding version, or an indication that the thread is currently not performing a put. 
+The second is a global pending scan array (\emph{PSA}) which tracks versions used by pending scans for compaction purposes; each entry consists of a version \code{ver} and a sequence number \code{seq}, as well as the scan’s key range. Each entry in the \code{PPA}s and \code{PSA} includes, in addition to the operation metadata, an ABA sequence number. 
+
+A put operation consists of 5 phases: (1) \emph{pre-process} - locate the target chunk; if a munk exists, prepare a cell to insert the value into; (2) \emph{publish} - obtain a version while synchronizing with concurrent scans and rebalances via the chunk's lock and publish indication in the chunk's \code{PPA}; (3) \emph{persist} - write the data into the log, indicate it is persisted in the \code{PPA}; (4) \emph{link} - if a munk exists, connect the new cell to the linked list, so it can be found through the list traversal, otherwise, update the row cache to latest version if key is present in the cache; and finally (5) \emph{clean} - clear the entry in the chunk's \code{PPA}, and increase the entry's ABA number.
+If the put fails to acquire the chunk's lock (since it is being rebalanced), the operation restarts, and {\inred{re-attempts to}} find an active chunk.
+Puts trigger both munk and funk rebalances. The former are handled inline when the munk {\inred{is close to overflow}}; the latter are done in the background 
+by helper threads.
+
+%Thus the version number is composed of the GV and 
+A per-chunk linearization counter is used to determine the order of concurrent put operations updating the same key.  
+Note that multiple \emph{generations} of munks may exist for a chunk throughout its life time.
+Therefore, the linearization counter is composed of three parts: (a) the GV value; (b) a \emph{generation number} - incremented whenever a munk is cached into memory and when the munk is rebalanced; and (c) a \emph{sequence number} - incremented upon each put and set to the number of KV-pairs in a munk upon a new generation number. When a new chunk is created as a result of a split, the children chunks inherit their generation number from their parent. The linearization counter is written both to the \code{PPA} upon publishing the put operation, and to the \code{log} when persisting the data. This ensures all operations see the same order of writes per key.
+
+A scan operation first publishes its intent to obtain a version in the \code{PSA}. It determines its scan time $t$ by increasing GV and writing it to its entry in the \code{PSA}. The scan operation then starts traversing the chunks in its range. For each chunk, it first waits for all put operations that are either with smaller version than $t$ or still have not acquired a version to clear their entry in the \code{PPA} or acquire a larger version. After waiting for all concurrent puts to complete, the scan  can read the range from the chunk. If a munk exists, it simply reads the range from the linked list, skipping versions that are not last before $t$. Otherwise, the scan merges the \code{SSTable} and \code{log} data and reads the range from the result, again skipping the penultimate versions. When the scan completes, it clears the entry in the \code{PSA}, and increases the entry's ABA number. Get operations access neither the \code{PSA} nor the \code{PPA}.% data structures.
+
+A munk rebalance iterates through the \code{PSA} to collect the maximum version number among the active scans that cannot be reclaimed yet. If a scan published its intent in the \code{PSA} but published no version number yet, the rebalance waits until either the version is published or the ABA number in the entry is increased. 
+\remove{It then acquires the chunk's lock to block additional put operation. If executing a funk rebalance it also acquires the funk rebalance lock for the chunk. After completing the rebalance operation and placing the new content of the chunk in place including the updated metadata, all locks are promoted.
+}
+}
+
+%\paragraph{Adaptive mechanisms.} \sys\ applies two dynamic mechanisms that adapt to the workload. 
+The munk cache applies an LFU eviction policy. %in which the score is a weighted average of the number of accesses per operation type. 
+We use exponential decay to maintain the recent access counts, similar to~\cite{tinyLFU}: periodically, all counters are 
+sliced by a factor of two. 
+The row cache implements a coarse-grained LRU policy using a fixed-size queue of hash tables. 
+New entries are inserted into the head table. Once it overflows, a new empty table is added to the head,
+and the tail is discarded. Consequently, lookups for recently cached keys are usually served by the head 
+table, and unpopular keys are removed from the cache in a bulk once the tail table is dropped.
+
+The row cache  never holds stale values. %, yet need not contain each and every updated key. 
+Therefore, a put updates the cache  whenever a previous version of the updated key is already in the cache. 
+But if the key is not in the cache, put does not add it, to avoid overpopulating the cache 
+in write-dominated workloads. After a get, the up-to-date KV-pair is added to the head table unless it is already there.
+If the key's value already exists in another table, it is shared by the two tables, to avoid duplication.
+
+\remove{
+\paragraph{Chunk merges support.}
+%\inred{move to conclusion and future work?}
+Our current implementation does not support chunk merges (to defragment the store after massive data deletion). This could be done as 
+part of the rebalance procedure (see~\cite{kiwi}).
+In \sys\ this entails merging the funks of two chunks. As in the split operation, the rebalance first acquires the  rebalance locks of the chunks to be merged---to ensure exclusiveness. The content of the chunks is merged and written into a new chunk. Finally, the rebalance acquires the chunks' locks for the short period in which the content that was added to the chunks during the merge is written to the log of the new chunk, and the new chunk swaps the old chunks in the list.
+}
