@@ -86,31 +86,31 @@ in all scenarios that include puts).
 
 \begin{figure*}[tb]
 \centering
-\begin{subfigure}{0.32\linewidth}
+\begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/ingestion.pdf}
 \caption{Throughput, Kops}
 \label{fig:prod:ingestion:a}
 \end{subfigure}
 \hspace{0.03\linewidth} 
-\begin{subfigure}{0.32\linewidth}
+\begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/throughput_256_ingestions_line.pdf}
 \caption{Throughput dynamics, 256GB}
 \label{fig:prod:ingestion:b}
 \end{subfigure}
-\begin{subfigure}{0.32\linewidth}
+\begin{subfigure}{0.3\linewidth}
 \includegraphics[width=\textwidth]{figs/write_amp_256.pdf}
 \caption{Write amplification}
 \label{fig:prod:ingestion:c}
 \end{subfigure}
-\hspace{0.03\linewidth} 
-\begin{subfigure}{0.32\linewidth}
-	\includegraphics[width=\textwidth]{figs/space_timeline_real_line.pdf}
-	\caption{{Space consumption, 256GB}}
-	\label{fig:space_timeline}
-\end{subfigure}
 \caption{\sys\/ vs RocksDB performance under ingestion (100\% put) workload with production datasets.}
 \label{fig:prod:ingestion}
 \end{figure*}
+
+\begin{figure}[tb]
+	\includegraphics[width=0.3\textwidth]{figs/space_timeline_real_line.pdf}
+	\caption{{Space consumption during ingestion, 256GB}}
+	\label{fig:space_timeline}
+\end{figure}
 
 
 
@@ -397,7 +397,7 @@ Figure~\ref{fig:writeamp}. We see that \sys\/ reduces the disk write rate dramat
 with the largest gain observed for big datasets (e.g.,  for the 64GB dataset 
 the amplification factors are $1.3$ vs $3.1$ under Zipf-composite, and $1.1$ vs $7.6$ under Uniform). 
 
-We further measured space amplification at the end of the run, and found that both \sys\ and RocksDB have roughly $17\%$ 
+We further measured space amplification at the end of the run, and found that both \sys\ and RocksDB have roughly $15$--$17\%$ 
 space amplification. Note that in \sys, the space amplification is controlled by the log size threshold parameter.
 
 %\begin{table}[t]

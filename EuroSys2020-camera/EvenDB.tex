@@ -1,8 +1,21 @@
 
 
 \documentclass[sigplan,10pt]{acmart}
-\renewcommand\footnotetextcopyrightpermission[1]{}
-\pagestyle{plain}
+%\renewcommand\footnotetextcopyrightpermission[1]{}
+%\pagestyle{plain}
+\settopmatter{printacmref=false, printfolios=false}
+
+
+\copyrightyear{2020}
+\acmYear{2020}
+\setcopyright{acmlicensed}
+\acmConference[EuroSys '20]{Fifteenth European Conference on Computer Systems}{April 27--30, 2020}{Heraklion, Greece}
+%\acmBooktitle{Fifteenth European Conference on Computer Systems (EuroSys '20), April 27--30, 2020, Heraklion, Greece}
+\acmPrice{15.00}
+\acmDOI{10.1145/3342195.3387523}
+\acmISBN{978-1-4503-6882-7/20/04}
+
+\startPage{1}
 
 %========================
 %  Packages
@@ -49,13 +62,12 @@
 % Actual document begins below.
 \begin{document}
 
-\title[\sys: Key-Value Storage for Spatial Locality]{\sys: Optimizing Key-Value Storage\\ for Spatial Locality} 
+\title[\sys: Key-Value Storage for Spatial Locality]{\sys: Optimizing Key-Value Storage\\ for Spatial Locality}
 
 \author{Eran Gilad}
 \affiliation{
 \institution{Yahoo Research, Israel} 
 }
-
 
 \author{Edward Bortnikov}
 \affiliation{
@@ -88,11 +100,16 @@
 \affiliation{
 \institution{Outbrain, Israel} 
 }
+\authornote{Work done while at Yahoo Research.}         
 
-\author{Rana Shahout}
+\author{Rana Shahout\footnotemark[1]}
 \affiliation{
 \institution{Technion, Israel} 
 }
+%\authornote{Work done while at Yahoo Research.}         
+
+
+\renewcommand{\shortauthors}{Eran Gilad et al.}
 
 \begin{abstract}
 \input{abstract}
@@ -127,6 +144,9 @@
 \section{Conclusions}
 \label{sec:conclusions}
 \input{conclusions}
+
+\section*{Acknowledgements}
+We thank Yoav Etsion for helpful comments. Eran Gilad's work on this project was partially funded by Hasso Platner Institute, while he was at the Technion. 
 
 \bibliographystyle{acm}
  %\bibliography{ref}
