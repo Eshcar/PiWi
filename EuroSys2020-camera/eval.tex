@@ -2,19 +2,24 @@
 The experiment setup is described in~\cref{ssec:setup}. 
 We present performance results with production data in~\cref{ssec:prod} and with standard synthetic workloads in~\cref{ssec:synthetic}. 
 
-The baseline for our evaluation is RocksDB -- a mature and widely-used industrial KV-store. 
-\remove{RocksDB is used as storage layer of multiple popular SQL and NoSQL databases, e.g., MyRocks~\cite{MyRocks} (incarnation of MySQL) 
-and MongoRocks~\cite{MongoRocks} (incarnation of MongoDB). RocksDB is an LSM-tree that is highly optimized for both read and write scenarios. 
-For example, its compaction scheduling policies are highly tuned to minimize impact on mainstream data access.} 
-We use the recent RocksDB release 5.17.2, available Oct 24, 2018.  It is worth noting that RocksDB's performance 
+Our baseline is RocksDB -- a mature and widely-used industrial KV-store --  
+release 5.17.2 (Oct 24, 2018).  It is worth noting that RocksDB's performance 
 is significantly improved  in this release~\cite{CallaghanCompaction}.   
-%over the last two years, primarily through optimized LSM compaction algorithms~\cite{CallaghanCompaction}.   
 In~\cref{ssec:pebbles} we compare \sys\ against PebblesDB~\cite{PebblesDB}, a research LSM prototype, and TokuDB~\cite{TokuDB} 
--- the only publicly available KV-store whose design is inspired by B$^\epsilon$-trees. Both  perform significantly worse than RocksDB and \sys, 
-motivating our focus on RocksDB.
+-- the only publicly available KV-store whose design is inspired by B$^\epsilon$-trees. Both  perform significantly worse than RocksDB and \sys, motivating our focus on RocksDB.
 
-% Finally, we study  \sys's scalability and sensitivity to configuration settings in~\S\ref{ssec:drill}. 
+We study scalability and sensitivity to configuration settings in~\cref{ssec:drill}. 
 %\cref{ssec:recover} evaluates its recovery mechanism. 
+Overall, our results show the following:
+\begin{itemize}
+\item \sys\ excels under the production workloads for which it has been designed.
+% -- it ingests data much faster and has the data immediately organized effectively for scans.  
+\item \sys\ performs better than RocksDB in spatially-local workloads and in small datasets.  
+In other workloads, \sys\ is largely on par with RocksDB, performing  better in get-only or put-only workloads
+ and worse in mixed read-write workloads. %, where \sys\ has a high tail latency. 
+\item \sys\ has much smaller write amplification. Both data stores have similar space amplification.
+% and both are sensitive to the access skew, with their performance decreasing as the access distribution tends to be more uniform.
+\end{itemize}
  
 \subsection{Setup}
 \label{ssec:setup} 
@@ -108,7 +113,7 @@ in all scenarios that include puts).
 
 \begin{figure}[tb]
 	\includegraphics[width=0.3\textwidth]{figs/space_timeline_real_line.pdf}
-	\caption{{Space consumption during ingestion, 256GB}}
+	\caption{{Space consumption during ingestion, 256GB.}}
 	\label{fig:space_timeline}
 \end{figure}
 
@@ -444,8 +449,8 @@ F (100\% get-modify-put, Figure~\ref{fig:throughput:f}) invoke puts and gets at 
 The get-put mix is particularly challenging for \sys, especially with simple keys, where it serves many gets from disk due to the
 low spatial locality. The bottleneck is the linear search in funk logs, which  fill up due to the high put rate.
 RocksDB's caching is more effective in this scenario, so its disk-access rate in get operations is lower,  resulting in faster gets. 
-While \sys\ continues to outperform RocksDB in small data sets or when spatial locality is high, its performance deteriorates in 
-large data sets with no such locality, where RocksDB is almost $2\times$ faster.
+While \sys\ continues to outperform RocksDB in small datasets or when spatial locality is high, its performance deteriorates in 
+large datasets with no such locality, where RocksDB is almost $2\times$ faster.
 
 %Note that \sys\/ is still reasonably close to RocksDB in the worst case ($0.75\times$ and $0.7\times$ throughput for the 64GB dataset in A and F, respectively).
 %(In-memory searches are three orders of magnitude faster.)
@@ -484,17 +489,15 @@ hence the funks are cached less effectively by the OS, and the disk becomes a bo
 \end{figure}
 
 \begin{figure}[htb]
-\centering
+%\centering
 %\hspace{0.05\linewidth}
-\begin{subfigure}{0.6\linewidth}
+\begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Time_percentage_A.pdf}
 \vskip .1in
 \caption{Fraction of get accesses}
 \label{fig:readstat:dist}
 \end{subfigure}
-
-%\hspace{0.05\linewidth}
-\begin{subfigure}{0.6\linewidth}
+\begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Latency_A.pdf}
 \caption{On-disk get access latency}
 \label{fig:readstat:lat}
@@ -511,7 +514,7 @@ vs $4.5\%$ with Zipf-composite.
 Workloads B and D (Figures~\ref{fig:throughput:b} and~\ref{fig:throughput:d}) also mix gets and puts, but with a lower put rate. 
 Here, the funk logs don't grow as quickly as under an even put-get mix, and 
 \sys\  has a marked advantage in all key distributions with small datasets (up to the available RAM size) 
-and also with Zipf-composite and Latest-simple keys in large datasets. But here, too, its advantage diminishes with the data set size,
+and also with Zipf-composite and Latest-simple keys in large datasets. But here, too, its advantage diminishes with the dataset size,
 especially under the Zipf-simple key distribution.  
 
 \paragraph{Read-only.} 
@@ -527,10 +530,10 @@ but our experiments (not presented in this paper) have shown that this hurts per
 \paragraph{Scan-dominated.} Benchmarks E10--1000  (5\% put, 95\% scan, Figures~\ref{fig:throughput:e10}-~\ref{fig:throughput:e1000})
 iterate through a number of items sampled uniformly in the range [1,S], where S is  10, 100, or 1000. 
 Under Zipf-composite, this workload exhibits the spatial locality the system has been designed for, and indeed 
-\sys\/ outperforms RocksDB in this workload for all data set sizes and all lengths of scans.  Its biggest 
+\sys\/ outperforms RocksDB in this workload for all dataset sizes and all lengths of scans.  Its biggest 
 advantage -- $3.2\times$ -- is achieved with long scans over a small dataset. 
-With simple keys on a large data set, in particular when scans are short, \sys\ begins to suffer from long search times in logs
-(as this data set also includes puts), and RocksDB has better performance.
+With simple keys on a large dataset, in particular when scans are short, \sys\ begins to suffer from long search times in logs
+(as this dataset also includes puts), and RocksDB has better performance.
 In \S\ref{ssec:drill} we show that \sys's scan performance on big datasets can be improved by adapting the funk log size limit to this workload. 
 %(The experiments reported herein all use the default configuration).
  
@@ -547,12 +550,12 @@ both exploit locality. While put performance is impacted similarly in the two da
 
 \begin{figure}[t]
 	\centering
-	\begin{subfigure}{0.48\linewidth}
+	\begin{subfigure}{0.49\linewidth}
 		\includegraphics[width=\textwidth]{figs/puts_only_skew_line.pdf}
 		\caption{Put only}
 		\label{fig:puts_only_skew}
 	\end{subfigure}
-	\begin{subfigure}{0.48\linewidth}
+	\begin{subfigure}{0.49\linewidth}
 		\includegraphics[width=\textwidth]{figs/gets_only_skew_line.pdf}
 		\caption{Get only}
 		\label{fig:gets_only_skew}
@@ -738,13 +741,13 @@ Zipf-simple:    & 27.8	& 30.9 & 36.1	& 58.3  & {\bf {68.3}}   & 68.1   & &  36.3
 
 \begin{figure}[htb]
 \centering
-\begin{subfigure}{0.48\linewidth}
+\begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/max_log_size_line.pdf}
 \caption{Maximum log size,\\  workloads A and E100}
 \label{fig:params:log}
 \end{subfigure}
 %\hspace{0.05\linewidth}
-\begin{subfigure}{0.48\linewidth}
+\begin{subfigure}{0.49\linewidth}
 \includegraphics[width=\textwidth]{figs/Bloom_filter_line.pdf}
 \caption{Bloom filter split factor,\\ workload A}
 \label{fig:params:bf}
