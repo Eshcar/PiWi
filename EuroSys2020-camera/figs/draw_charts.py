@@ -490,16 +490,27 @@ def draw_space_timeline_chart(file_name, data, y_label='Disk space (GB)', x_labe
             lines[z[0]].append(z[1] / 2**30)
     timeline = [0] + list(data.keys())[1:]
 
-    fig, ax = plt.subplots()
+    '''
+    Even - solid blue
+    Even log - solid gray, legend - "EvenDB Log"
+    Rocks - dotted
+    "Raw Data" - solid black
+    Also, reorder lines in order of appearance
+    '''
+    ordered_lines = [None] * 4
     for key, value in lines.items():
+        i = 0 if key == 'RocksDB' else 1 if key == 'EvenDB' else 2 if key == 'Input size' else 3
+        ordered_lines[i] = (key, value)
+    fig, ax = plt.subplots()
+    for key, value in ordered_lines:
         if len(value) < len(timeline):
             value += [None] * (len(timeline) - len(value))
-        style, color = ('-.', flurry_linecolor) if key == 'EvenDB' \
-            else ('--', uniform_linecolor) if key == 'RocksDB' \
-                else (':', tableau20[1]) if key == 'Log space' \
-                    else ('-', zip_linecolor) if key == 'Input size' \
+        style, color, label, linew = ('-', flurry_linecolor, 'EvenDB', linewidth * 0.6) if key == 'EvenDB' \
+            else ('--', flurry_linecolor, 'RocksDB', linewidth * 0.6) if key == 'RocksDB' \
+                else (':', tableau20[14], 'EvenDB Log', linewidth * 0.6) if key == 'Log space' \
+                    else ('-', (0, 0, 0), 'Raw Data', linewidth * 0.4) if key == 'Input size' \
                         else (None, None)
-        ax.plot(timeline, value, label=key, linewidth=linewidth * 0.6, color=color, linestyle=style)
+        ax.plot(timeline, value, label=label, linewidth=linew, color=color, linestyle=style)
 
     ax.set_xlabel(x_label, fontsize=fontsize + 5)
     ax.set_ylabel(y_label, fontsize=fontsize + 5)
@@ -528,7 +539,7 @@ def draw_space_timeline_chart(file_name, data, y_label='Disk space (GB)', x_labe
         ax.set_xlim(ax.get_xlim()[0], x_upper)
 
     h, l = ax.get_legend_handles_labels()
-    ax.legend(h, l, loc=legend, fontsize=fontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor)
+    ax.legend(h, l, loc=legend, fontsize=fontsize, ncol=ncol, bbox_to_anchor=bbox_to_anchor, labelspacing=0.3)
 
     fig.savefig(file_name.replace(' ', '_') + '_line.pdf', bbox_inches='tight')
 
@@ -1173,12 +1184,12 @@ def main():
     # draw_speedup_charts(data)
     # draw_latency_charts(data)
     # draw_bloom_filter_charts(data)
-    draw_ampl_charts(data)
+    # draw_ampl_charts(data)
     # draw_scalability_charts(data)
     ###draw_caching_effect(data)
     # draw_95(data)
-    # draw_space_timeline_charts(data)
-    draw_skew_charts(data)
+    draw_space_timeline_charts(data)
+    # draw_skew_charts(data)
     # draw_log_size_charts(data)
     # draw_real_data_bar_charts(data)
     # draw_timeline_charts(data)
